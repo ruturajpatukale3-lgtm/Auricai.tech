@@ -1,0 +1,12 @@
+// Minimal layout for public interview pages — no auth, no sidebar
+export default function InterviewLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-h-screen bg-[#0A0A0A]">
+      {children}
+    </div>
+  );
+}
