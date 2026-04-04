@@ -61,12 +61,13 @@ export default function InterviewPage() {
   const [planName, setPlanName] = useState<string>("starter");
   const [isInvalid, setIsInvalid] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
-  const [processingStep, setProcessingStep] = useState(0);
+  const [isValidating, setIsValidating] = useState(true);
+  const [errorType, setErrorType] = useState<"NOT_FOUND" | "EXPIRED" | "SERVER_ERROR" | null>(null);
   const [pollingError, setPollingError] = useState(false);
   const [showSuccessMoment, setShowSuccessMoment] = useState(false);
   const [generatedCaseStudy, setGeneratedCaseStudy] = useState<any>(null);
   const [processingTimeout, setProcessingTimeout] = useState(false);
+  const [processingStep, setProcessingStep] = useState(0);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -114,28 +115,67 @@ export default function InterviewPage() {
     }
   }, [screen, isLoading, messages.length]);
 
-  // Validate token on mount
+  // ─── Initial Logic ─────────────────────────────────────────
+
+  // Unified persistent initialization function
+  const initializeInterview = useCallback(async () => {
+    setIsValidating(true);
+    setErrorType(null);
+    setIsInvalid(false);
+
+    console.log("----------------------------------");
+    console.log("INITIALIZING INTERVIEW:", token);
+
+    try {
+      const res = await fetch(`/api/public/interview/${token}`);
+      console.log("FETCH STATUS:", res.status);
+
+      if (res.status === 404) {
+        setErrorType("NOT_FOUND");
+        setIsInvalid(true);
+        return;
+      }
+
+      if (res.status === 410) {
+        setErrorType("EXPIRED");
+        setIsInvalid(true);
+        return;
+      }
+
+      if (!res.ok) {
+        setErrorType("SERVER_ERROR");
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `HTTP ${res.status}`);
+      }
+
+      const response = await res.json();
+      console.log("FETCH SUCCESS:", response.data?.id);
+
+      if (response.data?.client_name) {
+        setOrgName(response.data.client_name);
+      }
+      
+      // Handle plan branding
+      if (response.data?.plan_name) {
+        setPlanName(response.data.plan_name);
+      }
+
+    } catch (err: any) {
+      console.error("INITIALIZATION ERROR:", err.message);
+      setErrorType("SERVER_ERROR");
+      setError(err.message);
+    } finally {
+      setIsValidating(false);
+    }
+  }, [token]);
+
+  // Run on mount
   useEffect(() => {
     setIsMounted(true);
-    async function validateToken() {
-      try {
-        const res = await fetch(`/api/public/interview/${token}`);
-        if (!res.ok) {
-          setIsInvalid(true);
-          return;
-        }
-        const data = await res.json();
-        console.log("STEP 8 - RESPONSE:", data);
-
-        // Simple extraction
-        if (data.data?.client_name) setOrgName(data.data.client_name);
-      } catch (err) {
-        console.error("STEP 8 - ERROR:", err);
-        setIsInvalid(true);
-      }
+    if (token) {
+      initializeInterview();
     }
-    if (token) validateToken();
-  }, [token]);
+  }, [token, initializeInterview]);
 
   // ─── Polling Logic ────────────────────────────────────────
   const fetchStatus = useCallback(async () => {
@@ -315,28 +355,89 @@ export default function InterviewPage() {
     }
   }
 
-  // ─── Hydration Guard ──────────────────────────────────────
-  if (!isMounted) return null;
-
-  // ─── Invalid Token ────────────────────────────────────────
-  if (isInvalid) {
+  // ─── Hydration & Validation Guard ─────────────────────────
+  if (!isMounted || isValidating) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[#0A0A0A]">
+        <div className="text-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-4"
+          >
+            <Loader2 className="w-6 h-6 text-blue-500" />
+          </motion.div>
+          <p className="text-sm text-zinc-500 font-medium animate-pulse">
+            Verifying secure link...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Invalid Token / Error States ─────────────────────────
+  if (isInvalid) {
+    const errorConfigs = {
+      NOT_FOUND: {
+        title: "Interview Not Found",
+        message: "This interview link is invalid. Please double-check the URL or contact your interviewer.",
+        icon: AlertCircle,
+        color: "text-red-400",
+        bg: "bg-red-500/10",
+        border: "border-red-500/20"
+      },
+      EXPIRED: {
+        title: "Link Expired",
+        message: "This interview link has expired or has already been completed.",
+        icon: AlertCircle,
+        color: "text-amber-400",
+        bg: "bg-amber-500/10",
+        border: "border-amber-500/20"
+      },
+      SERVER_ERROR: {
+        title: "Connection Error",
+        message: error || "We're having trouble connecting to the server. Please try again.",
+        icon: AlertCircle,
+        color: "text-zinc-400",
+        bg: "bg-white/5",
+        border: "border-white/10"
+      }
+    };
+
+    const config = errorConfigs[errorType || "SERVER_ERROR"];
+    const Icon = config.icon;
+
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[#0A0A0A]">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="text-center max-w-md"
         >
-          <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-6">
-            <AlertCircle className="w-8 h-8 text-red-400" />
+          <div className={`w-16 h-16 rounded-2xl ${config.bg} ${config.border} border flex items-center justify-center mx-auto mb-6 shadow-lg`}>
+            <Icon className={`w-8 h-8 ${config.color}`} />
           </div>
           <h1 className="text-xl font-bold text-white mb-2">
-            Interview Not Found
+            {config.title}
           </h1>
-          <p className="text-sm text-zinc-500">
-            This interview link may have expired or is invalid. Please check
-            your email for the correct link.
+          <p className="text-sm text-zinc-500 mb-8 leading-relaxed">
+            {config.message}
           </p>
+          
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => initializeInterview()}
+              className="inline-flex items-center justify-center gap-2 bg-white text-black px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-zinc-200 transition-all active:scale-95"
+            >
+              Try Again
+            </button>
+            <a 
+              href="/"
+              className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors py-2"
+            >
+              Return Home
+            </a>
+          </div>
         </motion.div>
       </div>
     );
