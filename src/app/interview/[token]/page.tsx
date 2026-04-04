@@ -125,25 +125,12 @@ export default function InterviewPage() {
           return;
         }
         const data = await res.json();
-        
-        // Handle State Machine Recovery
-        const status = data.data?.status;
-        if (status === "approved" || status === "published") {
-          localStorage.removeItem(`auricai_session_${token}`);
-          setScreen("complete");
-        } else if (status === "review_ready") {
-          localStorage.removeItem(`auricai_session_${token}`);
-          setScreen("review");
-          fetchStatus(); // Get the case study data
-        } else if (status === "completed") {
-          localStorage.removeItem(`auricai_session_${token}`);
-          setScreen("review"); // Will show loader while polling
-        }
-        
-        // Extract org and plan info
+        console.log("STEP 8 - RESPONSE:", data);
+
+        // Simple extraction
         if (data.data?.client_name) setOrgName(data.data.client_name);
-        if (data.data?.plan_name) setPlanName(data.data.plan_name);
-      } catch {
+      } catch (err) {
+        console.error("STEP 8 - ERROR:", err);
         setIsInvalid(true);
       }
     }
