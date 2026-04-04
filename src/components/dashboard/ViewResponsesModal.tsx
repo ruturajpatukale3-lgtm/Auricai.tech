@@ -43,7 +43,7 @@ export function ViewResponsesModal({ isOpen, onClose, interviewId }: ViewRespons
     setApproving(true);
     const result = await apiPatch(`/api/interviews/${interviewId}`, { action: "approve" });
     setApproving(false);
-    
+
     if (result.success) {
       toast.success("Interview approved!");
       router.refresh();

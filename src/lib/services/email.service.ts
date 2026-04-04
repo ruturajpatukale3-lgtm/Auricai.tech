@@ -43,7 +43,7 @@ export const EmailService = {
               Start Interview →
             </a>
             <p style="color: #999; font-size: 13px; margin-top: 32px;">
-              This link is unique to you and doesn't expire.
+              This link is unique to you and expires in 30 days.
             </p>
           </div>
         `,
@@ -176,6 +176,53 @@ export const EmailService = {
       });
     } catch (error) {
       console.error("[EmailService] Failed to send clarification email:", error);
+    }
+  },
+
+  /**
+   * Send notification when case study is ready for client review.
+   */
+  async sendCaseStudyReadyEmail(
+    to: string,
+    orgName: string,
+    token: string,
+    clientName?: string
+  ): Promise<boolean> {
+    const previewUrl = `${APP_URL}/i/${token}`;
+    const greeting = clientName ? `Hi ${clientName}` : "Hi";
+
+    try {
+      const { error } = await resend.emails.send({
+        from: FROM_EMAIL,
+        to,
+        subject: `Your case study for ${orgName} is ready`,
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 40px 20px;">
+            <h2 style="color: #111; font-size: 20px; margin-bottom: 16px;">${greeting},</h2>
+            <p style="color: #555; font-size: 15px; line-height: 1.6;">
+              Great news! Your case study with <strong>${orgName}</strong> has been generated and is ready for your final review.
+            </p>
+            <p style="color: #555; font-size: 15px; line-height: 1.6;">
+              Review the results, metrics, and data extraction before it goes live.
+            </p>
+            <a href="${previewUrl}" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; margin: 24px 0;">
+              Review Case Study →
+            </a>
+            <p style="color: #999; font-size: 13px; margin-top: 32px;">
+              Once approved, you'll receive a copy of the final formatted case study.
+            </p>
+          </div>
+        `,
+      });
+
+      if (error) {
+        console.error("[EmailService] Resend API error:", error);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error("[EmailService] Failed to send review notification:", error);
+      return false;
     }
   },
 };

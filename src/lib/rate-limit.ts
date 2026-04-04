@@ -5,7 +5,7 @@ import { Redis } from "@upstash/redis";
  * Production-ready Rate Limiting Helper
  * 
  * Protects public endpoints from brute-force and scraping.
- * Gracefully falls back if Redis keys are missing in dev.
+ * FAILS CLOSED in production if Redis is not configured.
  */
 export async function checkRateLimit(
   identifier: string,
@@ -15,11 +15,17 @@ export async function checkRateLimit(
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-  // Fallback for local development or missing keys
-  if (!url || !token) {
+  // Check for placeholder values
+  const isConfigured = url && token
+    && !url.startsWith("your_")
+    && !token.startsWith("your_");
+
+  if (!isConfigured) {
     if (process.env.NODE_ENV === "production") {
-      console.warn("[RateLimit] WARNING: UPSTASH keys missing in PRODUCTION!");
+      console.error("[RateLimit] CRITICAL: UPSTASH keys missing in PRODUCTION — BLOCKING REQUEST");
+      return { success: false, limit, remaining: 0, reset: Date.now() + 60000 };
     }
+    // Allow in development only
     return { success: true, limit, remaining: limit - 1, reset: Date.now() + 60000 };
   }
 
@@ -46,7 +52,11 @@ export async function checkRateLimit(
     };
   } catch (error) {
     console.error("[RateLimit] Error:", error);
-    // Fail open in case of Upstash downtime so the app doesn't crash for real users
+    if (process.env.NODE_ENV === "production") {
+      // Fail closed in production — block on Redis failure
+      return { success: false, limit, remaining: 0, reset: Date.now() + 30000 };
+    }
+    // Fail open in development only
     return { success: true, limit, remaining: 0, reset: 0 };
   }
 }

@@ -12,12 +12,12 @@ import { SendInterviewModal } from "@/components/dashboard/SendInterviewModal";
 import { useRouter } from "next/navigation";
 import { Interview } from "@/types";
 
-export function InterviewList({ 
-  data, 
-  totalCount, 
-}: { 
-  data: Interview[]; 
-  totalCount?: number; 
+export function InterviewList({
+  data,
+  totalCount,
+}: {
+  data: Interview[];
+  totalCount?: number;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [remindingId, setRemindingId] = useState<string | null>(null);
@@ -29,11 +29,11 @@ export function InterviewList({
       <div className="w-full flex-col bg-[#111111] border border-white/10 rounded-xl mt-6 p-10 text-center flex items-center justify-center min-h-[400px] relative overflow-hidden">
         {/* Subtle background glow */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-blue-500/10 blur-[100px] pointer-events-none" />
-        
+
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-6 border border-white/10 relative z-10">
           <Mail className="w-8 h-8 text-white" />
         </div>
-        
+
         <h3 className="text-2xl font-bold text-white mb-2 tracking-tight relative z-10">
           Start collecting client proof
         </h3>
@@ -113,19 +113,18 @@ export function InterviewList({
 
             {/* Status */}
             <div className="col-span-3 hidden sm:block">
-              <span className={`inline-flex items-center text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                interview.status === 'published' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-                interview.status === 'approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                interview.status === 'completed' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
-              } shadow-sm`}>
+              <span className={`inline-flex items-center text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${interview.status === 'published' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                  interview.status === 'approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                    interview.status === 'completed' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                      'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
+                } shadow-sm`}>
                 {interview.status}
               </span>
             </div>
 
             {/* Link */}
             <div className="col-span-3 sm:col-span-3 flex items-center gap-2">
-              <button 
+              <button
                 onClick={() => {
                   const url = `${window.location.origin}/interview/${interview.token}`;
                   navigator.clipboard.writeText(url);
@@ -156,7 +155,7 @@ export function InterviewList({
             {/* Actions */}
             <div className="col-span-5 sm:col-span-4 md:col-span-1 flex items-center justify-end">
               <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                <button 
+                <button
                   onClick={() => setSelectedId(interview.id)}
                   title="View Responses"
                   className="flex items-center justify-center w-8 h-8 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 transition-colors"
@@ -169,7 +168,7 @@ export function InterviewList({
         ))}
       </div>
 
-      <ViewResponsesModal 
+      <ViewResponsesModal
         isOpen={!!selectedId}
         onClose={() => setSelectedId(null)}
         interviewId={selectedId}

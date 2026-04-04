@@ -82,7 +82,7 @@ export function RecentActivity({ activities }: { activities: ActivityFeedItem[] 
                     <Clock className="w-3 h-3 text-zinc-600" />
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
-                  
+
                   {item.deal_value && (
                     <>
                       <div className="w-1 h-1 rounded-full bg-zinc-800" />

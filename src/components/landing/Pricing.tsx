@@ -98,7 +98,7 @@ export default function Pricing() {
       router.push("/sign-up");
       return;
     }
-    
+
     if (isCurrentPlan(plan) || upgradingPlan) return;
 
     setUpgradingPlan(plan);
@@ -107,7 +107,7 @@ export default function Pricing() {
       const res = await fetch("/api/billing/create-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           plan,
           interval: annual ? "annual" : "monthly"
         }),

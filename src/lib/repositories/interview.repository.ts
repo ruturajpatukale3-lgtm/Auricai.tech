@@ -337,17 +337,23 @@ export const InterviewRepository = {
 
   /**
    * Find interviews eligible for email reminder (cron query).
-   * Criteria: status in (sent, in_progress), reminder_sent = false, sent > 24h ago.
+   * Criteria: 
+   * - status in (sent, in_progress)
+   * - attempts < 3
+   * - 24h passed since initial send (for 1st reminder) or last reminder.
    */
   async findPendingReminders(limit: number = 100): Promise<Interview[]> {
-    const day1Cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const cutoff24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
+    // Complex query: 
+    // attempts = 0 AND sent_at < 24h ago
+    // OR attempts > 0 AND last_reminder_at < 24h ago
     const { data, error } = await supabaseAdmin
       .from(TABLE)
       .select("*")
       .in("status", ["sent", "in_progress"])
-      .eq("reminder_sent", false)
-      .lte("sent_at", day1Cutoff)
+      .lt("reminder_attempts", 3)
+      .or(`and(reminder_attempts.eq.0,sent_at.lte.${cutoff24h}),and(reminder_attempts.gt.0,last_reminder_at.lte.${cutoff24h})`)
       .order("sent_at", { ascending: true })
       .limit(limit);
 

@@ -1,13 +1,20 @@
 // GET /api/public/interview/[token] — Public interview fetch (no auth)
 import { NextRequest, NextResponse } from "next/server";
 import { InterviewService } from "@/lib/services/interview.service";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function GET(req: NextRequest, props: { params: Promise<{ token: string }> }) {
   try {
+    // Rate limit: 20 lookups per minute per IP (prevents token brute-force)
+    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    const limit = await checkRateLimit(`public_interview:${ip}`, 20, "1 m");
+    if (!limit.success) {
+      return NextResponse.json({ success: false, error: "Too many requests." }, { status: 429 });
+    }
+
     const { token } = await props.params;
 
-    // 1. Prospect context for tracking
-    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    // 1. Prospect context for tracking (reuse ip from rate limit above)
     const ua = req.headers.get("user-agent") || "unknown";
 
     // 2. Lookup by token (Services checks 30-day expiry)

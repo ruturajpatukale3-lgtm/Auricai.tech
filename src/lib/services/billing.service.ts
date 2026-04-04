@@ -108,7 +108,7 @@ export const BillingService = {
     // Never overwrite a higher priority plan with a lower one in sub.created
     if (targetPriority < currentPriority && currentPlan !== "free") {
       console.warn(`[Billing] Rejected status collision: sub.created tried to set ${targetPlan} (prio:${targetPriority}) but org=${orgId} is already on ${currentPlan} (prio:${currentPriority})`);
-      
+
       // Still sync Paddle IDs for billing continuity
       await supabaseAdmin
         .from("subscriptions")

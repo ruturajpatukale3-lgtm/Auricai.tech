@@ -9,7 +9,7 @@ export function AnalyticsKPIStrip({ metrics }: { metrics: DashboardMetrics }) {
 
   const formatValue = (val: string | number, type: 'currency' | 'percent' | 'number') => {
     if (isEmpty) return "No data yet";
-    
+
     if (type === 'currency' && typeof val === 'number') {
       if (val === 0) return "No data yet";
       if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(1)}M`;

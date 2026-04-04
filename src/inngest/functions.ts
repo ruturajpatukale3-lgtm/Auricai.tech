@@ -91,6 +91,19 @@ export const generateCaseStudyJob = inngest.createFunction(
       await InterviewRepository.updateStatus(orgId, interviewId, "review_ready");
     });
 
+    // Notify client that case study is ready for review
+    await step.run("notify-client-ready", async () => {
+      const org = await OrganizationRepository.findById(orgId);
+      if (org) {
+        await EmailService.sendCaseStudyReadyEmail(
+          interview.client_email,
+          org.name,
+          interview.token,
+          interview.client_name || undefined
+        );
+      }
+    });
+
     // Notify org that case study is ready
     await step.run("notify-case-study-ready", async () => {
       try {
@@ -231,6 +244,59 @@ export const purgeDeletedWorkspacesJob = inngest.createFunction(
 import { syncSubscriptionsJob } from "./billing-sync";
 import { scheduleDailyHubSpotSync } from "./hubspot";
 
+/**
+ * Automated Interview Reminders (Hourly)
+ * Finds 'sent' or 'in_progress' interviews older than 24h and sends a polite follow-up.
+ */
+export const sendInterviewRemindersJob = inngest.createFunction(
+  { id: "send-interview-reminders", triggers: [{ cron: "0 * * * *" }] }, // Hourly
+  async ({ step }: { step: any }) => {
+    // 1. Fetch eligible interviews (limit 50 per hour to avoid burst/spam)
+    const pendingReminders = await step.run("fetch-pending-reminders", async () => {
+      return await InterviewRepository.findPendingReminders(50);
+    });
+
+    if (!pendingReminders || pendingReminders.length === 0) {
+      return { success: true, sentCount: 0 };
+    }
+
+    const results = [];
+
+    // 2. Process each interview with idempotency
+    for (const interview of pendingReminders) {
+      const result = await step.run(`process-reminder-${interview.id}`, async () => {
+        // Atomic claim (RPC prevents race conditions if multiple workers run)
+        const claimed = await InterviewRepository.claimEmailReminder(interview.id);
+        if (!claimed) return { interviewId: interview.id, status: "skipped", reason: "already_claimed_or_invalid_state" };
+
+        const org = await OrganizationRepository.findById(interview.org_id);
+        if (!org) return { interviewId: interview.id, status: "failed", reason: "org_not_found" };
+
+        const sent = await EmailService.sendReminder(
+          interview.client_email,
+          org.name,
+          interview.token,
+          interview.client_name || undefined
+        );
+
+        if (!sent) {
+          // If email provider fails, revert claim so it can be retried in next cron run
+          await InterviewRepository.revertEmailReminder(interview.id);
+          return { interviewId: interview.id, status: "failed", reason: "email_provider_error" };
+        }
+
+        // track event for observability
+        await EventService.reminderSent(interview.org_id, interview.id, interview.client_email);
+
+        return { interviewId: interview.id, status: "sent" };
+      });
+      results.push(result);
+    }
+
+    return { success: true, results, sentCount: results.filter(r => r.status === "sent").length };
+  }
+);
+
 export const functions = [
   generateCaseStudyJob,
   verifyDomainJob,
@@ -238,4 +304,5 @@ export const functions = [
   syncSubscriptionsJob,
   purgeDeletedWorkspacesJob,
   scheduleDailyHubSpotSync,
+  sendInterviewRemindersJob,
 ];

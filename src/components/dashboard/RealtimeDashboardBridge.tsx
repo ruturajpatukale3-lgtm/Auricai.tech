@@ -23,7 +23,7 @@ export function RealtimeDashboardBridge({ orgId }: { orgId: string }) {
 
     const debouncedRefresh = (source: string) => {
       const now = Date.now();
-      
+
       // If events fire within 1500ms of each other, count it as a burst
       if (now - lastEventTime < 1500) {
         burstCount++;
@@ -34,7 +34,7 @@ export function RealtimeDashboardBridge({ orgId }: { orgId: string }) {
 
       // Adjust debounce window based on bursts
       const timeoutMs = burstCount > 2 ? 1500 : 300;
-      
+
       clearTimeout(refreshTimeout);
       refreshTimeout = setTimeout(() => {
         console.log(`[Realtime] Batching update from ${source} (Burst: ${burstCount}), refreshing RSC...`);

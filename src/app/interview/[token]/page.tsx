@@ -66,6 +66,7 @@ export default function InterviewPage() {
   const [pollingError, setPollingError] = useState(false);
   const [showSuccessMoment, setShowSuccessMoment] = useState(false);
   const [generatedCaseStudy, setGeneratedCaseStudy] = useState<any>(null);
+  const [processingTimeout, setProcessingTimeout] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -163,6 +164,7 @@ export default function InterviewPage() {
           setGeneratedCaseStudy(data.data.caseStudy);
           setScreen("review");
           setShowSuccessMoment(false);
+          setProcessingTimeout(false);
         }, 1200);
         return true;
       }
@@ -185,16 +187,28 @@ export default function InterviewPage() {
     return () => clearInterval(stepInterval);
   }, [screen, generatedCaseStudy]);
 
+  // Polling loop
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (screen === "review" && !generatedCaseStudy && !pollingError) {
+    if (screen === "review" && !generatedCaseStudy && !pollingError && !processingTimeout) {
       interval = setInterval(async () => {
         const finished = await fetchStatus();
         if (finished) clearInterval(interval);
       }, 3000);
     }
     return () => clearInterval(interval);
-  }, [screen, generatedCaseStudy, fetchStatus, pollingError]);
+  }, [screen, generatedCaseStudy, fetchStatus, pollingError, processingTimeout]);
+
+  // 60-second processing timeout
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (screen === "review" && !generatedCaseStudy && !processingTimeout) {
+      timer = setTimeout(() => {
+        setProcessingTimeout(true);
+      }, 60000); // 60 seconds
+    }
+    return () => clearTimeout(timer);
+  }, [screen, generatedCaseStudy, processingTimeout]);
 
   // ─── Watermark Logic ──────────────────────────────────────
   const isEnterprise = planName === "enterprise";
@@ -443,6 +457,15 @@ export default function InterviewPage() {
                     >
                       <CheckCircle2 className="w-10 h-10 text-emerald-500" />
                     </motion.div>
+                  ) : processingTimeout ? (
+                    <motion.div
+                      key="timeout"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute inset-0 rounded-full bg-amber-500/10 border-2 border-amber-500/20 flex items-center justify-center"
+                    >
+                      <Loader2 className="w-10 h-10 text-amber-500 animate-spin" />
+                    </motion.div>
                   ) : (
                     <motion.div
                       key="loading"
@@ -475,6 +498,15 @@ export default function InterviewPage() {
                     >
                       Your case study is ready
                     </motion.h2>
+                  ) : processingTimeout ? (
+                    <motion.h2
+                      key="timeout-text"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-2xl font-bold text-amber-400 tracking-tight"
+                    >
+                      Almost there...
+                    </motion.h2>
                   ) : (
                     <motion.h2
                       key={processingStep}
@@ -493,21 +525,27 @@ export default function InterviewPage() {
                 </AnimatePresence>
               </div>
 
-              <p className="text-zinc-500 max-w-sm mx-auto mb-8 text-sm">
-                {showSuccessMoment ? "Finalizing presentation..." : "Analyzing your feedback. Estimated time: ~10 seconds."}
+              <p className="text-zinc-500 max-w-sm mx-auto mb-8 text-sm leading-relaxed">
+                {showSuccessMoment 
+                  ? "Finalizing presentation..." 
+                  : processingTimeout 
+                    ? "Your case study is processing in the background. You'll receive an email confirmation once it's ready for review."
+                    : "Analyzing your feedback. Estimated time: ~10 seconds."}
               </p>
 
               {/* Precise Progress Bar */}
-              <div className="max-w-xs mx-auto mb-10 h-1 bg-white/5 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: "0%" }}
-                  animate={{ 
-                    width: showSuccessMoment ? "100%" : (processingStep === 0 ? "33%" : processingStep === 1 ? "66%" : "95%") 
-                  }}
-                  transition={{ duration: showSuccessMoment ? 0.3 : 3.5, ease: "linear" }}
-                  className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
-                />
-              </div>
+              {!processingTimeout && (
+                <div className="max-w-xs mx-auto mb-10 h-1 bg-white/5 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: "0%" }}
+                    animate={{ 
+                      width: showSuccessMoment ? "100%" : (processingStep === 0 ? "33%" : processingStep === 1 ? "66%" : "95%") 
+                    }}
+                    transition={{ duration: showSuccessMoment ? 0.3 : 3.5, ease: "linear" }}
+                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                  />
+                </div>
+              )}
 
               <div className="flex flex-col items-center gap-4">
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
@@ -515,13 +553,25 @@ export default function InterviewPage() {
                   <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Secure & Private</span>
                 </div>
 
-                {pollingError && (
-                  <button 
-                    onClick={() => { setPollingError(false); fetchStatus(); }}
-                    className="text-xs text-blue-400 underline hover:text-blue-300"
-                  >
-                    Taking too long? Click to retry
-                  </button>
+                {(pollingError || processingTimeout) && (
+                  <div className="space-y-4">
+                    <button 
+                      onClick={() => { setPollingError(false); setProcessingTimeout(false); fetchStatus(); }}
+                      className="text-xs text-blue-400 underline hover:text-blue-300"
+                    >
+                      Check status again
+                    </button>
+                    {processingTimeout && (
+                      <div className="pt-4">
+                        <button 
+                          onClick={() => setScreen("complete")}
+                          className="px-6 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white hover:bg-white/10 transition-colors"
+                        >
+                          Return to Home
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

@@ -5,14 +5,18 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { SubscriptionService } from "@/lib/services/subscription.service";
+import { AuthService } from "@/lib/services/auth.service";
 import { handleApiError, apiSuccess, AuthRequiredError } from "@/lib/errors";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import type { Subscription } from "@/types";
 
 export async function GET() {
   try {
-    const { orgId } = await auth();
-    if (!orgId) throw new AuthRequiredError();
+    const { userId } = await auth();
+    if (!userId) throw new AuthRequiredError();
+
+    const orgId = await AuthService.getOrgIdForUser(userId);
+    if (!orgId) throw new AuthRequiredError("No workspace found.");
 
     const subscription = await SubscriptionService.getSubscription(orgId);
     

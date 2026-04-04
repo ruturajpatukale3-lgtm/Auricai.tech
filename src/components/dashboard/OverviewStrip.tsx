@@ -39,29 +39,29 @@ export function OverviewStrip({ metrics }: { metrics: DashboardMetrics }) {
   }
 
   const kpis = [
-    { 
-      label: "Pipeline Influenced", 
-      value: formatCurrency(metrics.totalPipeline), 
-      sub: metrics.totalDeals > 0 ? `${metrics.totalDeals} deals tracked` : "No deals yet", 
-      highlight: true 
+    {
+      label: "Pipeline Influenced",
+      value: formatCurrency(metrics.totalPipeline),
+      sub: metrics.totalDeals > 0 ? `${metrics.totalDeals} deals tracked` : "No deals yet",
+      highlight: true
     },
-    { 
-      label: "Verifiable Revenue", 
-      value: formatCurrency(metrics.verifiableRevenue), 
-      sub: metrics.verifiableRevenue > 0 ? "Closed won deals" : "Pending closures", 
-      highlight: false 
+    {
+      label: "Verifiable Revenue",
+      value: formatCurrency(metrics.verifiableRevenue),
+      sub: metrics.verifiableRevenue > 0 ? "Closed won deals" : "Pending closures",
+      highlight: false
     },
-    { 
-      label: "Client Response Rate", 
-      value: metrics.interviewsSent > 0 ? `${metrics.conversionRate}%` : "No data yet", 
-      sub: "Higher = more proof", 
-      highlight: false 
+    {
+      label: "Client Response Rate",
+      value: metrics.interviewsSent > 0 ? `${metrics.conversionRate}%` : "No data yet",
+      sub: "Higher = more proof",
+      highlight: false
     },
-    { 
-      label: "Avg Proven ROI", 
-      value: `${metrics.avgROI}%`, 
-      sub: metrics.totalDeals > 0 ? "Validated from clients" : "Waiting for responses", 
-      highlight: false 
+    {
+      label: "Avg Proven ROI",
+      value: `${metrics.avgROI}%`,
+      sub: metrics.totalDeals > 0 ? "Validated from clients" : "Waiting for responses",
+      highlight: false
     },
   ];
 
@@ -102,7 +102,7 @@ export function OverviewStrip({ metrics }: { metrics: DashboardMetrics }) {
             className={`bg-[#111111] border ${kpi.highlight ? "border-blue-500/30 shadow-[0_0_30px_rgba(37,99,235,0.1)]" : "border-white/10"} rounded-xl p-5 hover:-translate-y-[2px] hover:shadow-[0_8px_30px_rgba(0,0,0,0.5)] hover:border-white/20 transition-all duration-300 relative overflow-hidden`}
           >
             {kpi.highlight && <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full" />}
-            
+
             <p className="text-sm text-zinc-400 font-medium mb-2 tracking-wide uppercase text-[10px] sm:text-[11px] relative z-10">
               {kpi.label}
             </p>

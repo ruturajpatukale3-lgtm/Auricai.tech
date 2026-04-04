@@ -20,7 +20,7 @@ export default async function DashboardLayout({
 
   // Check if user has an organization
   const { AuthService } = await import("@/lib/services/auth.service");
-  
+
   const orgId = await AuthService.getOrgIdForUser(userId);
 
   if (!orgId) {

@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { InterviewService } from "@/lib/services/interview.service";
 import { validateInput, submitAnswerSchema } from "@/lib/validation";
 import { apiSuccess, apiError, handleApiError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 
 // Extended schema for public submission (includes token)
@@ -20,6 +21,13 @@ const publicSubmitSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: 30 submissions per minute per IP
+    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    const limit = await checkRateLimit(`public_submit:${ip}`, 30, "1 m");
+    if (!limit.success) {
+      return apiError(429, "Too many submissions. Please slow down.", "RATE_LIMIT");
+    }
+
     const body = await req.json();
     const validation = validateInput(publicSubmitSchema, body);
     if (!validation.success) {
