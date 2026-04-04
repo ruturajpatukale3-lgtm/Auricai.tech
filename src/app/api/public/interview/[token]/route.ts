@@ -1,4 +1,5 @@
 // GET /api/public/interview/[token] — Public interview fetch (no auth)
+// Nudge: Triggering fresh deployment with Absolute Raw Fetch V2 fix
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
