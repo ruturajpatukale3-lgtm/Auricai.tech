@@ -30,5 +30,13 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "test-*.ts",
+    "smoke-*.ts",
+    "simulation-*.ts",
+    "check-db.ts",
+    "env-debug.ts",
+    "fetch-token.ts"
+  ]
 }
