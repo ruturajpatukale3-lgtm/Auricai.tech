@@ -14,7 +14,15 @@ import { NotificationService } from "@/lib/services/notification.service";
  * AI Case Study Generation Job
  */
 export const generateCaseStudyJob = inngest.createFunction(
-  { id: "generate-case-study", retries: 3, triggers: [{ event: "ai/generate_case_study" }] },
+  { 
+    id: "generate-case-study", 
+    retries: 3, 
+    triggers: [{ event: "ai/generate_case_study" }],
+    concurrency: {
+      limit: 20,
+      key: "event.data.orgId", // Per-org concurrency limit to prevent one org from hogging all slots
+    }
+  },
   async ({ event, step }: { event: any; step: any }) => {
     const { interviewId, orgId } = event.data;
 
