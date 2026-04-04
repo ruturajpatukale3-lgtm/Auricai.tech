@@ -99,13 +99,6 @@ export default function Footer() {
           <p className="text-caption text-[#52525B]">
             © 2026 Auricai. All rights reserved.
           </p>
-          <p className="text-caption text-[#52525B]">
-            Built with Next.js + Supabase
-          </p>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-[rgba(255,255,255,0.06)] text-[10px] text-[#52525B]">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-            SOC2 Compliant
-          </div>
         </div>
       </div>
     </footer>
