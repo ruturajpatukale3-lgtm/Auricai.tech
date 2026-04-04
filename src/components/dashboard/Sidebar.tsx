@@ -13,7 +13,8 @@ import {
   AlertCircle,
   Sparkles,
   Activity,
-  Users
+  Users,
+  X
 } from "lucide-react";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { getPlanLimits } from "@/lib/plans";
@@ -26,16 +27,32 @@ const navigation = [
   { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <div className="hidden md:flex flex-col w-64 fixed inset-y-0 left-0 bg-[#0A0A0A] border-r border-white/10 z-50">
-      <div className="flex h-16 items-center px-6 border-b border-white/10">
+    <div className={`
+      fixed inset-y-0 left-0 flex flex-col w-64 bg-[#0A0A0A] border-r border-white/10 z-[50]
+      transition-transform duration-300 ease-in-out
+      ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+      md:flex
+    `}>
+      <div className="flex h-16 items-center justify-between px-6 border-b border-white/10">
         <Link href="/dashboard" className="flex items-center gap-2.5 group transition-all">
           <AuricaiLogo size={28} className="text-white group-hover:scale-110 transition-transform" />
           <span className="text-white font-bold tracking-tight">Auricai</span>
         </Link>
+        <button 
+          className="p-2 -mr-2 text-zinc-500 hover:text-white md:hidden"
+          onClick={onClose}
+        >
+          <X size={20} />
+        </button>
       </div>
 
       <nav className="flex-1 px-4 py-6 space-y-1">
