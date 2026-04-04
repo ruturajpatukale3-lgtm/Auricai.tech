@@ -15,7 +15,7 @@ export const CaseStudyRepository = {
   ): Promise<CaseStudy[]> {
     let query = supabaseAdmin
       .from(TABLE)
-      .select("id, company_name, headline, metric_type, delta_percent, pipeline_value, deals_influenced, status, slug, created_at, views")
+      .select("id, company_name, headline, metric_type, delta_percent, status, slug, created_at, views")
       .eq("org_id", orgId)
       .order("created_at", { ascending: false });
 
@@ -88,8 +88,6 @@ export const CaseStudyRepository = {
       after_value?: string;
       delta_percent?: number;
       timeframe?: string;
-      pipeline_value?: number;
-      deals_influenced?: number;
       slug?: string;
     }
   ): Promise<CaseStudy> {
@@ -119,8 +117,6 @@ export const CaseStudyRepository = {
         | "after_value"
         | "delta_percent"
         | "timeframe"
-        | "pipeline_value"
-        | "deals_influenced"
         | "status"
         | "slug"
       >
@@ -176,98 +172,9 @@ export const CaseStudyRepository = {
 
   // ─── Aggregations ────────────────────────────────────────
 
-  async sumPipeline(orgId: string): Promise<number> {
-    const { data, error } = await supabaseAdmin
-      .from(TABLE)
-      .select("pipeline_value")
-      .eq("org_id", orgId)
-      .eq("status", "live");
-    if (error) throw new Error(`Failed to sum pipeline: ${error.message}`);
-    return (data || []).reduce((sum, row) => sum + (Number(row.pipeline_value) || 0), 0);
-  },
 
-  async avgDeltaPercent(orgId: string): Promise<number> {
-    const { data, error } = await supabaseAdmin
-      .from(TABLE)
-      .select("delta_percent")
-      .eq("org_id", orgId)
-      .eq("status", "live")
-      .not("delta_percent", "is", null);
-    if (error) throw new Error(`Failed to avg delta: ${error.message}`);
-    if (!data || data.length === 0) return 0;
-    const sum = data.reduce((acc, row) => acc + (Number(row.delta_percent) || 0), 0);
-    return Math.round(sum / data.length);
-  },
 
-  async sumDealsInfluenced(orgId: string): Promise<number> {
-    const { data, error } = await supabaseAdmin
-      .from(TABLE)
-      .select("deals_influenced")
-      .eq("org_id", orgId)
-      .eq("status", "live");
-    if (error) throw new Error(`Failed to sum deals: ${error.message}`);
-    return (data || []).reduce((sum, row) => sum + (Number(row.deals_influenced) || 0), 0);
-  },
 
-  async recordDeal(
-    orgId: string,
-    id: string,
-    dealValue: number = 0
-  ): Promise<CaseStudy> {
-    const { data: current } = await supabaseAdmin
-      .from(TABLE)
-      .select("deals_influenced, pipeline_value")
-      .eq("id", id)
-      .eq("org_id", orgId)
-      .single();
-
-    if (!current) throw new Error("Case study not found");
-
-    const { data, error } = await supabaseAdmin
-      .from(TABLE)
-      .update({
-        deals_influenced: (current.deals_influenced || 0) + 1,
-        pipeline_value: (current.pipeline_value || 0) + dealValue,
-      })
-      .eq("id", id)
-      .eq("org_id", orgId)
-      .select()
-      .single();
-
-    if (error) throw new Error(`Failed to record deal: ${error.message}`);
-    return data as CaseStudy;
-  },
-
-  async recordMultiDeal(
-    orgId: string,
-    ids: string[],
-    dealValue: number = 0
-  ): Promise<void> {
-    if (ids.length === 0) return;
-
-    // Use a single batch update with increment if possible, or individual updates
-    const updates = ids.map(async (id) => {
-      const { data: current } = await supabaseAdmin
-        .from(TABLE)
-        .select("deals_influenced, pipeline_value")
-        .eq("id", id)
-        .eq("org_id", orgId)
-        .single();
-      
-      if (!current) return;
-
-      await supabaseAdmin
-        .from(TABLE)
-        .update({
-          deals_influenced: (current.deals_influenced || 0) + 1,
-          pipeline_value: (current.pipeline_value || 0) + dealValue,
-        })
-        .eq("id", id)
-        .eq("org_id", orgId);
-    });
-
-    await Promise.all(updates);
-  },
 
   async getTopPerformingByROI(orgId: string, limit: number = 5): Promise<CaseStudy[]> {
     const { data, error } = await supabaseAdmin
@@ -281,17 +188,7 @@ export const CaseStudyRepository = {
     return (data || []) as CaseStudy[];
   },
 
-  async getTopPerformingByPipeline(orgId: string, limit: number = 5): Promise<CaseStudy[]> {
-    const { data, error } = await supabaseAdmin
-      .from(TABLE)
-      .select("*")
-      .eq("org_id", orgId)
-      .eq("status", "live")
-      .order("pipeline_value", { ascending: false })
-      .limit(limit);
-    if (error) throw new Error(`Failed to fetch top pipeline performers: ${error.message}`);
-    return (data || []) as CaseStudy[];
-  },
+
 
   async getTopPerformingByEngagement(orgId: string, limit: number = 5): Promise<CaseStudy[]> {
     const { data, error } = await supabaseAdmin

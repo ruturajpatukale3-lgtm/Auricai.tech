@@ -26,7 +26,6 @@ type ChatMessage = {
 const quickActions = [
   { label: "Send Interview", icon: Mail, color: "text-blue-400 border-blue-500/20 bg-blue-500/10" },
   { label: "Generate Case Study", icon: FileText, color: "text-purple-400 border-purple-500/20 bg-purple-500/10" },
-  { label: "Push to HubSpot", icon: ArrowUpRight, color: "text-orange-400 border-orange-500/20 bg-orange-500/10" },
   { label: "View Analytics", icon: BarChart3, color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/10" },
 ];
 

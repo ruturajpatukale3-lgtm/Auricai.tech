@@ -93,8 +93,6 @@ export const generateCaseStudyJob = inngest.createFunction(
         before: metrics.before > 0 ? metrics.before.toString() : null,
         after: metrics.after > 0 ? metrics.after.toString() : null,
         timeframe: metrics.timeframe,
-        pipelineValue: metrics.pipelineValue,
-        dealsInfluenced: metrics.dealsInfluenced,
         deltaPercent,
       });
     });
@@ -255,7 +253,6 @@ export const purgeDeletedWorkspacesJob = inngest.createFunction(
 );
 
 import { syncSubscriptionsJob } from "./billing-sync";
-import { scheduleDailyHubSpotSync } from "./hubspot";
 
 /**
  * Automated Interview Reminders (Hourly)
@@ -316,6 +313,5 @@ export const functions = [
   processOutboxJob,
   syncSubscriptionsJob,
   purgeDeletedWorkspacesJob,
-  scheduleDailyHubSpotSync,
   sendInterviewRemindersJob,
 ];

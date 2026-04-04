@@ -1,21 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { TrendingUp, DollarSign, Target, FileStack } from "lucide-react";
+import { TrendingUp, Globe, Target, FileStack } from "lucide-react";
 import type { DashboardMetrics } from "@/types";
 
 export function AnalyticsKPIStrip({ metrics }: { metrics: DashboardMetrics }) {
   const isEmpty = metrics.totalUsage === 0 && metrics.caseStudiesLive === 0;
 
-  const formatValue = (val: string | number, type: 'currency' | 'percent' | 'number') => {
+  const formatValue = (val: string | number, type: 'percent' | 'number') => {
     if (isEmpty) return "No data yet";
-
-    if (type === 'currency' && typeof val === 'number') {
-      if (val === 0) return "No data yet";
-      if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(1)}M`;
-      if (val >= 1_000) return `$${(val / 1_000).toFixed(0)}K`;
-      return `$${val.toLocaleString()}`;
-    }
 
     if (type === 'percent' && typeof val === 'number') {
       return val > 0 ? `${val}%` : "No data yet";
@@ -57,7 +50,7 @@ export function AnalyticsKPIStrip({ metrics }: { metrics: DashboardMetrics }) {
       title: "Case Studies Live",
       value: formatValue(metrics.caseStudiesLive, 'number'),
       trend: isEmpty ? "Collect more proof" : "Publicly verifiable stories",
-      icon: DollarSign,
+      icon: Globe,
       color: "text-zinc-300",
       bgHover: "hover:bg-white/5",
     },

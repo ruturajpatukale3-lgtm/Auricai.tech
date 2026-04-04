@@ -55,7 +55,7 @@ export const AnalyticsService = {
           conversionRate,
         } as DashboardMetrics;
       },
-      [`dashboard-metrics-v2-${orgId}`],
+      [`dashboard-metrics-v3-${orgId}`],
       { revalidate: 60, tags: [`analytics-${orgId}`, "dashboard"] }
     )();
   }),
@@ -163,9 +163,6 @@ export const AnalyticsService = {
         case "case_study_shared": 
           message = "Case study shared with a prospect"; 
           break;
-        case "used_in_deal": 
-          message = "Case study linked to a conversion event"; 
-          break;
         case "reminder_sent":
           message = `24h reminder sent to ${e.metadata?.client_email || "prospect"}`;
           break;
@@ -176,16 +173,12 @@ export const AnalyticsService = {
         type: e.type,
         message,
         created_at: e.created_at,
-        deal_value: (e.metadata?.deal_value as number) ?? null,
       };
     });
   },
 
   /**
    * Compute conversion funnel metrics + state intelligence (Cached)
-   * 
-   * CRITICAL: Funnel = progression clarity, Breakdown = state intelligence
-   * These are NEVER mixed together.
    */
   getFunnelMetrics: cache(async (orgId: string) => {
     return unstable_cache(
@@ -205,9 +198,7 @@ export const AnalyticsService = {
         const published = statusCounts.published || 0;
 
         // 2. CORRECT STATUS MAPPING
-        // notStarted = interviews with status='sent' (never opened/started)
-        // inProgress = interviews with status='in_progress' (opened and started)
-        const notStarted = sent; // DB status 'sent' means no activity yet
+        const notStarted = sent; 
 
         const getRate = (num: number, den: number) => 
           den > 0 ? Math.round((num / den) * 100) : 0;
@@ -216,7 +207,7 @@ export const AnalyticsService = {
         const neverCompleted = notStarted + inProgress;
         const dropOffRate = total > 0 ? Math.round((neverCompleted / total) * 100) : 0;
 
-        // 4. Build duplicate flags (informational only)
+        // 4. Build duplicate flags
         const duplicates = duplicatesRaw.map((d) => ({
           interviewId: d.interview_id,
           email: d.email,
@@ -226,7 +217,6 @@ export const AnalyticsService = {
         }));
 
         return {
-          // FUNNEL: progression clarity — "how many reached this stage"
           funnel: {
             total,
             opened: inProgress,
@@ -241,7 +231,6 @@ export const AnalyticsService = {
               total: getRate(published, total),
             },
           },
-          // BREAKDOWN: state intelligence — "what are all possible states"
           breakdown: {
             notStarted,
             inProgress,
@@ -249,23 +238,15 @@ export const AnalyticsService = {
             approved,
             published,
           },
-          // DUPLICATES: informational only
           duplicates,
-          // META: decision intelligence
           meta: {
             avgCompletionTimeMs: avgCompletionTime,
             dropOffRate,
           },
         };
       },
-      [`funnel-metrics-v2-${orgId}`],
+      [`funnel-metrics-v3-${orgId}`],
       { revalidate: 60, tags: [`analytics-${orgId}`, "funnel"] }
     )();
   }),
-
-  formatCurrency(value: number): string {
-    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-    if (value >= 1_000) return `${(value / 1_000).toFixed(0)}K`;
-    return value.toLocaleString();
-  },
 };

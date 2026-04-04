@@ -2,13 +2,12 @@ import { CaseStudy } from "@/types";
 
 /**
  * Validates if a case study has enough data to be considered "Complete".
- * Threshold: Must have at least one measurable performance metric (ROI or Pipeline).
+ * Threshold: Must have at least one measurable performance metric (ROI).
  */
 export const isCaseStudyComplete = (study: CaseStudy): boolean => {
   const hasROI = (study.delta_percent !== null && study.delta_percent > 0);
-  const hasPipeline = (study.pipeline_value !== null && study.pipeline_value > 0);
   
-  return hasROI || hasPipeline;
+  return hasROI;
 };
 
 /**

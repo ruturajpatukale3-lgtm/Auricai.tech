@@ -39,9 +39,6 @@ export type EventType =
   | "case_study_published"
   | "case_study_shared"
   | "used_in_deal"
-  | "deal_created"
-  | "deal_status_changed"
-  | "deal_attributed"
   | "ai_generation_failed"
   | "reminder_sent"
   | "team_invited"
@@ -205,31 +202,13 @@ export interface CaseStudy {
   after_value: string | null;
   delta_percent: number | null;
   timeframe: string | null;
-  pipeline_value: number;
-  deals_influenced: number;
   views: number;
   status: CaseStudyStatus;
   slug: string | null;
   created_at: string;
 }
 
-export interface Deal {
-  id: string;
-  org_id: string;
-  name: string;
-  value: number;
-  status: DealStatus;
-  created_at: string;
-}
 
-export interface DealAttribution {
-  id: string;
-  org_id: string;
-  deal_id: string;
-  case_study_id: string;
-  influence_weight: number;
-  created_at: string;
-}
 
 export interface Usage {
   org_id: string;
@@ -265,7 +244,6 @@ export interface Subscription {
 export type NotificationType =
   | "interview_completed"
   | "case_study_ready"
-  | "deal_won"
   | "usage_warning"
   | "usage_limit_reached"
   | "system";
@@ -303,7 +281,6 @@ export interface Activity {
   id: string;
   org_id: string;
   message: string;
-  deal_value: number | null;
   created_at: string;
 }
 
@@ -353,7 +330,6 @@ export interface ActivityFeedItem {
   id: string;
   type: EventType;
   message: string;
-  deal_value: number | null;
   created_at: string;
 }
 
@@ -434,16 +410,7 @@ export interface DangerConfirmation {
   confirmation: string;
 }
 
-export interface CreateDealRequest {
-  name: string;
-  value: number;
-  status?: DealStatus;
-}
 
-export interface AttributeDealRequest {
-  deal_id: string;
-  case_study_id: string;
-}
 
 export interface SubmitInterviewRequest {
   token: string;

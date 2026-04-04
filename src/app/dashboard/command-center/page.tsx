@@ -84,10 +84,9 @@ async function DashboardAlerts({ orgId }: { orgId: string }) {
           <TrendingUp className="w-6 h-6 text-blue-400" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-white">Stalled Revenue Recovery</h3>
+          <h3 className="text-sm font-semibold text-white">Stalled Proof Recovery</h3>
           <p className="text-xs text-zinc-500">
-            You have <span className="text-blue-400 font-bold">{metrics.stalledInterviews} stalling interviews</span> with an estimated 
-            <span className="text-white font-bold ml-1">${AnalyticsService.formatCurrency(metrics.pipelineAtRisk)}</span> in pipeline at risk.
+            You have <span className="text-blue-400 font-bold">{metrics.stalledInterviews} stalling interviews</span> that are delaying your public proof.
           </p>
         </div>
       </div>

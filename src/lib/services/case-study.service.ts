@@ -55,30 +55,10 @@ export const CaseStudyService = {
       after_value: extracted.after,
       delta_percent: deltaPercent ?? undefined,
       timeframe: extracted.timeframe,
-      pipeline_value: extracted.pipelineValue || 0,
-      deals_influenced: extracted.dealsInfluenced || 0,
       slug,
     });
 
-    // 7. Log event
-    await EventService.caseStudyCreated(orgId, caseStudy.id, caseStudy.company_name);
 
-    // 8. HubSpot Automation: Attempt auto-link to matching CRM deals
-    try {
-      const { HubSpotService } = await import("@/lib/services/hubspot.service");
-      const { HubSpotRepository } = await import("@/lib/repositories/hubspot.repository");
-      const connection = await HubSpotRepository.getConnection(orgId);
-      
-      if (connection) {
-        // We'll run this in the background (no await) to avoid blocking the user response
-        // but we'll use a detached promise if possible, or just call it directly in serverless as it's small.
-        // Given local server state, we'll await for deterministic testability or use a fire-and-forget.
-        // We'll await to ensure the data is fully linked before the UI refreshes.
-        await HubSpotService.autoMatchAndLink(orgId, interview.client_email, caseStudy.id);
-      }
-    } catch (e) {
-      console.warn(`[HubSpot Automation] Failed to trigger auto-match:`, (e as Error).message);
-    }
 
     return { success: true, data: caseStudy };
   },
@@ -94,8 +74,6 @@ export const CaseStudyService = {
       before: string | null;
       after: string | null;
       timeframe: string;
-      pipelineValue: number;
-      dealsInfluenced: number;
       deltaPercent: number | null;
     }
   ): Promise<CaseStudy> {
@@ -111,8 +89,6 @@ export const CaseStudyService = {
       after_value: data.after || undefined,
       delta_percent: data.deltaPercent ?? undefined,
       timeframe: data.timeframe,
-      pipeline_value: data.pipelineValue,
-      deals_influenced: data.dealsInfluenced,
       slug,
     });
 
@@ -150,7 +126,7 @@ export const CaseStudyService = {
     await EventService.caseStudyViewed(
       caseStudy.org_id,
       caseStudy.id,
-      caseStudy.pipeline_value || undefined,
+      undefined,
       metadata
     );
 
@@ -168,7 +144,7 @@ export const CaseStudyService = {
     await EventService.caseStudyViewed(
       caseStudy.org_id,
       caseStudy.id,
-      caseStudy.pipeline_value || undefined,
+      undefined,
       metadata
     );
 
@@ -245,36 +221,7 @@ export const CaseStudyService = {
     return { success: true, data: updated };
   },
 
-  /**
-   * Record that one or more case studies influenced a closed deal
-   */
-  async recordDeal(
-    orgId: string, 
-    ids: string | string[], 
-    dealId: string,
-    dealValue: number = 0
-  ): Promise<ServiceResult<void>> {
-    const caseStudyIds = Array.isArray(ids) ? ids : [ids];
-    if (caseStudyIds.length === 0) throw new Error("At least one case study ID is required");
 
-    // 1. Idempotency Check & Attribution (at event level)
-    const { alreadyProcessed } = await EventService.recordDealAttribution(
-      orgId,
-      caseStudyIds,
-      dealId,
-      dealValue,
-      "Deal Closure" // Fallback name
-    );
-
-    if (alreadyProcessed) {
-      return { success: true }; // Silently ignore duplicates to provide idempotency
-    }
-
-    // 2. Update Case Study metrics in DB
-    await CaseStudyRepository.recordMultiDeal(orgId, caseStudyIds, dealValue);
-
-    return { success: true };
-  },
 
   /**
    * Delete case study
@@ -295,8 +242,6 @@ export const CaseStudyService = {
     before?: string;
     after?: string;
     timeframe?: string;
-    pipelineValue?: number;
-    dealsInfluenced?: number;
   } {
     const result: Record<string, unknown> = {};
 
@@ -329,17 +274,7 @@ export const CaseStudyService = {
         if (extracted?.timeframe) result.timeframe = extracted.timeframe as string;
       }
 
-      if (lowerQ.includes("pipeline") || lowerQ.includes("revenue") || lowerQ.includes("impact")) {
-        if (extracted?.dollar_value) {
-          result.pipelineValue = extracted.dollar_value as number;
-        }
-      }
 
-      if (lowerQ.includes("deal") || lowerQ.includes("influenced") || lowerQ.includes("customer")) {
-        if (extracted?.number) {
-          result.dealsInfluenced = Math.round(extracted.number as number);
-        }
-      }
     }
 
     return result as ReturnType<typeof CaseStudyService.extractCaseStudyData>;

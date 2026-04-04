@@ -113,7 +113,7 @@ export function UpgradeModal({
     if (reason === "watermark") {
       return "Unlock the Enterprise plan to remove Auricai branding and serve case studies on your own custom domain.";
     }
-    return "Upgrade to unlock higher limits and premium features to close more deals faster.";
+    return "Upgrade to unlock higher limits and premium features to build more proof faster.";
   };
 
   return (
@@ -173,7 +173,7 @@ export function UpgradeModal({
                   {reason === "fair_usage" 
                     ? "To ensure quality of service for all Enterprise customers, we implement a fair usage soft cap of 1,000 interviews per month."
                     : reason === "USAGE_REVIEW_REQUIRED" 
-                    ? "Your automated broadcast threshold has required the interruption of your batch. Securely resolve this by confirming your pipeline via support."
+                    ? "Your automated broadcast threshold has required the interruption of your batch. Securely resolve this by confirming your proof velocity via support."
                     : "Wait times are enforced to protect our AI infrastructure and prevent automated abuse."}
                 </p>
                 {reason === "fair_usage" || reason === "USAGE_REVIEW_REQUIRED" ? (
