@@ -185,9 +185,14 @@ export function FunnelStrip({ metrics }: { metrics: FunnelStageMetrics }) {
             </motion.div>
 
             {i < steps.length - 1 && (
-              <div className="hidden md:flex px-6 text-white/5">
-                <ArrowRight className="w-6 h-6 stroke-[3px]" />
-              </div>
+              <>
+                <div className="hidden md:flex px-6 text-white/5">
+                  <ArrowRight className="w-6 h-6 stroke-[3px]" />
+                </div>
+                <div className="flex md:hidden w-full items-center justify-center py-2 text-white/5">
+                  <ArrowDown className="w-5 h-5 stroke-[3px]" />
+                </div>
+              </>
             )}
           </div>
         ))}

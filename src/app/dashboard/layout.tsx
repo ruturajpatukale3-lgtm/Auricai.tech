@@ -37,20 +37,22 @@ export default async function DashboardLayout({
   return (
     <SubscriptionProvider>
       <CheckoutSuccessHandler />
-      <div className="flex min-h-screen w-full bg-[#0A0A0A] text-white">
+      <div className="flex min-h-screen w-full bg-[#0A0A0A] text-white overflow-x-hidden">
         <Sidebar />
-        <div className="flex-1 flex flex-col md:pl-64">
+        <div className="flex-1 flex flex-col min-w-0 md:pl-64">
           <Topbar />
-          <main className="flex-1">
+          <main className="flex-1 overflow-x-hidden">
             <SubscriptionBanner />
             {!isProfileComplete && (
-              <div className="bg-yellow-500/10 border-b border-yellow-500/20 px-6 py-3 flex items-center justify-between text-yellow-500 text-sm">
-                <p>⚠️ Your business context is missing. AI generation is currently disabled.</p>
-                <a href="/onboarding?step=2" className="underline font-bold">Complete setup</a>
+              <div className="bg-yellow-500/10 border-b border-yellow-500/20 px-4 md:px-6 py-3 flex items-center justify-between text-yellow-500 text-sm">
+                <p className="truncate mr-4">⚠️ Business context missing. AI disabled.</p>
+                <a href="/onboarding?step=2" className="underline font-bold shrink-0">Setup</a>
               </div>
             )}
             {/* Main container with max-w-7xl mx-auto px-6 py-8 */}
-            {children}
+            <div className="min-w-0">
+              {children}
+            </div>
           </main>
         </div>
         <AssistantPanel />

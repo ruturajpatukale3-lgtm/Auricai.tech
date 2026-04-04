@@ -15,7 +15,7 @@ export function InterviewPageActions({ isVisible = true }: { isVisible?: boolean
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="bg-white hover:bg-zinc-200 text-black px-4 py-2.5 rounded-lg text-sm font-bold shadow-lg flex items-center gap-2 transition-all text-center"
+        className="w-full sm:w-auto bg-white hover:bg-zinc-200 text-black px-4 py-3 md:py-2.5 rounded-lg text-sm font-bold shadow-lg flex items-center justify-center gap-2 transition-all min-h-[44px] md:min-h-0"
       >
         <Plus className="w-4 h-4" /> Send Interview
       </button>

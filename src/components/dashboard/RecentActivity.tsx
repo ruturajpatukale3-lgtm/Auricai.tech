@@ -74,7 +74,7 @@ export function RecentActivity({ activities }: { activities: ActivityFeedItem[] 
               </div>
 
               <div className="flex flex-col justify-center flex-1">
-                <p className="text-sm text-zinc-300 font-medium leading-tight mb-1.5 group-hover:text-white transition-colors">
+                <p className="text-sm text-zinc-300 font-medium leading-tight mb-1.5 group-hover:text-white transition-colors break-words line-clamp-2 md:line-clamp-none">
                   {item.message}
                 </p>
                 <div className="flex items-center gap-3">

@@ -46,8 +46,8 @@ export function Topbar() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          {/* Sticky Actions */}
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* Sticky Actions - Only hide on smallest screens if needed, or keep for LG */}
           <div className="hidden lg:flex items-center gap-3 mr-4 border-r border-white/10 pr-6">
             <button 
               onClick={() => setIsInterviewModalOpen(true)}
@@ -57,10 +57,10 @@ export function Topbar() {
             </button>
           </div>
 
-          {/* Notification Bell (Real, SWR-powered) */}
-          <NotificationPanel />
-
-          <UserButton />
+          <div className="flex items-center gap-2">
+            <NotificationPanel />
+            <UserButton />
+          </div>
         </div>
       </header>
 
