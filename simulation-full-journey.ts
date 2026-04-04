@@ -12,6 +12,13 @@ register({
   paths: tsConfig.compilerOptions.paths,
 });
 
+import moduleModule from "module";
+const originalRequire = (moduleModule as any).prototype.require;
+(moduleModule as any).prototype.require = function(path: string) {
+  if (path === "next/cache") return { revalidateTag: () => {} };
+  return originalRequire.apply(this, arguments);
+};
+
 import "./src/lib/supabase-admin"; // Ensure env is loaded
 import { OrganizationRepository } from "./src/lib/repositories/organization.repository";
 import { OrgProfileRepository } from "./src/lib/repositories/org-profile.repository";
