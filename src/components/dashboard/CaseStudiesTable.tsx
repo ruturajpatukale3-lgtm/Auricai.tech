@@ -3,14 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Copy, Eye, Pencil, Trash2, ArrowRight, DollarSign, CheckCircle, UploadCloud, Mail, Link as LinkIcon, BarChart3 } from "lucide-react";
+import { Copy, Eye, Pencil, Trash2, ArrowRight, CheckCircle, UploadCloud, Mail, BarChart3, TrendingUp } from "lucide-react";
 import MagneticButton from "@/components/ui/MagneticButton";
-import { DealAttributionModal } from "@/components/dashboard/DealAttributionModal";
 import { SendInterviewModal } from "@/components/dashboard/SendInterviewModal";
 import { EditCaseStudyModal } from "@/components/dashboard/EditCaseStudyModal";
 import { DeleteConfirmModal } from "@/components/dashboard/DeleteConfirmModal";
 import { CaseStudyPreviewModal } from "@/components/dashboard/CaseStudyPreviewModal";
-import { PushToHubSpotModal } from "@/components/dashboard/PushToHubSpotModal";
 import { apiPatch } from "@/lib/hooks/useSWR";
 import toast from "react-hot-toast";
 
@@ -20,14 +18,12 @@ import { isCaseStudyComplete, getValidHeadline } from "@/lib/utils/case-study-va
 export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
   const router = useRouter();
 
-  const [selectedStudy, setSelectedStudy] = useState<CaseStudy | null>(null); // For deal attribution
-  const [targetStudy, setTargetStudy] = useState<CaseStudy | null>(null); // For other modals
+  const [targetStudy, setTargetStudy] = useState<CaseStudy | null>(null);
 
   const [isSendInterviewOpen, setIsSendInterviewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [isPushToHSOpen, setIsPushToHSOpen] = useState(false);
 
   const handleCopyLink = (slug: string) => {
     const origin = typeof window !== "undefined" ? window.location.origin : "https://auricai.com";
@@ -141,7 +137,7 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
                   {!isComplete ? (
                     <div className="flex flex-col items-start md:items-center gap-1 opacity-50">
                       <span className="text-lg font-bold text-zinc-600 font-mono italic">Awaiting Results...</span>
-                      <span className="text-[10px] text-zinc-700 uppercase font-bold tracking-widest">Collecting hard ROI metrics</span>
+                      <span className="text-[10px] text-zinc-700 uppercase font-bold tracking-widest">Collecting hard engagement proof</span>
                     </div>
                   ) : (
                     <>
@@ -149,9 +145,9 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
                         {study.delta_percent ? `+${study.delta_percent}%` : study.metric_type || "N/A"}
                       </span>
                       <div className="flex items-center gap-2 mt-1.5 transition-all group-hover:scale-105">
-                        <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 font-mono tracking-tight bg-emerald-400/10 px-2.5 py-1 rounded-full border border-emerald-400/20 shadow-[0_0_15px_rgba(52,211,153,0.1)]">
-                          <BarChart3 className="w-3 h-3" />
-                          ${(Number(study.pipeline_value) || 0).toLocaleString()} Revenue Influenced
+                        <span className="flex items-center gap-1.5 text-xs font-bold text-blue-400 font-mono tracking-tight bg-blue-400/10 px-2.5 py-1 rounded-full border border-blue-400/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                          <TrendingUp className="w-3 h-3" />
+                          {study.views || 0} Organic Views
                         </span>
                       </div>
                     </>
@@ -159,11 +155,9 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
                 </div>
 
                 {/* Right Box: Usage & Actions */}
-                <div className="flex-1 flex flex-col md:items-end justify-center min-w-[240px]">
+                <div className="flex-1 flex flex-col md:items-end justify-center min-w-[120px]">
                   <div className="flex items-center gap-4 text-xs font-mono text-zinc-500 mb-4 group-hover:opacity-0 transition-opacity duration-200">
-                    <span>Used in {study.deals_influenced || 0} deals</span>
-                    <span>•</span>
-                    <span>{study.views || 0} views</span>
+                    <span>{study.views || 0} views today</span>
                   </div>
 
                   {/* Hover Actions */}
@@ -180,7 +174,7 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
                         }`}
                       >
                         <CheckCircle className="w-3.5 h-3.5" /> 
-                        {isComplete ? "Approve" : "Waiting for Metrics"}
+                        {isComplete ? "Approve" : "Waiting for Results"}
                       </button>
                     )}
                     {study.status === 'pending' && (
@@ -189,27 +183,6 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-xs font-bold text-blue-400 transition-colors"
                       >
                         <UploadCloud className="w-3.5 h-3.5" /> Publish
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => setSelectedStudy(study)}
-                      disabled={!isComplete}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                        isComplete
-                          ? "bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 text-green-400"
-                          : "bg-zinc-800 border border-white/5 text-zinc-500 cursor-not-allowed opacity-50"
-                      }`}
-                    >
-                      <DollarSign className="w-3.5 h-3.5" /> Link Deal
-                    </button>
-
-                    {study.status === "live" && (
-                      <button 
-                        onClick={() => { setTargetStudy(study); setIsPushToHSOpen(true); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#FF7A59]/10 hover:bg-[#FF7A59]/20 border border-[#FF7A59]/20 text-xs font-bold text-[#FF7A59] transition-colors"
-                      >
-                        <UploadCloud className="w-3.5 h-3.5" /> Push to HS
                       </button>
                     )}
 
@@ -252,17 +225,7 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
         })}
       </div>
 
-      {/* Deal Attribution Modal */}
-      {selectedStudy && (
-        <DealAttributionModal
-          isOpen={!!selectedStudy}
-          onClose={() => setSelectedStudy(null)}
-          caseStudyId={selectedStudy.id}
-          companyName={selectedStudy.company_name}
-        />
-      )}
-
-      {/* Other Modals */}
+      {/* Modals */}
       <EditCaseStudyModal
         isOpen={isEditOpen}
         onClose={() => { setIsEditOpen(false); setTargetStudy(null); }}
@@ -274,22 +237,12 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
         isOpen={isPreviewOpen}
         onClose={() => { setIsPreviewOpen(false); setTargetStudy(null); }}
         caseStudy={targetStudy}
-        onPushToHubSpot={() => {
-          setIsPreviewOpen(false);
-          setIsPushToHSOpen(true);
-        }}
       />
       
       <DeleteConfirmModal
         isOpen={isDeleteOpen}
         onClose={() => { setIsDeleteOpen(false); setTargetStudy(null); }}
         onSuccess={() => router.refresh()}
-        caseStudy={targetStudy}
-      />
-
-      <PushToHubSpotModal
-        isOpen={isPushToHSOpen}
-        onClose={() => { setIsPushToHSOpen(false); setTargetStudy(null); }}
         caseStudy={targetStudy}
       />
     </>

@@ -25,7 +25,7 @@ const steps = [
     number: "02",
     title: "The Extraction",
     headline: "AI extracts the metrics that close deals.",
-    body: "Our AI doesn't accept vague answers. It follows up automatically: 'You mentioned pipeline improvement — what was the exact percentage?' The result is a case study with real numbers, not fluff.",
+    body: "Our AI doesn't accept vague answers. It follows up automatically: 'You mentioned engagement improvement — what was the exact percentage?' The result is a case study with real proof, not fluff.",
     pills: ["Auto follow-ups", "Metric validation", "Hallucination detection"],
     icon: MessageSquare,
   },
@@ -200,10 +200,10 @@ function StepCard({ index }: { index: number }) {
             What was your biggest challenge before implementing our solution?
           </div>
           <div className="bg-[rgba(255,255,255,0.06)] rounded-2xl rounded-br-md px-3 py-2 text-xs text-[#FAFAFA] max-w-[85%] ml-auto">
-            Pipeline conversion was stuck at 12% for months
+            User engagement was stuck at 12% for months
           </div>
           <div className="bg-[rgba(37,99,235,0.08)] rounded-2xl rounded-bl-md px-3 py-2 text-xs text-[#A1A1AA] max-w-[85%]">
-            Can you share the exact improvement in pipeline conversion after implementation?
+            Can you share the exact improvement in engagement proof after implementation?
           </div>
           <div className="flex gap-1.5 mt-2">
             <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[rgba(16,185,129,0.1)] text-[#10B981] border border-[rgba(16,185,129,0.2)]">12% → 31%</span>
@@ -226,16 +226,16 @@ function StepCard({ index }: { index: number }) {
       <div className="flex-1 space-y-4">
         <div>
           <p className="text-xs text-[#52525B] mb-1">Case Study Preview</p>
-          <p className="text-sm text-[#FAFAFA] font-medium">Acme Corp: How They Increased Pipeline by 158%</p>
+          <p className="text-sm text-[#FAFAFA] font-medium">Acme Corp: How They Increased Engagement by 158%</p>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="p-3 rounded-lg bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.06)]">
-            <p className="text-[10px] text-[#52525B]">Pipeline</p>
-            <p className="text-lg font-bold font-mono text-[#FAFAFA]">$2.4M</p>
+            <p className="text-[10px] text-[#52525B]">Views</p>
+            <p className="text-lg font-bold font-mono text-[#FAFAFA]">2.4M</p>
           </div>
           <div className="p-3 rounded-lg bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.06)]">
-            <p className="text-[10px] text-[#52525B]">ROI</p>
-            <p className="text-lg font-bold font-mono text-[#10B981]">280%</p>
+            <p className="text-[10px] text-[#52525B]">CTR</p>
+            <p className="text-lg font-bold font-mono text-[#10B981]">14.2%</p>
           </div>
         </div>
         <button className="w-full py-3 bg-[#10B981] text-white text-sm font-medium rounded-lg hover:brightness-110 transition-all">

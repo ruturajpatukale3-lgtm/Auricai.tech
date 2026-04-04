@@ -80,7 +80,7 @@ export default function Hero() {
         >
           <span className="text-white">Stop Begging for Testimonials.</span>
           <br />
-          <span className="gradient-text">Turn Client Results Into Proof That Closes Deals.</span>
+          <span className="gradient-text">Turn Client Results Into Proof That Engages Prospects.</span>
         </motion.h1>
 
         <motion.p
@@ -89,7 +89,7 @@ export default function Hero() {
           transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.2 }}
           className="text-body-lg text-[#A1A1AA] max-w-[620px] mb-4"
         >
-          Send a 3-minute interview. Get a client-approved case study with real ROI metrics in 24 hours — ready to win your next deal.
+          Send a 3-minute interview. Get a client-approved case study with engagement proof in 24 hours — ready to verify your impact.
         </motion.p>
 
         <motion.p
@@ -98,7 +98,7 @@ export default function Hero() {
           transition={{ delay: 0.3 }}
           className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-10"
         >
-          No calls. No chasing clients. No fluff. Just real numbers.
+          No calls. No chasing clients. No fluff. Just real proof.
         </motion.p>
 
         {/* CTA Row */}

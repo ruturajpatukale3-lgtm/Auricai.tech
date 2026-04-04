@@ -14,7 +14,7 @@ import type { PlanType } from "@/context/SubscriptionContext";
 // ─── Core features included on EVERY plan ──────────────────
 const CORE_FEATURES = [
   "Full AI Interview Intelligence",
-  "Full analytics & deal signals",
+  "Proof & engagement analytics",
   "AI auto follow-ups (reminders)",
   "Case study generation",
   "Hosted live case study pages",
@@ -53,7 +53,7 @@ const plans = {
       "Use your own custom domain",
       "PDF export for sales decks",
     ],
-    cta: "Start Closing Deals →",
+    cta: "Start Proving Value →",
   },
 };
 
@@ -172,7 +172,7 @@ export default function Pricing() {
       <div className="container-max relative z-10">
         <ScrollReveal className="text-center mb-16">
           <h2 className="text-h2 text-[#FAFAFA] mb-4">
-            7-day free trial. Scale when you close deals.
+            7-day free trial. Scale when you build proof.
           </h2>
 
           {/* Toggle */}
@@ -352,7 +352,7 @@ export default function Pricing() {
                   {plans.enterprise.upgradeLabel}
                 </span>
                 <h3 className="text-xl font-bold text-white mb-2">{plans.enterprise.name}</h3>
-                <p className="text-xl text-green-400 font-bold mb-4 tracking-tight min-h-[32px]">Close 1 deal → pays for 5+ months</p>
+                <p className="text-xl text-green-400 font-bold mb-4 tracking-tight min-h-[32px]">Build 1 case study → pays for itself</p>
 
                 <div className="flex items-baseline gap-1 mb-2 h-[48px]">
                   <motion.span

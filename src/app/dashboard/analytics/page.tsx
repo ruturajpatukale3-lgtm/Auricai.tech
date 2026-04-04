@@ -6,14 +6,14 @@ import { AnalyticsService } from "@/lib/services/analytics.service";
 import { AnalyticsKPIStrip } from "@/components/dashboard/AnalyticsKPIStrip";
 import { UsageOverTimeChart } from "@/components/dashboard/UsageOverTimeChart";
 import { TopPerformers } from "@/components/dashboard/TopPerformers";
-import { DealIntelligence, SmartInsightBlock } from "@/components/dashboard/DealInsights";
+import { SmartInsightBlock } from "@/components/dashboard/SmartInsights";
 import { RealtimeDashboardBridge } from "@/components/dashboard/RealtimeDashboardBridge";
-import { OverviewStripSkeleton, RecentActivitySkeleton } from "@/components/dashboard/SkeletonLoaders";
+import { OverviewStripSkeleton } from "@/components/dashboard/SkeletonLoaders";
 import { SmartInsightActionCard } from "@/components/dashboard/SmartInsightActionCard";
 
 export const metadata = {
   title: "Analytics | Auricai",
-  description: "Understand how your proof is performing.",
+  description: "Understand how your proof performs and engages prospects.",
 };
 
 export default async function AnalyticsPage() {

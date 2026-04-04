@@ -9,10 +9,9 @@ interface CaseStudyPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   caseStudy: CaseStudy | null;
-  onPushToHubSpot?: () => void;
 }
 
-export function CaseStudyPreviewModal({ isOpen, onClose, caseStudy, onPushToHubSpot }: CaseStudyPreviewModalProps) {
+export function CaseStudyPreviewModal({ isOpen, onClose, caseStudy }: CaseStudyPreviewModalProps) {
   if (!isOpen || !caseStudy) return null;
 
   const isComplete = isCaseStudyComplete(caseStudy);
@@ -58,14 +57,6 @@ export function CaseStudyPreviewModal({ isOpen, onClose, caseStudy, onPushToHubS
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {isComplete && caseStudy.status === "live" && onPushToHubSpot && (
-              <button
-                onClick={onPushToHubSpot}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#FF7A59]/10 hover:bg-[#FF7A59]/20 border border-[#FF7A59]/20 text-xs font-bold text-[#FF7A59] transition-colors"
-              >
-                 <UploadCloud className="w-3.5 h-3.5" /> Push to HubSpot
-              </button>
-            )}
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors"
@@ -112,7 +103,7 @@ export function CaseStudyPreviewModal({ isOpen, onClose, caseStudy, onPushToHubS
               </div>
               <h3 className="text-xl font-bold text-white tracking-tight">Waiting for measurable results</h3>
               <p className="text-sm text-zinc-500 max-w-sm leading-relaxed">
-                The AI is currently analyzing your client&apos;s story to extract hard ROI metrics. Once specific outcomes are identified, this case study will be ready for review.
+                The AI is currently analyzing your client&apos;s story to extract hard engagement proof. Once specific outcomes are identified, this case study will be ready for review.
               </p>
             </div>
           ) : (
@@ -144,13 +135,13 @@ export function CaseStudyPreviewModal({ isOpen, onClose, caseStudy, onPushToHubS
                     )}
                 </div>
 
-                {/* Metric 3: Pipeline Impact */}
+                {/* Metric 3: Organic Engagement */}
                 <div className="bg-[#1A1A1A] border border-white/5 p-5 rounded-xl flex flex-col items-center justify-center text-center">
-                    <span className="text-sm text-zinc-400 uppercase tracking-widest font-mono mb-2">Pipeline Impact</span>
-                    <span className="text-2xl font-extrabold text-white font-mono text-green-400 tracking-tighter">
-                      ${(Number(caseStudy.pipeline_value) || 0).toLocaleString()}
+                    <span className="text-sm text-zinc-400 uppercase tracking-widest font-mono mb-2">Organic Reach</span>
+                    <span className="text-2xl font-extrabold text-white font-mono text-blue-400 tracking-tighter">
+                      {caseStudy.views || 0}
                     </span>
-                    <span className="text-xs text-zinc-500 mt-1">{caseStudy.deals_influenced || 0} deals influenced</span>
+                    <span className="text-xs text-zinc-500 mt-1">Unique Proof Views</span>
                 </div>
               </div>
 
@@ -174,11 +165,11 @@ export function CaseStudyPreviewModal({ isOpen, onClose, caseStudy, onPushToHubS
                   </div>
       
                   <div className="p-3 rounded-xl bg-white/5 border border-white/5 flex items-start gap-3 group hover:bg-white/10 transition-colors">
-                    <div className="w-8 h-8 rounded-lg bg-[#FF7A59]/10 flex items-center justify-center shrink-0">
-                      <Layout className="w-4 h-4 text-[#FF7A59]" />
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
+                      <Layout className="w-4 h-4 text-purple-400" />
                     </div>
                     <div>
-                      <h4 className="text-[11px] font-bold text-[#FF7A59] uppercase tracking-wider mb-1">Email / CRM</h4>
+                      <h4 className="text-[11px] font-bold text-purple-400 uppercase tracking-wider mb-1">Outreach Tool</h4>
                       <p className="text-xs text-zinc-500 leading-normal">
                         Drop the public link into your cold outreach or follow-up sequences.
                       </p>

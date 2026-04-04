@@ -12,9 +12,9 @@ const examples = [
     type: "Agency style",
     title: "SaaS Growth Agency",
     metrics: [
-      { label: "Pipeline", value: "$3.2M" },
-      { label: "ROI", value: "340%" },
-      { label: "Deals Closed", value: "23" },
+      { label: "Proof Views", value: "3.2M" },
+      { label: "CTR", value: "14.2%" },
+      { label: "Engagement", value: "84%" },
       { label: "Time to Value", value: "21 days" },
     ]
   },
@@ -22,10 +22,10 @@ const examples = [
     type: "Enterprise style",
     title: "Cloud Infrastructure",
     metrics: [
-      { label: "Deals Influenced", value: "14" },
-      { label: "Pipeline", value: "$5.1M" },
+      { label: "Shared Proof", value: "114x" },
+      { label: "Organic Reach", value: "5.1M" },
       { label: "Conversion Lift", value: "+62%" },
-      { label: "Sales Cycle", value: "-14 days" },
+      { label: "Confidence", value: "9.8/10" },
     ]
   },
   {
@@ -34,8 +34,8 @@ const examples = [
     metrics: [
       { label: "Threats Blocked", value: "2.4M" },
       { label: "Response Time", value: "12ms" },
-      { label: "Cost Saved", value: "$840k" },
-      { label: "ROI", value: "410%" },
+      { label: "Growth Score", value: "9.4/10" },
+      { label: "Success Rate", value: "98%" },
     ]
   }
 ];
@@ -153,11 +153,11 @@ export default function ProofCenterPreview() {
 
               <div className="grid grid-cols-2 gap-4 w-full opacity-40 grayscale">
                 <div className="bg-white/5 rounded-lg p-3 border border-white/5">
-                  <div className="text-lg font-bold text-white font-mono blur-[2px]">$$$</div>
+                  <div className="text-lg font-bold text-white font-mono blur-[2px]">Proof</div>
                   <div className="text-xs text-zinc-500 mt-1 blur-[1px]">Metric</div>
                 </div>
                 <div className="bg-white/5 rounded-lg p-3 border border-white/5">
-                  <div className="text-lg font-bold text-white font-mono blur-[2px]">%%%</div>
+                  <div className="text-lg font-bold text-white font-mono blur-[2px]">Views</div>
                   <div className="text-xs text-zinc-500 mt-1 blur-[1px]">Metric</div>
                 </div>
               </div>

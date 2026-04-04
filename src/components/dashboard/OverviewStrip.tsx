@@ -5,14 +5,6 @@ import { DashboardMetrics } from "@/types";
 import Link from "next/link";
 
 export function OverviewStrip({ metrics }: { metrics: DashboardMetrics }) {
-  const formatCurrency = (n: number) => {
-    if (n === null || n === undefined) return "No data yet";
-    if (n === 0) return "$0";
-    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-    return `$${n.toLocaleString()}`;
-  };
-
   const hasData = metrics.interviewsSent > 0 || metrics.caseStudiesLive > 0;
 
   if (!hasData) {
@@ -26,10 +18,10 @@ export function OverviewStrip({ metrics }: { metrics: DashboardMetrics }) {
           <span className="text-2xl">🌱</span>
         </div>
         <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight mb-2">
-          Ready to prove your ROI?
+          Ready to build your proof?
         </h2>
         <p className="text-zinc-400 text-sm max-w-md mx-auto mb-6">
-          You don't have any case studies or pipeline data yet. Send your first interview to start extracting verifiable metrics.
+          You don't have any case studies yet. Send your first interview to start extracting organic engagement proof.
         </p>
         <Link href="/dashboard/interviews" className="text-zinc-500 hover:text-white transition-colors text-sm underline underline-offset-4">
           View Interviews
@@ -40,27 +32,27 @@ export function OverviewStrip({ metrics }: { metrics: DashboardMetrics }) {
 
   const kpis = [
     {
-      label: "Pipeline Influenced",
-      value: formatCurrency(metrics.totalPipeline),
-      sub: metrics.totalDeals > 0 ? `${metrics.totalDeals} deals tracked` : "No deals yet",
+      label: "Organic Engagement",
+      value: (metrics.totalUsage || 0).toLocaleString(),
+      sub: "Total unique proof views",
       highlight: true
     },
     {
-      label: "Verifiable Revenue",
-      value: formatCurrency(metrics.verifiableRevenue),
-      sub: metrics.verifiableRevenue > 0 ? "Closed won deals" : "Pending closures",
+      label: "Proof Points Live",
+      value: metrics.caseStudiesLive,
+      sub: "Active verifiable case studies",
       highlight: false
     },
     {
       label: "Client Response Rate",
       value: metrics.interviewsSent > 0 ? `${metrics.conversionRate}%` : "No data yet",
-      sub: "Higher = more proof",
+      sub: "Higher = faster proof",
       highlight: false
     },
     {
-      label: "Avg Proven ROI",
-      value: `${metrics.avgROI}%`,
-      sub: metrics.totalDeals > 0 ? "Validated from clients" : "Waiting for responses",
+      label: "Proof Velocity",
+      value: "Under 24h",
+      sub: "Avg generation time",
       highlight: false
     },
   ];
@@ -68,11 +60,11 @@ export function OverviewStrip({ metrics }: { metrics: DashboardMetrics }) {
   return (
     <>
       <div className="mb-4 flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-        <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500/80">Real-time Revenue Intelligence Active</span>
+        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+        <span className="text-[10px] font-bold uppercase tracking-widest text-blue-500/80">Real-time Proof Intelligence Active</span>
       </div>
 
-      {/* Revenue Banner */}
+      {/* Engagement Banner */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -82,10 +74,10 @@ export function OverviewStrip({ metrics }: { metrics: DashboardMetrics }) {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight mb-1">
-              Your case studies are influencing <span suppressHydrationWarning className="text-blue-400">{formatCurrency(metrics.totalPipeline)}</span> in pipeline
+              Your case studies generated <span suppressHydrationWarning className="text-blue-400">{(metrics.totalUsage || 0).toLocaleString()}</span> organic proof points
             </h2>
             <p className="text-blue-200/60 text-sm italic">
-              Used across {metrics.caseStudiesLive} active assets • <span suppressHydrationWarning>{formatCurrency(metrics.verifiableRevenue)}</span> revenue closed
+              Distributed across {metrics.caseStudiesLive} live assets • {metrics.interviewsCompleted} customers verified
             </p>
           </div>
         </div>
