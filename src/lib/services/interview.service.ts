@@ -152,17 +152,22 @@ export const InterviewService = {
    * Tracks 'opened' event on first hit
    */
    async getByToken(token: string, metadata: Record<string, unknown> = {}): Promise<Interview | null> {
-    // 2. Lookup by token with plan_name left join
+    // 2. Lookup by token natively (no explicit joins because of PGRST200 missing FK)
     const { data: interview, error: fetchError } = await supabaseAdmin
       .from("interviews")
-      .select(`
-        *,
-        subscriptions(plan_name)
-      `)
+      .select("*")
       .eq("token", token)
       .single();
 
     if (fetchError || !interview) return null;
+
+    // Fetch the active subscription independently gracefully
+    const { data: sub } = await supabaseAdmin
+      .from("subscriptions")
+      .select("plan_name")
+      .eq("org_id", interview.org_id)
+      .eq("status", "active")
+      .single();
 
     // 1. Expiration check (30 days)
     const createdDate = new Date(interview.created_at);
@@ -181,9 +186,8 @@ export const InterviewService = {
     // 4. Flatten the response for consistency
     const result = {
       ...interview,
-      plan_name: (interview.subscriptions as any)?.plan_name || "starter"
+      plan_name: sub?.plan_name || "starter"
     };
-    delete result.subscriptions;
 
     return result;
   },
