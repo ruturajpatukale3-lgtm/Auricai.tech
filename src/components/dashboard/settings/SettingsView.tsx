@@ -33,6 +33,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { useSubscription, type PlanType } from "@/context/SubscriptionContext";
+import { FEATURES } from "@/lib/config/features";
 
 // ═══════════════════════════════════════
 // TYPES
@@ -1089,27 +1090,29 @@ function IntegrationsSection({ hubspotConnection, org, mutate }: { hubspotConnec
       </SettingsCard>
 
       {/* Meta Ads (Coming Soon) */}
-      <SettingsCard>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 opacity-60 pointer-events-none">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 flex-shrink-0 rounded-xl bg-blue-500 border border-blue-500/20 flex items-center justify-center">
-              <span className="font-bold text-white text-lg tracking-tighter">M</span>
+      {FEATURES.metaAds && (
+        <SettingsCard>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 opacity-60 pointer-events-none">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 flex-shrink-0 rounded-xl bg-blue-500 border border-blue-500/20 flex items-center justify-center">
+                <span className="font-bold text-white text-lg tracking-tighter">M</span>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-base font-bold text-white mb-0.5">Meta Ads (Pixel)</h4>
+                  <span className="text-[10px] font-bold tracking-wider uppercase bg-white/10 px-2 py-0.5 rounded text-zinc-400 border border-white/10">Coming Soon</span>
+                </div>
+                <p className="text-sm text-zinc-500">Sync audience segments from case study viewers.</p>
+              </div>
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-base font-bold text-white mb-0.5">Meta Ads (Pixel)</h4>
-                <span className="text-[10px] font-bold tracking-wider uppercase bg-white/10 px-2 py-0.5 rounded text-zinc-400 border border-white/10">Coming Soon</span>
-              </div>
-              <p className="text-sm text-zinc-500">Sync audience segments from case study viewers.</p>
+              <button disabled className="inline-flex items-center gap-2 bg-white/10 text-white px-5 py-2 font-bold text-sm rounded-lg opacity-50 cursor-not-allowed">
+                Connect Meta
+              </button>
             </div>
           </div>
-          <div>
-            <button disabled className="inline-flex items-center gap-2 bg-white/10 text-white px-5 py-2 font-bold text-sm rounded-lg opacity-50 cursor-not-allowed">
-              Connect Meta
-            </button>
-          </div>
-        </div>
-      </SettingsCard>
+        </SettingsCard>
+      )}
 
     </motion.div>
   );
