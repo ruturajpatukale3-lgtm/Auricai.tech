@@ -35,7 +35,7 @@ export const AIExtractor = {
     const contextBlock = orgContext ? buildContextBlock(orgContext) : "";
 
     if (!orgContext) {
-      throw new Error("STRICT_MODE: Business context is missing. AI generation blocked.");
+      console.warn("[AIExtractor] WARNING: Missing business context. Proceeding with generic fallback.");
     }
 
     const systemPrompt = `

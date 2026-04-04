@@ -104,15 +104,34 @@ export const OrganizationRepository = {
       paddle_customer_id?: string;
     }
   ): Promise<Organization> {
-    // 1. Update Organization (Base) — exclude Paddle-only fields
-    const { paddle_subscription_id, paddle_customer_id, ...orgFields } = subData;
-    const { data, error } = await supabaseAdmin
-      .from(TABLE)
-      .update(orgFields)
-      .eq("id", orgId)
-      .select()
-      .single();
-    if (error) throw new Error(`Failed to update organization subscription metadata: ${error.message}`);
+    // 1. Update Organization (Base) — exclude Paddle and new Subscription-only fields
+    // 1. Update Organization (Base) — exclude Paddle and new Subscription-only fields
+    const { 
+      paddle_subscription_id, 
+      paddle_customer_id, 
+      next_plan,
+      trial_end,
+      trial_consumed,
+      payment_status,
+      access_blocked,
+      refunded_at,
+      last_synced_at,
+      plan_type, // Also exclude plan_type from base org table
+      ...orgFields 
+    } = subData;
+    
+    // Only update organizations if there are remaining valid legacy fields
+    let data = null;
+    if (Object.keys(orgFields).length > 0) {
+      const { data: orgData, error } = await supabaseAdmin
+        .from(TABLE)
+        .update(orgFields)
+        .eq("id", orgId)
+        .select()
+        .single();
+      if (error) throw new Error(`Failed to update organization subscription metadata: ${error.message}`);
+      data = orgData;
+    }
 
     // 2. Sync to Hardened Subscriptions Table
     const subUpdates: any = {

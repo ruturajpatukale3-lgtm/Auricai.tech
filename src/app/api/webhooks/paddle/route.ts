@@ -64,7 +64,7 @@ function verifySignature(body: string, sig: string, secret: string): boolean {
 
     // Use timingSafeEqual to prevent timing attacks
     return crypto.timingSafeEqual(
-      Buffer.from(expectedHmac), 
+      Buffer.from(expectedHmac),
       Buffer.from(h1)
     );
   } catch (error) {

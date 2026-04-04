@@ -96,15 +96,22 @@ export const InterviewService = {
     }
 
     // 6. Send email directly via Resend (no Inngest dependency)
+    console.log(`📧 [SERVICE] Sending email to ${clientEmail}...`);
     try {
-      await EmailService.sendInterviewInvite(
+      const emailSent = await EmailService.sendInterviewInvite(
         clientEmail,
         org.name,
         token,
         clientName
       );
+      if (!emailSent) {
+        throw new Error("Email provider (Resend) failed to deliver the email");
+      }
+      console.log("   ✅ [SERVICE] EmailService returned success");
     } catch (e) {
+      console.error(`   ❌ [SERVICE] EmailService FATAL: ${(e as Error).message}`);
       logger.warn({ event: "TRANSACTION_FAILURE", orgId, error: (e as Error).message, metadata: { context: "email_send_failed" }});
+      return { success: false, error: "Failed to send interview invitation email. Please try again.", code: "EMAIL_DELIVERY_FAILED" };
     }
 
     // 7. Log event
@@ -145,12 +152,12 @@ export const InterviewService = {
    * Tracks 'opened' event on first hit
    */
    async getByToken(token: string, metadata: Record<string, unknown> = {}): Promise<Interview | null> {
-    // 2. Lookup by token with plan_name join
+    // 2. Lookup by token with plan_name left join
     const { data: interview, error: fetchError } = await supabaseAdmin
       .from("interviews")
       .select(`
         *,
-        subscriptions!inner(plan_name)
+        subscriptions(plan_name)
       `)
       .eq("token", token)
       .single();

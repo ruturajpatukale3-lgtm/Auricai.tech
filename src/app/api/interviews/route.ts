@@ -19,10 +19,14 @@ export const GET = withOrg(async (_req: NextRequest, ctx: OrgContext) => {
 });
 
 export const POST = withOrg(async (req: NextRequest, ctx: OrgContext) => {
+  console.log(`📡 [API/POST] /api/interviews called (org=${ctx.orgId})`);
   try {
     const body = await req.json();
+    console.log("   - Body:", JSON.stringify(body, null, 2));
+
     const validation = validateInput(createInterviewSchema, body);
     if (!validation.success) {
+      console.warn("   ❌ Validation failed:", validation.error);
       return apiError(400, validation.error, "VALIDATION_ERROR");
     }
 

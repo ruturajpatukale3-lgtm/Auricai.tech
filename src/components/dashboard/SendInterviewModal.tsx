@@ -34,12 +34,16 @@ export function SendInterviewModal({ isOpen, onClose, onSuccess }: SendInterview
     }
 
     setSending(true);
+    console.log("🚀 [DEBUG] Sending Interview Request...");
+    const payload = {
+      client_email: email.trim().toLowerCase(),
+      client_name: name.trim() || undefined,
+    };
+    console.log("   - Payload:", JSON.stringify(payload, null, 2));
 
     try {
-      const result = await apiPost("/api/interviews", {
-        client_email: email.trim().toLowerCase(),
-        client_name: name.trim() || undefined,
-      });
+      const result = await apiPost("/api/interviews", payload);
+      console.log("   - API Response:", JSON.stringify(result, null, 2));
 
       if (result.success) {
         setSent(true);

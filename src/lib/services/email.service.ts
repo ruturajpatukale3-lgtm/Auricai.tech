@@ -22,11 +22,15 @@ export const EmailService = {
     token: string,
     clientName?: string
   ): Promise<boolean> {
-    const interviewUrl = `${APP_URL}/i/${token}`;
+    console.log(`📡 [EMAIL_SERVICE] Initializing Resend call to ${to}...`);
+    console.log(`   - Key Presence: ${RESEND_API_KEY ? "EXISTS" : "MISSING"} (Starts: ${RESEND_API_KEY.slice(0, 4)}... Ends: ${RESEND_API_KEY.slice(-4)})`);
+    console.log(`   - From: ${FROM_EMAIL}`);
+
+    const interviewUrl = `${APP_URL}/interview/${token}`;
     const greeting = clientName ? `Hi ${clientName}` : "Hi there";
 
     try {
-      const { error } = await resend.emails.send({
+      const { data, error } = await resend.emails.send({
         from: FROM_EMAIL,
         to,
         subject: "Your 3-minute case study interview is ready",
@@ -50,12 +54,14 @@ export const EmailService = {
       });
 
       if (error) {
-        console.error("[EmailService] Resend API error:", error);
+        console.error("   ❌ [RESEND API ERROR]:", JSON.stringify(error, null, 2));
         return false;
       }
+      
+      console.log("   ✅ [RESEND API SUCCESS]:", JSON.stringify(data, null, 2));
       return true;
     } catch (error) {
-      console.error("[EmailService] Failed to send interview invite:", error);
+      console.error("   ❌ [EMAIL_SERVICE FATAL ERROR]:", (error as Error).message);
       return false;
     }
   },
@@ -70,7 +76,7 @@ export const EmailService = {
     token: string,
     clientName?: string
   ): Promise<boolean> {
-    const interviewUrl = `${APP_URL}/i/${token}`;
+    const interviewUrl = `${APP_URL}/interview/${token}`;
     const greeting = clientName ? `Hi ${clientName}` : "Hi";
 
     try {
@@ -150,7 +156,7 @@ export const EmailService = {
     missingFields: string[],
     clientName?: string
   ): Promise<void> {
-    const interviewUrl = `${APP_URL}/i/${token}`;
+    const interviewUrl = `${APP_URL}/interview/${token}`;
     const greeting = clientName ? `Hi ${clientName}` : "Hi";
     const fieldsStr = missingFields.join(" and ");
 
@@ -188,7 +194,7 @@ export const EmailService = {
     token: string,
     clientName?: string
   ): Promise<boolean> {
-    const previewUrl = `${APP_URL}/i/${token}`;
+    const previewUrl = `${APP_URL}/interview/${token}`;
     const greeting = clientName ? `Hi ${clientName}` : "Hi";
 
     try {

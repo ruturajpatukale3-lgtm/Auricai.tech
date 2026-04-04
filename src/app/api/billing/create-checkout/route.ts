@@ -72,12 +72,18 @@ export async function POST(req: NextRequest) {
     const plan = body.plan as string;
     const interval = (body.interval || "monthly") as "monthly" | "annual";
 
+    console.log(`💳 [API/POST] create-checkout: org=${orgId}, plan=${plan}, interval=${interval}`);
+
     if (!plan || !PLAN_PRICE_MAP[plan]) {
+      console.error(`   ❌ Invalid plan: ${plan}`);
       return apiError(400, "Invalid plan. Must be 'starter', 'growth', or 'enterprise'.", "INVALID_PLAN");
     }
 
     const priceId = PLAN_PRICE_MAP[plan][interval];
+    console.log(`   - Resolved Price ID: ${priceId}`);
+
     if (!priceId) {
+      console.error(`   ❌ Price ID NOT CONFIGURED for ${plan} ${interval}`);
       return apiError(500, `Paddle price ID not configured for ${plan} ${interval}.`, "MISSING_PRICE_ID");
     }
 
@@ -232,6 +238,9 @@ export async function POST(req: NextRequest) {
     return apiSuccess({
       action: "checkout_created",
       checkout_url: checkoutUrl,
+      price_id: priceId,
+      org_id: orgId,
+      email: user?.emailAddresses?.[0]?.emailAddress,
     });
   } catch (error) {
     return handleApiError(error);

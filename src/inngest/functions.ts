@@ -6,6 +6,7 @@ import { CaseStudyService } from "@/lib/services/case-study.service";
 import { EmailService } from "@/lib/services/email.service";
 import { EventService } from "@/lib/services/event.service";
 import { DomainService } from "@/lib/services/domain.service";
+import { OrgProfileRepository } from "@/lib/repositories/org-profile.repository";
 import { OrganizationRepository } from "@/lib/repositories/organization.repository";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { NotificationService } from "@/lib/services/notification.service";
@@ -42,12 +43,16 @@ export const generateCaseStudyJob = inngest.createFunction(
       return { success: false, reason: "No answers found" };
     }
 
+    const orgProfile = await step.run("fetch-org-profile", async () => {
+      return await OrgProfileRepository.findByOrgId(orgId);
+    });
+
     const metrics = await step.run("extract-metrics", async () => {
       const formattedAnswers = answers.map((a: { question: string; answer: string }) => ({
         question: a.question,
         answer: a.answer,
       }));
-      return await AIExtractor.extractMetrics(formattedAnswers);
+      return await AIExtractor.extractMetrics(formattedAnswers, orgProfile);
     });
 
     if (metrics.isVague) {

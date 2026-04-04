@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
-const TABLE = "webhook_events";
+const TABLE = "processed_webhooks";
 
 export const ProcessedWebhooksRepository = {
   /**

@@ -102,6 +102,7 @@ export default function Pricing() {
     if (isCurrentPlan(plan) || upgradingPlan) return;
 
     setUpgradingPlan(plan);
+    console.log(`💳 [PRICING] Triggering upgrade for plan: ${plan}, interval: ${annual ? "annual" : "monthly"}`);
 
     try {
       const res = await fetch("/api/billing/create-checkout", {
@@ -114,23 +115,52 @@ export default function Pricing() {
       });
 
       const responseData = await res.json();
+      console.log("   - API Response Data:", JSON.stringify(responseData, null, 2));
+
       const data = responseData.data || responseData;
 
       if (!res.ok) {
         throw new Error(data.error || "Failed to initiate checkout");
       }
 
-      if (data.checkout_url) {
-        window.location.href = data.checkout_url;
+      if (data.action === "checkout_created") {
+        console.log("   - Initiating Paddle.Checkout.open()");
+        if (typeof (window as any).Paddle !== "undefined") {
+          const checkoutParams = {
+            settings: {
+              displayMode: "overlay",
+              theme: "dark",
+              locale: "en",
+            },
+            items: [{ 
+              priceId: data.price_id, 
+              quantity: 1 
+            }],
+            customer: data.email ? { email: data.email } : undefined,
+            customData: { org_id: data.org_id },
+          };
+          console.log("   - Params:", JSON.stringify(checkoutParams, null, 2));
+          
+          try {
+            (window as any).Paddle.Checkout.open(checkoutParams);
+            console.log("   - Paddle.Checkout.open() called successfully");
+          } catch (e) {
+            console.error("   ❌ Paddle.Checkout.open() threw an error:", e);
+          }
+        } else {
+          console.warn("   ⚠️ Paddle SDK NOT available in window. Falling back to checkout_url.");
+          window.location.href = data.checkout_url;
+        }
       } else if (data.action === "subscription_updated") {
+        console.log("   - Subscription updated immediately via API logic.");
         toast.success(data.message || "Plan updated successfully!");
         window.location.href = data.redirect_url || "/dashboard?checkout=success";
       } else {
-        console.error("No checkout_url", data);
+        console.warn("   ⚠️ Unknown action or missing URL:", data.action);
         alert("Checkout failed");
       }
     } catch (err: any) {
-      console.error("[Billing] Checkout Error:", err);
+      console.error("   ❌ [PRICING ERROR] Catch block reached:", err);
       alert(err.message || "Upgrade failed");
     } finally {
       setUpgradingPlan(null);
