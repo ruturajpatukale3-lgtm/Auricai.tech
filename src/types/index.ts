@@ -15,7 +15,7 @@ export type InterviewStatus =
   | "approved"
   | "published";
 
-export type CaseStudyStatus = "draft" | "pending" | "live";
+export type CaseStudyStatus = "draft" | "pending" | "live" | "complete";
 
 
 
@@ -330,10 +330,6 @@ export interface PlanLimits {
 // ─── Analytics Types ───────────────────────────────────────
 
 export interface DashboardMetrics {
-  totalPipeline: number;
-  verifiableRevenue: number;
-  avgROI: number;
-  totalDeals: number;
   totalViews: number;
   totalShares: number;
   totalUsage: number;
@@ -341,7 +337,6 @@ export interface DashboardMetrics {
   interviewsSent: number;
   interviewsCompleted: number;
   stalledInterviews: number;
-  pipelineAtRisk: number;
   caseStudiesLive: number;
   conversionRate: number;
 }

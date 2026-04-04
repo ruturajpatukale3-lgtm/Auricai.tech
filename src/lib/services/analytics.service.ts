@@ -8,8 +8,6 @@ import { unstable_cache } from "next/cache";
 import { CaseStudyRepository } from "@/lib/repositories/case-study.repository";
 import { InterviewRepository } from "@/lib/repositories/interview.repository";
 import { EventRepository } from "@/lib/repositories/event.repository";
-import { UsageRepository } from "@/lib/repositories/usage.repository";
-import { DealService } from "@/lib/services/deal.service";
 import type { DashboardMetrics, SmartInsight, ActivityFeedItem } from "@/types";
 
 export const AnalyticsService = {
@@ -20,26 +18,16 @@ export const AnalyticsService = {
     return unstable_cache(
       async () => {
         const [
-          dealPipeline,
-          dealRevenue,
-          dealCount,
-          avgROIResult,
           totalViews,
           totalShares,
-          usedInDeals,
           interviewsSent,
           interviewsCompleted,
           caseStudiesLive,
           uniqueVisitors,
           stalledInterviewsResult,
         ] = await Promise.all([
-          DealService.getPipelineInfluenced(orgId).catch(() => 0),
-          DealService.getVerifiableRevenue(orgId).catch(() => 0),
-          DealService.getDealsInfluenced(orgId).catch(() => 0),
-          CaseStudyRepository.avgDeltaPercent(orgId).catch(() => 0),
           EventRepository.countByTypes(orgId, ["case_study_viewed"]).catch(() => 0),
           EventRepository.countByTypes(orgId, ["case_study_shared"]).catch(() => 0),
-          EventRepository.countByTypes(orgId, ["used_in_deal", "deal_attributed"]).catch(() => 0),
           InterviewRepository.countByOrg(orgId).catch(() => 0),
           InterviewRepository.countByStatus(orgId, "completed").catch(() => 0),
           CaseStudyRepository.countByStatus(orgId, "live").catch(() => 0),
@@ -47,27 +35,15 @@ export const AnalyticsService = {
           InterviewRepository.findStalled(orgId, new Date(Date.now() - 24 * 60 * 60 * 1000)).catch(() => []),
         ]);
 
-        // Strict Backend-Authoritative Source: Deals + Deal Attributions
-        const totalPipeline = dealPipeline || 0;
-        const verifiableRevenue = dealRevenue || 0;
-        const avgROI = avgROIResult || 0;
-        const totalDeals = dealCount || 0;
         const stalledInterviewsCount = (stalledInterviewsResult || []).length;
         
-        const avgPipelinePerStudy = caseStudiesLive > 0 ? totalPipeline / caseStudiesLive : 0;
-        const pipelineAtRisk = stalledInterviewsCount * avgPipelinePerStudy;
-
         const conversionRate = interviewsSent > 0
           ? Math.round((interviewsCompleted / interviewsSent) * 100)
           : 0;
 
-        const totalUsage = totalViews + totalShares + usedInDeals;
+        const totalUsage = totalViews + totalShares;
 
         return {
-          totalPipeline,
-          verifiableRevenue,
-          avgROI,
-          totalDeals,
           totalViews,
           totalShares,
           totalUsage, 
@@ -75,12 +51,11 @@ export const AnalyticsService = {
           interviewsSent,
           interviewsCompleted,
           stalledInterviews: stalledInterviewsCount,
-          pipelineAtRisk,
           caseStudiesLive,
           conversionRate,
         } as DashboardMetrics;
       },
-      [`dashboard-metrics-${orgId}`],
+      [`dashboard-metrics-v2-${orgId}`],
       { revalidate: 60, tags: [`analytics-${orgId}`, "dashboard"] }
     )();
   }),
@@ -101,37 +76,24 @@ export const AnalyticsService = {
     
     // 1. Opportunity Logic
     const missingCount = metrics.interviewsSent - metrics.interviewsCompleted;
-    const avgPipeline = metrics.caseStudiesLive > 0 
-      ? metrics.totalPipeline / metrics.caseStudiesLive 
-      : 0;
     
-    if (missingCount > 0 && avgPipeline > 0) {
-      const opportunity = missingCount * avgPipeline;
+    if (missingCount > 0) {
       insights.push({
         type: "opportunity",
-        title: "Untapped Revenue",
-        description: `You have ${missingCount} interviews pending. Completing them could unlock an estimated $${this.formatCurrency(opportunity)} in pipeline.`,
-        value: `$${this.formatCurrency(opportunity)}`,
+        title: "Pending Proof",
+        description: `You have ${missingCount} interviews pending. Completing them will significantly boost your verifiable proof.`,
+        value: missingCount,
         action: "Send Reminders",
       });
     }
 
-    // 2. ROI Performance Comparison (Strict execution layer)
-    const usageData = await EventRepository.getROIBasedUsage(orgId);
-    if (usageData.highROIUsage > 0 && usageData.lowROIUsage > 0) {
-      const ratio = (usageData.highROIUsage / usageData.lowROIUsage).toFixed(1);
+    // 2. Engagement Achievement
+    if (metrics.totalViews > 50) {
       insights.push({
         type: "achievement",
-        title: "ROI Velocity",
-        description: `High ROI case studies (>200%) are viewed and shared ${ratio}x more frequently than lower performing benchmarks.`,
-        value: `${ratio}x`,
-      });
-    } else if (usageData.highROIUsage > 0) {
-       insights.push({
-        type: "achievement",
-        title: "Proof Resonance",
-        description: `Your high-ROI stories are generating most of your engagement. Consider doubling down on similar case studies.`,
-        value: "High",
+        title: "High Resonance",
+        description: `Your case studies have crossed 50 views this period. They are gaining significant traction.`,
+        value: metrics.totalViews,
       });
     }
 
@@ -199,19 +161,10 @@ export const AnalyticsService = {
           message = "Case study viewed by a prospect"; 
           break;
         case "case_study_shared": 
-          message = "Case study shared in a Winning Deal!"; 
+          message = "Case study shared with a prospect"; 
           break;
         case "used_in_deal": 
-          message = `Case study helped close a $${this.formatCurrency(Number(e.metadata?.deal_value || 0))} deal!`; 
-          break;
-        case "deal_created":
-          message = `New deal created: ${e.metadata?.deal_name || "Deal"} ($${this.formatCurrency(Number(e.metadata?.deal_value || 0))})`;
-          break;
-        case "deal_attributed":
-          message = `Case study linked to deal: ${e.metadata?.deal_name || "Deal"} ($${this.formatCurrency(Number(e.metadata?.deal_value || 0))})`;
-          break;
-        case "deal_status_changed":
-          message = `Deal "${e.metadata?.deal_name || ""}" status changed to ${String(e.metadata?.new_status || "").replace("_", " ")}`;
+          message = "Case study linked to a conversion event"; 
           break;
         case "reminder_sent":
           message = `24h reminder sent to ${e.metadata?.client_email || "prospect"}`;

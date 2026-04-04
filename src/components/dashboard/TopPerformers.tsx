@@ -13,34 +13,14 @@ interface TopPerformersProps {
 export function TopPerformers({ topROI, topPipeline, topEngagement }: TopPerformersProps) {
   const items = [
     { 
-      id: "roi",
-      data: topROI,
-      title: "Highest ROI", 
-      metric: topROI ? `${topROI.delta_percent}% ROI` : null, 
-      stat: topROI ? `${topROI.deals_influenced} deals influenced` : null, 
-      icon: Award, 
-      color: "emerald", 
-      highlight: true 
-    },
-    { 
-      id: "pipeline",
-      data: topPipeline,
-      title: "Most Valuable", 
-      metric: topPipeline ? `$${(topPipeline.pipeline_value / 1000).toFixed(0)}K` : null, 
-      stat: "Pipeline Value", 
-      icon: Zap, 
-      color: "amber", 
-      highlight: false 
-    },
-    { 
       id: "engagement",
       data: topEngagement,
-      title: "Trending", 
+      title: "Trending Story", 
       metric: topEngagement ? `${topEngagement.views} Views` : null, 
-      stat: "Engagement", 
+      stat: "Organic Engagement", 
       icon: TrendingUp, 
       color: "blue", 
-      highlight: false 
+      highlight: true 
     },
   ].filter(item => item.data);
 

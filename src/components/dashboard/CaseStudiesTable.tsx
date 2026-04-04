@@ -15,6 +15,7 @@ import { apiPatch } from "@/lib/hooks/useSWR";
 import toast from "react-hot-toast";
 
 import { CaseStudy } from "@/types";
+import { isCaseStudyComplete, getValidHeadline } from "@/lib/utils/case-study-validation";
 
 export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
   const router = useRouter();
@@ -87,155 +88,168 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
     );
   }
 
-  const isFirstStudy = data.length === 1;
-
   return (
     <>
       <div className="flex flex-col gap-4 w-full mt-4">
-        {isFirstStudy && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-2 flex items-center gap-3"
-          >
-            <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
-              <CheckCircle className="w-4 h-4 text-emerald-500" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-emerald-400">✓ Your first case study is ready</p>
-              <p className="text-xs text-emerald-500/70">Generated in under 24 hours from your client interview.</p>
-            </div>
-          </motion.div>
-        )}
-        {data.map((study, i) => (
-          <motion.div
-            key={study.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className="group relative bg-[#111111] border border-white/5 rounded-xl p-5 hover:border-white/20 hover:-translate-y-[2px] hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-300"
-          >
-            {/* Main Row Content */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              
-              {/* Left Box: Company & Headline */}
-              <div className="flex-1 min-w-[200px]">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold text-white tracking-tight">{study.company_name}</span>
-                  <span 
-                    title={
-                      study.status === 'live' ? 'Public case study' : 
-                      study.status === 'pending' ? 'Ready to publish' : 
-                      'Awaiting approval'
-                    }
-                    className={`text-[10px] cursor-help uppercase tracking-wider px-2.5 py-1 rounded-full border font-bold transition-all hover:scale-105 ${
-                      study.status === 'live' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
-                      study.status === 'pending' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                      'bg-orange-500/10 text-orange-400 border-orange-500/20'
-                    }`}
-                  >
-                    {study.status === 'live' ? 'Live' : study.status === 'pending' ? 'Approved' : 'Review Required'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-zinc-500 line-clamp-1">{study.headline}</p>
-                  <span className="text-[10px] text-zinc-600 font-mono">• Generated in under 24h</span>
-                </div>
-              </div>
-
-              {/* Middle Box: The Money Metrics (Largest Text) */}
-              <div className="flex-1 flex flex-col items-start md:items-center">
-                <span className="text-2xl md:text-3xl font-extrabold text-white font-mono tracking-tight drop-shadow-md">
-                  {study.delta_percent ? `+${study.delta_percent}%` : study.metric_type || "Pending"}
-                </span>
-                <div className="flex items-center gap-2 mt-1.5 transition-all group-hover:scale-105">
-                  <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 font-mono tracking-tight bg-emerald-400/10 px-2.5 py-1 rounded-full border border-emerald-400/20 shadow-[0_0_15px_rgba(52,211,153,0.1)]">
-                    <BarChart3 className="w-3 h-3" />
-                    ${(Number(study.pipeline_value) || 0).toLocaleString()} Revenue Influenced
-                  </span>
-                </div>
-              </div>
-
-              {/* Right Box: Usage & Actions */}
-              <div className="flex-1 flex flex-col md:items-end justify-center min-w-[240px]">
-                <div className="flex items-center gap-4 text-xs font-mono text-zinc-500 mb-4 group-hover:opacity-0 transition-opacity duration-200">
-                  <span>Used in {study.deals_influenced || 0} deals</span>
-                  <span>•</span>
-                  <span>{study.views || 0} views</span>
-                </div>
-
-                {/* Hover Actions */}
-                <div className="absolute right-5 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-y-2 group-hover:translate-y-0">
-                  {/* Status Actions */}
-                  {study.status === 'draft' && (
-                    <button
-                      onClick={() => handleApprove(study.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-xs font-bold text-orange-400 transition-colors"
+        {data.map((study, i) => {
+          const isComplete = isCaseStudyComplete(study);
+          const headline = getValidHeadline(study.headline);
+          
+          return (
+            <motion.div
+              key={study.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className="group relative bg-[#111111] border border-white/5 rounded-xl p-5 hover:border-white/20 hover:-translate-y-[2px] hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-300"
+            >
+              {/* Main Row Content */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                
+                {/* Left Box: Company & Headline */}
+                <div className="flex-1 min-w-[200px]">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-semibold text-white tracking-tight">{study.company_name}</span>
+                    <span 
+                      title={
+                        study.status === 'live' ? 'Public case study' : 
+                        study.status === 'pending' ? 'Ready to publish' : 
+                        isComplete ? 'Ready for review' : 'Draft — awaiting data'
+                      }
+                      className={`text-[10px] cursor-help uppercase tracking-wider px-2.5 py-1 rounded-full border font-bold transition-all hover:scale-105 ${
+                        study.status === 'live' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
+                        study.status === 'pending' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                        isComplete ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
+                        'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
+                      }`}
                     >
-                      <CheckCircle className="w-3.5 h-3.5" /> Approve
-                    </button>
+                      {study.status === 'live' ? 'Live' : 
+                       study.status === 'pending' ? 'Approved' : 
+                       isComplete ? 'Review Needed' : 'Draft'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className={`text-sm line-clamp-1 ${isComplete ? 'text-zinc-500' : 'text-zinc-600 italic'}`}>
+                      {headline}
+                    </p>
+                    <span className="text-[10px] text-zinc-600 font-mono">• Generated in under 24h</span>
+                  </div>
+                </div>
+
+                {/* Middle Box: The Money Metrics (Largest Text) */}
+                <div className="flex-1 flex flex-col items-start md:items-center">
+                  {!isComplete ? (
+                    <div className="flex flex-col items-start md:items-center gap-1 opacity-50">
+                      <span className="text-lg font-bold text-zinc-600 font-mono italic">Awaiting Results...</span>
+                      <span className="text-[10px] text-zinc-700 uppercase font-bold tracking-widest">Collecting hard ROI metrics</span>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="text-2xl md:text-3xl font-extrabold text-white font-mono tracking-tight drop-shadow-md">
+                        {study.delta_percent ? `+${study.delta_percent}%` : study.metric_type || "N/A"}
+                      </span>
+                      <div className="flex items-center gap-2 mt-1.5 transition-all group-hover:scale-105">
+                        <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 font-mono tracking-tight bg-emerald-400/10 px-2.5 py-1 rounded-full border border-emerald-400/20 shadow-[0_0_15px_rgba(52,211,153,0.1)]">
+                          <BarChart3 className="w-3 h-3" />
+                          ${(Number(study.pipeline_value) || 0).toLocaleString()} Revenue Influenced
+                        </span>
+                      </div>
+                    </>
                   )}
-                  {study.status === 'pending' && (
+                </div>
+
+                {/* Right Box: Usage & Actions */}
+                <div className="flex-1 flex flex-col md:items-end justify-center min-w-[240px]">
+                  <div className="flex items-center gap-4 text-xs font-mono text-zinc-500 mb-4 group-hover:opacity-0 transition-opacity duration-200">
+                    <span>Used in {study.deals_influenced || 0} deals</span>
+                    <span>•</span>
+                    <span>{study.views || 0} views</span>
+                  </div>
+
+                  {/* Hover Actions */}
+                  <div className="absolute right-5 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-y-2 group-hover:translate-y-0">
+                    {/* Status Actions */}
+                    {study.status === 'draft' && (
+                      <button
+                        onClick={() => isComplete && handleApprove(study.id)}
+                        disabled={!isComplete}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${
+                          isComplete 
+                            ? "bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400"
+                            : "bg-zinc-800 border border-white/5 text-zinc-500 cursor-not-allowed opacity-50"
+                        }`}
+                      >
+                        <CheckCircle className="w-3.5 h-3.5" /> 
+                        {isComplete ? "Approve" : "Waiting for Metrics"}
+                      </button>
+                    )}
+                    {study.status === 'pending' && (
+                      <button
+                        onClick={() => handlePublish(study.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-xs font-bold text-blue-400 transition-colors"
+                      >
+                        <UploadCloud className="w-3.5 h-3.5" /> Publish
+                      </button>
+                    )}
+
                     <button
-                      onClick={() => handlePublish(study.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-xs font-bold text-blue-400 transition-colors"
+                      onClick={() => setSelectedStudy(study)}
+                      disabled={!isComplete}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                        isComplete
+                          ? "bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 text-green-400"
+                          : "bg-zinc-800 border border-white/5 text-zinc-500 cursor-not-allowed opacity-50"
+                      }`}
                     >
-                      <UploadCloud className="w-3.5 h-3.5" /> Publish
+                      <DollarSign className="w-3.5 h-3.5" /> Link Deal
                     </button>
-                  )}
 
-                  <button
-                    onClick={() => setSelectedStudy(study)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 text-xs font-medium text-green-400 transition-colors"
-                  >
-                    <DollarSign className="w-3.5 h-3.5" /> Link Deal
-                  </button>
+                    {study.status === "live" && (
+                      <button 
+                        onClick={() => { setTargetStudy(study); setIsPushToHSOpen(true); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#FF7A59]/10 hover:bg-[#FF7A59]/20 border border-[#FF7A59]/20 text-xs font-bold text-[#FF7A59] transition-colors"
+                      >
+                        <UploadCloud className="w-3.5 h-3.5" /> Push to HS
+                      </button>
+                    )}
 
-                  {study.status === "live" && (
                     <button 
-                      onClick={() => { setTargetStudy(study); setIsPushToHSOpen(true); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#FF7A59]/10 hover:bg-[#FF7A59]/20 border border-[#FF7A59]/20 text-xs font-bold text-[#FF7A59] transition-colors"
+                      onClick={() => { setTargetStudy(study); setIsPreviewOpen(true); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white text-black hover:bg-zinc-200 border border-transparent text-xs font-bold transition-all shadow-[0_0_10px_rgba(255,255,255,0.05)]"
                     >
-                      <UploadCloud className="w-3.5 h-3.5" /> Push to HS
+                      <Eye className="w-3.5 h-3.5" /> View
                     </button>
-                  )}
 
-                  <button 
-                    onClick={() => { setTargetStudy(study); setIsPreviewOpen(true); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white text-black hover:bg-zinc-200 border border-transparent text-xs font-bold transition-all shadow-[0_0_10px_rgba(255,255,255,0.05)]"
-                  >
-                    <Eye className="w-3.5 h-3.5" /> View
-                  </button>
+                    <button 
+                      onClick={() => handleCopyLink(study.slug || "")}
+                      disabled={study.status !== 'live'}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-white transition-all disabled:opacity-30`}
+                    >
+                      <Copy className="w-3.5 h-3.5" /> Copy Link
+                    </button>
 
-                  <button 
-                    onClick={() => handleCopyLink(study.slug || "")}
-                    disabled={study.status !== 'live'}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-white transition-all disabled:opacity-30`}
-                  >
-                    <Copy className="w-3.5 h-3.5" /> Copy Link
-                  </button>
+                    <button 
+                      onClick={() => { setTargetStudy(study); setIsEditOpen(true); }}
+                      disabled={study.status === 'draft' && !isComplete}
+                      title={study.status === 'draft' && !isComplete ? "Awaiting measurable results before edit." : "Edit Case Study"}
+                      className="flex items-center justify-center w-8 h-8 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
 
-                  <button 
-                    onClick={() => { setTargetStudy(study); setIsEditOpen(true); }}
-                    disabled={study.status === 'draft'}
-                    title={study.status === 'draft' ? "Generated drafts cannot be edited until reviewed." : "Edit Case Study"}
-                    className="flex items-center justify-center w-8 h-8 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-
-                  <button 
-                    onClick={() => { setTargetStudy(study); setIsDeleteOpen(true); }}
-                    className="flex items-center justify-center w-8 h-8 rounded-md bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 text-red-500 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                    <button 
+                      onClick={() => { setTargetStudy(study); setIsDeleteOpen(true); }}
+                      className="flex items-center justify-center w-8 h-8 rounded-md bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 text-red-500 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-            </div>
-          </motion.div>
-        ))}
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
 
       {/* Deal Attribution Modal */}
