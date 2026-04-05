@@ -125,6 +125,7 @@ export default function InterviewPage() {
 
     console.log("----------------------------------");
     console.log("INITIALIZING INTERVIEW:", token);
+    console.log("Token:", token);
 
     try {
       const res = await fetch(`/api/public/interview/${token}`);
@@ -145,25 +146,27 @@ export default function InterviewPage() {
       if (!res.ok) {
         setErrorType("SERVER_ERROR");
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `HTTP ${res.status}`);
+        const combinedError = errData?.stack ? JSON.stringify(errData, null, 2) : (errData?.error || `HTTP ${res.status}`);
+        throw new Error(combinedError);
       }
 
       const response = await res.json();
-      console.log("FETCH SUCCESS:", response.data?.id);
+      console.log("Response:", response);
+      console.log("FETCH SUCCESS:", response?.data?.id);
 
-      if (response.data?.client_name) {
+      if (response?.data?.client_name) {
         setOrgName(response.data.client_name);
       }
       
       // Handle plan branding
-      if (response.data?.plan_name) {
+      if (response?.data?.plan_name) {
         setPlanName(response.data.plan_name);
       }
 
     } catch (err: any) {
       console.error("INITIALIZATION ERROR:", err.message);
       setErrorType("SERVER_ERROR");
-      setError(err.message);
+      setError(err.message || "Failed to load interview");
     } finally {
       setIsValidating(false);
     }
@@ -420,9 +423,16 @@ export default function InterviewPage() {
           <h1 className="text-xl font-bold text-white mb-2">
             {config.title}
           </h1>
-          <p className="text-sm text-zinc-500 mb-8 leading-relaxed">
-            {config.message}
-          </p>
+          
+          {typeof config.message === 'string' && config.message.startsWith('{') ? (
+            <pre className="text-xs text-left text-red-400 bg-red-900/20 p-4 rounded-xl border border-red-500/20 mb-8 overflow-auto max-h-64 whitespace-pre-wrap font-mono">
+              {config.message}
+            </pre>
+          ) : (
+            <p className="text-sm text-zinc-500 mb-8 leading-relaxed">
+              {config.message}
+            </p>
+          )}
           
           <div className="flex flex-col gap-3">
             <button
