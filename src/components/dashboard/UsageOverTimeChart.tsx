@@ -19,7 +19,7 @@ export function UsageOverTimeChart({ data }: { data: { date: string; count: numb
       <div className="flex items-center justify-between mb-8">
         <div>
           <h3 className="text-sm font-semibold text-white">Usage Over Time</h3>
-          <p className="text-xs text-zinc-500">Case study views vs. usage in deals</p>
+          <p className="text-xs text-zinc-500">Case study views over time</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">

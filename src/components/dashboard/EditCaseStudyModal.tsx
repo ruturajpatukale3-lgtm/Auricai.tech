@@ -21,8 +21,6 @@ export function EditCaseStudyModal({ isOpen, onClose, onSuccess, caseStudy }: Ed
     before_value: "",
     after_value: "",
     timeframe: "",
-    pipeline_value: 0,
-    deals_influenced: 0,
   });
 
   const [saving, setSaving] = useState(false);
@@ -36,8 +34,6 @@ export function EditCaseStudyModal({ isOpen, onClose, onSuccess, caseStudy }: Ed
         before_value: caseStudy.before_value || "",
         after_value: caseStudy.after_value || "",
         timeframe: caseStudy.timeframe || "",
-        pipeline_value: Number(caseStudy.pipeline_value) || 0,
-        deals_influenced: caseStudy.deals_influenced || 0,
       });
     }
   }, [caseStudy, isOpen]);
@@ -52,13 +48,13 @@ export function EditCaseStudyModal({ isOpen, onClose, onSuccess, caseStudy }: Ed
 
     try {
       const result = await apiPatch(`/api/case-studies/${caseStudy.id}`, {
-          ...formData,
-          company_name: formData.company_name.trim(),
-          headline: formData.headline.trim() || undefined,
-          metric_type: formData.metric_type.trim() || undefined,
-          before_value: formData.before_value.trim() || undefined,
-          after_value: formData.after_value.trim() || undefined,
-          timeframe: formData.timeframe.trim() || undefined,
+        ...formData,
+        company_name: formData.company_name.trim(),
+        headline: formData.headline.trim() || undefined,
+        metric_type: formData.metric_type.trim() || undefined,
+        before_value: formData.before_value.trim() || undefined,
+        after_value: formData.after_value.trim() || undefined,
+        timeframe: formData.timeframe.trim() || undefined,
       });
 
       if (result.success) {
@@ -185,21 +181,8 @@ export function EditCaseStudyModal({ isOpen, onClose, onSuccess, caseStudy }: Ed
                   className="w-full bg-[#0A0A0A] border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20 transition-all"
                 />
               </div>
-
-              <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
-                  Pipeline Value ($)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.pipeline_value}
-                  onChange={(e) => setFormData(prev => ({ ...prev, pipeline_value: Number(e.target.value) }))}
-                  className="w-full bg-[#0A0A0A] border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20 transition-all"
-                />
-              </div>
             </div>
-            
+
           </form>
         </div>
 

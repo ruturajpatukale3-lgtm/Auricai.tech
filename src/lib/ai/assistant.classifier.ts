@@ -49,20 +49,13 @@ export const AssistantClassifier = {
       };
     }
 
-    // 4. HUBSPOT
-    if (input.includes("hubspot") || input.includes("crm")) {
-      return {
-        type: "feature",
-        message: "You can push published case studies directly to HubSpot deals. First, make sure your HubSpot account is connected in Settings.",
-        actions: [{ label: "Connect HubSpot", route: "/dashboard/settings" }],
-      };
-    }
+
 
     // 5. ANALYTICS
-    if (input.includes("analytics") || input.includes("pipeline") || input.includes("revenue")) {
+    if (input.includes("analytics") || input.includes("engagement") || input.includes("views")) {
       return {
         type: "feature",
-        message: "The Dashboard provides real-time analytics on your attributed pipeline and closed-won revenue generated from your case studies.",
+        message: "The Dashboard provides real-time analytics on your proof engagement, response flow, and case study views.",
         actions: [{ label: "Go to Dashboard", route: "/dashboard" }],
       };
     }

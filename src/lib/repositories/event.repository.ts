@@ -120,7 +120,7 @@ export const EventRepository = {
       .from(TABLE)
       .select("entity_id")
       .eq("org_id", orgId)
-      .in("type", ["case_study_viewed", "case_study_shared", "used_in_deal"]);
+      .in("type", ["case_study_viewed", "case_study_shared"]);
     
     if (evError) throw new Error(`Failed to fetch events: ${evError.message}`);
 

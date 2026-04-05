@@ -56,7 +56,7 @@ export default function PrivacyPolicyPage() {
           <li><strong>Case Study Content</strong>: Generated narratives, metrics (revenue, ROI, etc.), and media shared in your Proof Center.</li>
           <li><strong>Analytics and Usage Data</strong>: Information on how you interact with the dashboard, including event logs and session telemetry.</li>
           <li><strong>Billing Information</strong>: Transaction history and subscription status managed via Paddle (we do not store raw credit card numbers).</li>
-          <li><strong>Integration Data</strong>: Tokens and metadata from connected platforms like HubSpot or CRM systems.</li>
+          <li><strong>Integration Data</strong>: Public metadata from verified sources and social platforms.</li>
         </ul>
       </section>
 
@@ -67,7 +67,7 @@ export default function PrivacyPolicyPage() {
           <li>Powering the AI engines that generate your case studies.</li>
           <li>Maintaining secure access to your organization dashboard.</li>
           <li>Personalizing the platform experience based on your industry.</li>
-          <li>Providing accurate revenue attribution and usage metrics.</li>
+          <li>Providing accurate engagement proof and usage metrics.</li>
           <li>Improving our AI models through anonymized performance analysis.</li>
         </ul>
       </section>
@@ -85,7 +85,7 @@ export default function PrivacyPolicyPage() {
       <section id="data-sharing">
         <h2>Subprocessors & Sharing</h2>
         <p>We do not sell your personal data. To provide our service, we engage the following third-party subprocessors:</p>
-        
+
         <div className="overflow-x-auto my-8 border border-white/10 rounded-xl">
           <table className="w-full text-sm text-left border-collapse">
             <thead>

@@ -5,7 +5,7 @@ import { AuthService } from "@/lib/services/auth.service";
 import { InterviewRepository } from "@/lib/repositories/interview.repository";
 import { AnalyticsService } from "@/lib/services/analytics.service";
 import { FunnelStrip } from "@/components/dashboard/FunnelStrip";
-import { PipelineBreakdown } from "@/components/dashboard/PipelineBreakdown";
+import { ResponseFlow } from "@/components/dashboard/ResponseFlow";
 import { InterviewList } from "@/components/dashboard/InterviewList";
 import { AlertCircle } from "lucide-react";
 import { RealtimeDashboardBridge } from "@/components/dashboard/RealtimeDashboardBridge";
@@ -14,7 +14,7 @@ import { InterviewPageActions } from "@/components/dashboard/InterviewPageAction
 
 export const metadata = {
   title: "Interviews | Auricai",
-  description: "Manage your client social proof pipeline.",
+  description: "Manage your client social proof progress.",
 };
 
 export default async function InterviewsPage({
@@ -44,7 +44,7 @@ export default async function InterviewsPage({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 mt-2">
         <div>
           <h1 className="text-2xl font-bold text-white mb-1 tracking-tight">Interviews</h1>
-          <p className="text-sm text-zinc-500">Automate your client proof extraction pipeline.</p>
+          <p className="text-sm text-zinc-500">Automate your client proof extraction progress.</p>
         </div>
         
         <InterviewPageActions isVisible={stateMetrics.funnel.total > 0} />
@@ -55,9 +55,8 @@ export default async function InterviewsPage({
         <FunnelStrip metrics={stateMetrics.funnel} />
       </div>
 
-      {/* 3. Pipeline Breakdown = State Intelligence (Multi-state allowed) */}
       <div className="mb-8">
-        <PipelineBreakdown 
+        <ResponseFlow 
           breakdown={stateMetrics.breakdown}
           duplicates={stateMetrics.duplicates}
           meta={stateMetrics.meta}

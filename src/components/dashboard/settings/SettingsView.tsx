@@ -25,7 +25,6 @@ import {
   Trash2,
   Plus,
   ChevronRight,
-  Plug,
   Sparkles,
   Mail,
   AlertCircle,
@@ -38,7 +37,7 @@ import { FEATURES } from "@/lib/config/features";
 // ═══════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════
-type TabId = "general" | "business" | "branding" | "domain" | "team" | "billing" | "usage" | "integrations" | "legal" | "danger";
+type TabId = "general" | "business" | "branding" | "domain" | "team" | "billing" | "usage" | "legal" | "danger";
 
 interface TabItem {
   id: TabId;
@@ -55,7 +54,6 @@ const tabs: TabItem[] = [
   { id: "team", label: "Team", icon: Users },
   { id: "billing", label: "Billing", icon: CreditCard },
   { id: "usage", label: "Usage", icon: BarChart3 },
-  { id: "integrations", label: "Integrations", icon: Plug },
   { id: "legal", label: "Legal & Policies", icon: Shield },
   { id: "danger", label: "Danger Zone", icon: AlertTriangle, color: "text-red-400" },
 ];
@@ -619,10 +617,10 @@ function DomainSection({ domain, mutate }: { domain: any, mutate: any }) {
                     <AlertTriangle className="w-4 h-4" /> DNS Setup Required
                   </h4>
                   <p className="text-xs text-amber-500/80 mb-4">
-                    Please add the following CNAME record to your domain's DNS settings to verify ownership and route traffic. 
+                    Please add the following CNAME record to your domain's DNS settings to verify ownership and route traffic.
                     It can take up to 24 hours to propagate globally.
                   </p>
-                  
+
                   <div className="bg-[#0A0A0A] border border-white/10 rounded overflow-hidden">
                     <table className="w-full text-xs text-left">
                       <thead className="bg-white/5 text-zinc-400 border-b border-white/10">
@@ -856,19 +854,19 @@ function BillingSection() {
 import { getPlanLimits } from "@/lib/plans";
 
 function UsageSection() {
-  const { 
-    interviewsUsed, 
-    interviewsLimit, 
+  const {
+    interviewsUsed,
+    interviewsLimit,
     lifetimeInterviewsUsed,
-    teamSeatsUsed, 
-    teamSeatLimit, 
-    usagePercent, 
+    teamSeatsUsed,
+    teamSeatLimit,
+    usagePercent,
     planType,
     currentPeriodEnd,
     isLifetime,
     isAtLimit,
     showPaywall,
-    isLoading 
+    isLoading
   } = useSubscription();
 
   if (isLoading) return <div className="text-zinc-500 animate-pulse bg-white/5 h-40 rounded-xl" />;
@@ -902,13 +900,13 @@ function UsageSection() {
             <span className="text-sm text-zinc-500">/ {isUnlimited ? "∞" : limit}</span>
           </div>
         </div>
-        
+
         <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-          <motion.div 
-            initial={{ width: 0 }} 
-            animate={{ width: `${p}%` }} 
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${p}%` }}
             transition={{ duration: 1, ease: "easeOut" }}
-            className={`h-full rounded-full transition-colors duration-500 ${getColor(p)}`} 
+            className={`h-full rounded-full transition-colors duration-500 ${getColor(p)}`}
           />
         </div>
 
@@ -925,9 +923,9 @@ function UsageSection() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 max-w-2xl">
       <div className="flex items-center justify-between">
-        <SectionTitle 
-          title="Usage & Entitlements" 
-          description="Resource consumption for your current monthly cycle." 
+        <SectionTitle
+          title="Usage & Entitlements"
+          description="Resource consumption for your current monthly cycle."
         />
         <div className="flex flex-col items-end">
           <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">Current Plan</span>
@@ -978,7 +976,7 @@ function UsageSection() {
             </>
           )}
         </div>
-        <button 
+        <button
           onClick={() => window.location.reload()}
           className="hover:text-white transition-colors flex items-center gap-1 font-medium"
         >
@@ -990,133 +988,7 @@ function UsageSection() {
   );
 }
 
-function IntegrationsSection({ hubspotConnection, org, mutate }: { hubspotConnection?: any, org?: any, mutate?: any }) {
-  const [ga4Id, setGa4Id] = useState(org?.ga4_measurement_id || "");
-  const [isSavingGa4, setIsSavingGa4] = useState(false);
 
-  async function handleSaveGa4(e: React.FormEvent) {
-    e.preventDefault();
-    setIsSavingGa4(true);
-    try {
-      const res = await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ga4_measurement_id: ga4Id }),
-      });
-      if (!res.ok) throw new Error((await res.json()).error || "Failed finding org");
-      toast.success("GA4 Configuration Saved");
-      if(mutate) mutate();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to save");
-    } finally {
-      setIsSavingGa4(false);
-    }
-  }
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <SectionTitle title="Integrations" description="Connect external systems to Auricai." />
-      
-      {/* Google Analytics */}
-      <SettingsCard>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 flex-shrink-0 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
-              <span className="font-bold text-orange-500">GA4</span>
-            </div>
-            <div>
-              <h4 className="text-base font-bold text-white mb-0.5">Google Analytics</h4>
-              <p className="text-sm text-zinc-400 max-w-sm">Track case study views and conversions directly in your GA4 property.</p>
-            </div>
-          </div>
-          <form className="flex items-center gap-2 w-full md:w-auto" onSubmit={handleSaveGa4}>
-            <input 
-              type="text" 
-              placeholder="G-XXXXXXXXXX" 
-              value={ga4Id}
-              onChange={(e) => setGa4Id(e.target.value)}
-              disabled={isSavingGa4}
-              className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white/20 w-40" 
-            />
-            <button 
-              type="submit" 
-              disabled={isSavingGa4 || ga4Id === org?.ga4_measurement_id}
-              className="bg-white text-black px-4 py-2 text-sm font-bold rounded-lg hover:bg-zinc-200 transition-colors disabled:opacity-50"
-            >
-              {isSavingGa4 ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}
-            </button>
-          </form>
-        </div>
-      </SettingsCard>
-
-      {/* HubSpot */}
-      <SettingsCard>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-[#FF7A59] border border-[#FF7A59]/20 flex items-center justify-center shadow-[0_0_15px_rgba(255,122,89,0.2)]">
-              <span className="font-extrabold text-white text-lg tracking-tighter">HS</span>
-            </div>
-            <div>
-              <h4 className="text-base font-bold text-white mb-0.5">HubSpot CRM</h4>
-              <p className="text-sm text-zinc-500">Read-only revenue attribution.</p>
-            </div>
-          </div>
-          <div>
-            {!hubspotConnection ? (
-              <a href="/api/integrations/hubspot/connect" className="inline-flex items-center gap-2 bg-white text-black px-5 py-2 font-bold text-sm rounded-lg hover:bg-zinc-200 transition-colors shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-                Connect HubSpot
-              </a>
-            ) : (
-              <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-4">
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-xs text-green-400 bg-green-500/10 px-2 py-1 rounded border border-green-500/20 font-bold tracking-wider uppercase">
-                    Connected
-                  </span>
-                  <span className="text-[10px] text-zinc-500 font-medium">
-                    Last sync: {hubspotConnection.last_synced_at ? new Date(hubspotConnection.last_synced_at).toLocaleDateString() : 'Recently'}
-                  </span>
-                </div>
-                <a
-                  href="/api/integrations/hubspot/connect"
-                  className="bg-white/5 text-white border border-white/10 px-4 py-2 text-sm font-medium rounded-lg hover:bg-white/10 transition-all flex items-center gap-2"
-                >
-                  <RefreshCw className="w-4 h-4 text-zinc-400" />
-                  Reconnect
-                </a>
-              </div>
-            )}
-          </div>
-        </div>
-      </SettingsCard>
-
-      {/* Meta Ads (Coming Soon) */}
-      {FEATURES.metaAds && (
-        <SettingsCard>
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 opacity-60 pointer-events-none">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 flex-shrink-0 rounded-xl bg-blue-500 border border-blue-500/20 flex items-center justify-center">
-                <span className="font-bold text-white text-lg tracking-tighter">M</span>
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="text-base font-bold text-white mb-0.5">Meta Ads (Pixel)</h4>
-                  <span className="text-[10px] font-bold tracking-wider uppercase bg-white/10 px-2 py-0.5 rounded text-zinc-400 border border-white/10">Coming Soon</span>
-                </div>
-                <p className="text-sm text-zinc-500">Sync audience segments from case study viewers.</p>
-              </div>
-            </div>
-            <div>
-              <button disabled className="inline-flex items-center gap-2 bg-white/10 text-white px-5 py-2 font-bold text-sm rounded-lg opacity-50 cursor-not-allowed">
-                Connect Meta
-              </button>
-            </div>
-          </div>
-        </SettingsCard>
-      )}
-
-    </motion.div>
-  );
-}
 
 function LegalSection() {
   const policies = [
@@ -1240,7 +1112,7 @@ export function SettingsView({ initialOrg }: { initialOrg?: any }) {
     );
   }
 
-  const { org, usage, team, domain, hubspotConnection, orgProfile, limits } = data.data || data; // handle generic wrappers
+  const { org, usage, team, domain, orgProfile, limits } = data.data || data; // handle generic wrappers
 
   const renderSection = () => {
     switch (activeTab) {
@@ -1251,7 +1123,6 @@ export function SettingsView({ initialOrg }: { initialOrg?: any }) {
       case "team": return <TeamSection team={team} limit={limits?.teamSeats || 1} mutate={mutate} />;
       case "billing": return <BillingSection />;
       case "usage": return <UsageSection />;
-      case "integrations": return <IntegrationsSection hubspotConnection={hubspotConnection} org={org} mutate={mutate} />;
       case "legal": return <LegalSection />;
       case "danger": return <DangerSection orgName={org?.name || "this workspace"} />;
     }

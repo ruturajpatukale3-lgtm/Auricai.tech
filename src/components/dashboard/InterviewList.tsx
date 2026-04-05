@@ -38,7 +38,7 @@ export function InterviewList({
           Start collecting client proof
         </h3>
 
-        {/* Pipeline visual */}
+        {/* Response flow visual */}
         <div className="flex items-center gap-2 text-xs font-bold font-mono tracking-wider text-zinc-500 mb-8 relative z-10 uppercase">
           <span className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-md text-white">Sent</span>
           <ArrowRight className="w-3 h-3" />
@@ -103,19 +103,19 @@ export function InterviewList({
           >
             {/* ROW 1: Client & Status (Mobile Layout) */}
             <div className="flex items-center justify-between md:hidden mb-1">
-               <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white">
-                    {interview.client_name ? interview.client_name.charAt(0).toUpperCase() : interview.client_email.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="text-sm font-bold text-white truncate max-w-[120px] sm:max-w-none">
-                    {interview.client_name || interview.client_email}
-                  </span>
-               </div>
-               
-               <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${interview.status === 'published' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-                  interview.status === 'approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                    interview.status === 'completed' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                      'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white">
+                  {interview.client_name ? interview.client_name.charAt(0).toUpperCase() : interview.client_email.charAt(0).toUpperCase()}
+                </div>
+                <span className="text-sm font-bold text-white truncate max-w-[120px] sm:max-w-none">
+                  {interview.client_name || interview.client_email}
+                </span>
+              </div>
+
+              <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${interview.status === 'published' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                interview.status === 'approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                  interview.status === 'completed' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                    'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
                 }`}>
                 {interview.status}
               </span>
@@ -134,9 +134,9 @@ export function InterviewList({
             {/* Desktop Status Column */}
             <div className="hidden md:block col-span-2">
               <span className={`inline-flex items-center text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${interview.status === 'published' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-                  interview.status === 'approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                    interview.status === 'completed' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                      'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
+                interview.status === 'approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                  interview.status === 'completed' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                    'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
                 } shadow-sm`}>
                 {interview.status}
               </span>
@@ -154,7 +154,7 @@ export function InterviewList({
               >
                 <Copy className="w-3.5 h-3.5" /> <span className="md:inline">Copy Link</span>
               </button>
-              
+
               <a
                 href={`mailto:${interview.client_email}?subject=Interview%20Request&body=Hi%20${interview.client_name || 'there'},%0A%0AWe'd%20love%20to%20hear%20about%20your%20experience.%20Could%20you%20please%20complete%20this%20quick%203-minute%20interview?%0A%0A${window.location.origin}/interview/${interview.token}%0A%0ABest%20regards!`}
                 className="flex items-center justify-center w-10 md:w-8 h-10 md:h-8 rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-all shrink-0"
@@ -165,11 +165,11 @@ export function InterviewList({
 
               {/* View Responses (Mobile only show as icon in this strip) */}
               <button
-                  onClick={() => setSelectedId(interview.id)}
-                  className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-all shrink-0"
-                >
-                  <Eye className="w-4 h-4" />
-                </button>
+                onClick={() => setSelectedId(interview.id)}
+                className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-all shrink-0"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
             </div>
 
             {/* Created Date (Compact/Hidden on Mobile) */}

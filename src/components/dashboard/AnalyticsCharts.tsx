@@ -33,11 +33,11 @@ export function AnalyticsCharts() {
         <div className="mb-6 flex items-start justify-between">
           <div>
             <h3 className="text-white font-semibold text-base mb-1">Interviews Sent</h3>
-            <p className="text-xs text-zinc-500">Pipeline mining volume</p>
+            <p className="text-xs text-zinc-500">Engagement mining volume</p>
           </div>
           <span className="text-xs font-mono font-bold bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded">Last 7D</span>
         </div>
-        
+
         <div className="h-40 flex items-end justify-between gap-2 mt-4">
           {interviewData.map((data, i) => {
             const height = data.count === 0 ? 5 : (data.count / maxInterviews) * 100;
@@ -68,12 +68,12 @@ export function AnalyticsCharts() {
             <h3 className="text-white font-semibold text-base mb-1">Asset Usage</h3>
             <p className="text-xs text-amber-500 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-              Usage in active deals
+              Engagement from live proof
             </p>
           </div>
           <span className="text-xs font-mono font-bold bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded">Last 7D</span>
         </div>
-        
+
         <div className="h-40 flex items-end justify-between gap-2 mt-4">
           {viewData.map((data, i) => {
             const height = data.count === 0 ? 5 : (data.count / maxViews) * 100;

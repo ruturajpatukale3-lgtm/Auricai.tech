@@ -9,7 +9,6 @@ import {
   MessageSquare,
   BarChart3,
   Settings,
-  DollarSign,
   AlertCircle,
   Sparkles,
   Activity,

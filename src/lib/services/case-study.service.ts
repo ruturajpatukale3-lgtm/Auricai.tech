@@ -126,7 +126,6 @@ export const CaseStudyService = {
     await EventService.caseStudyViewed(
       caseStudy.org_id,
       caseStudy.id,
-      undefined,
       metadata
     );
 
@@ -144,7 +143,6 @@ export const CaseStudyService = {
     await EventService.caseStudyViewed(
       caseStudy.org_id,
       caseStudy.id,
-      undefined,
       metadata
     );
 

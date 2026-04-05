@@ -15,7 +15,7 @@ export function QuickActions() {
           </div>
           <div className="flex flex-col">
             <span>Send new interview</span>
-            <span className="text-[10px] text-zinc-500 font-normal">Extract ROI from a client</span>
+            <span className="text-[10px] text-zinc-500 font-normal">Extract proof from a client</span>
           </div>
         </button>
         

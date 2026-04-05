@@ -8,7 +8,7 @@ import type { Notification } from "@/types";
 const NOTIFICATION_ICONS: Record<string, string> = {
   interview_completed: "📋",
   case_study_ready: "✨",
-  deal_won: "🎉",
+
   usage_warning: "⚠️",
   usage_limit_reached: "🔒",
   system: "ℹ️",
@@ -96,7 +96,7 @@ export function NotificationPanel() {
                 <Bell className="w-8 h-8 text-zinc-700 mb-3" />
                 <p className="text-sm text-zinc-500 text-center">No notifications yet</p>
                 <p className="text-xs text-zinc-600 text-center mt-1">
-                  You&apos;ll be notified when interviews are completed, case studies are ready, and deals close.
+                  You&apos;ll be notified when interviews are completed, case studies are ready, and new proof is generated.
                 </p>
               </div>
             ) : (

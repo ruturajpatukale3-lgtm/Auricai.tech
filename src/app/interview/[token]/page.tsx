@@ -482,80 +482,75 @@ export default function InterviewPage() {
           transition={{ duration: 0.6 }}
           className="relative text-center w-full max-w-[560px] bg-[#0c0c0c]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 sm:p-10 shadow-2xl z-10"
         >
-          {/* Subtle top indicator */}
+          {/* 1. Subtle top indicator */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="mb-6"
+            className="mb-2"
           >
-            <span className="text-xs font-bold tracking-widest uppercase text-purple-400">
+            <span className="text-sm text-white/60">
               {clientName ? `Hi ${clientName} — this will take ~3 minutes` : "This will take ~3 minutes"}
             </span>
           </motion.div>
 
+          {/* 2. Headline */}
           <motion.h1
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="text-2xl sm:text-3xl font-bold text-white mb-4 tracking-tight leading-tight"
+            className="text-3xl font-bold text-white mb-4 tracking-tight leading-tight"
           >
             Turn Your Results Into a Case Study
           </motion.h1>
 
+          {/* 3. Context Line */}
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="text-white/70 mb-8 text-base leading-relaxed max-w-sm mx-auto"
+            className="text-base text-white/70 max-w-[420px] mx-auto leading-relaxed"
           >
             {orgName 
-              ? `You're helping ${orgName} create a professional case study based on your results. `
-              : "Answer a few quick questions. "}
-            We'll transform your responses into a polished, data-driven case study.
+              ? `You're helping ${orgName} create a professional case study based on your results.`
+              : "You're helping create a professional case study based on your results."}
           </motion.p>
 
+          {/* 4. Trust Strip */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 mb-10 text-xs text-white/50"
+            className="mt-3 text-sm text-white/50"
           >
-            <div className="flex items-center gap-1.5 whitespace-nowrap">
-              <Clock className="w-3.5 h-3.5" />
-              <span>3 minutes</span>
-            </div>
-            <div className="hidden sm:block w-1 h-1 rounded-full bg-white/20" />
-            <div className="flex items-center gap-1.5 whitespace-nowrap">
-              <Lock className="w-3.5 h-3.5" />
-              <span>No login required</span>
-            </div>
-            <div className="hidden sm:block w-1 h-1 rounded-full bg-white/20" />
-            <div className="flex items-center gap-1.5 whitespace-nowrap">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>You approve before publishing</span>
-            </div>
+            <span>5 questions</span>
+            <span className="mx-3">•</span>
+            <span>No login</span>
+            <span className="mx-3">•</span>
+            <span>You approve before publishing</span>
           </motion.div>
 
+          {/* 5. Primary CTA */}
           <motion.button
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
             onClick={handleStart}
-            className="w-full relative group flex items-center justify-center gap-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white h-12 sm:h-[56px] rounded-xl text-base font-bold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(124,58,237,0.3)] hover:shadow-[0_0_30px_rgba(124,58,237,0.5)]"
+            className="w-full mt-6 relative group flex items-center justify-center gap-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white h-[52px] rounded-xl text-base font-bold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(124,58,237,0.3)] hover:shadow-[0_0_30px_rgba(124,58,237,0.5)]"
           >
             <span>Start 3-Minute Interview</span>
             <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
           </motion.button>
 
+          {/* 6. Micro Proof */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8 }}
-            className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/5 text-[11px] text-white/40"
+            className="mt-4 text-xs sm:text-sm text-white/50 text-center"
           >
-            <TrendingUp className="w-3 h-3 text-emerald-400" />
-            <span>Example outcome: +158% conversion increase in 60 days</span>
+            <p>Clients typically share results like:</p>
+            <p className="font-semibold text-white/60 mt-0.5">+158% conversion increase in 60 days</p>
           </motion.div>
         </motion.div>
 

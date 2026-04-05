@@ -203,9 +203,9 @@ function FeatureVisual({ type }: { type: string }) {
           <div className="space-y-2">
             <p className="text-[10px] text-[#10B981] uppercase tracking-wider">Validated Output</p>
             <div className="p-3 rounded-lg bg-[rgba(16,185,129,0.04)] border border-[rgba(16,185,129,0.15)] text-xs text-[#FAFAFA] space-y-2">
-              <p>+158% pipeline conversion</p>
-              <p>$2.4M revenue generated</p>
-              <p>14-day time to value</p>
+              <p>87% interview completion</p>
+              <p>+158% lift in engagement</p>
+              <p>24-hour time to proof</p>
             </div>
           </div>
         </div>

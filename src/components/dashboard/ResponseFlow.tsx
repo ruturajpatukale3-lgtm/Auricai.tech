@@ -2,10 +2,10 @@
 
 import { motion } from "framer-motion";
 import { Clock, TrendingDown, Copy } from "lucide-react";
-import type { PipelineBreakdown as PipelineBreakdownType, DuplicateFlag } from "@/types";
+import type { ResponseFlow as ResponseFlowType, DuplicateFlag } from "@/types";
 
 /**
- * PipelineBreakdown — Decision Intelligence Layer (Zero-Fake)
+ * ResponseFlow — Decision Intelligence Layer (Zero-Fake)
  * 
  * RULES:
  * - NEVER show numeric 0 or 0%
@@ -14,8 +14,8 @@ import type { PipelineBreakdown as PipelineBreakdownType, DuplicateFlag } from "
  * - Connected to FunnelStrip via scroll anchor
  */
 
-interface PipelineBreakdownProps {
-  breakdown: PipelineBreakdownType;
+interface ResponseFlowProps {
+  breakdown: ResponseFlowType;
   duplicates: DuplicateFlag[];
   meta: {
     avgCompletionTimeMs: number | null;
@@ -40,14 +40,14 @@ function formatDuration(ms: number): string {
   return `${days}d`;
 }
 
-export function PipelineBreakdown({ breakdown, duplicates, meta }: PipelineBreakdownProps) {
+export function ResponseFlow({ breakdown, duplicates, meta }: ResponseFlowProps) {
   const total = breakdown.notStarted + breakdown.inProgress + breakdown.completed + breakdown.approved + breakdown.published;
   
   if (total === 0) return null;
 
   return (
     <motion.div
-      id="pipeline-breakdown"
+      id="response-flow"
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.15, duration: 0.4 }}
@@ -57,7 +57,7 @@ export function PipelineBreakdown({ breakdown, duplicates, meta }: PipelineBreak
       <div className="px-6 pt-5 pb-4 flex items-center justify-between border-b border-white/5 bg-gradient-to-r from-white/[0.02] to-transparent">
         <div className="flex items-center gap-3">
           <div className="w-1 h-4 rounded-full bg-gradient-to-b from-blue-500 to-purple-500" />
-          <h3 className="text-xs font-bold text-white uppercase tracking-widest">Pipeline Breakdown</h3>
+          <h3 className="text-xs font-bold text-white uppercase tracking-widest">Response Flow</h3>
           <span className="text-[10px] font-mono text-zinc-600 bg-white/5 px-2 py-0.5 rounded border border-white/5">
             {total} total
           </span>
@@ -74,9 +74,9 @@ export function PipelineBreakdown({ breakdown, duplicates, meta }: PipelineBreak
           {/* Meta: Drop-off Rate — never show 0% */}
           {meta.dropOffRate > 0 && (
             <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
-              <TrendingDown className="w-3 h-3 text-red-400/60" />
-              <span className="font-mono font-bold text-red-400/80">{meta.dropOffRate}%</span>
-              <span className="text-zinc-600">drop-off</span>
+              <TrendingDown className="w-3 h-3 text-amber-400/60" />
+              <span className="font-mono font-bold text-amber-400/80">{meta.dropOffRate}%</span>
+              <span className="text-zinc-600">not completed yet</span>
             </div>
           )}
         </div>

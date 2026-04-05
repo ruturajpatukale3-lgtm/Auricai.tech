@@ -142,13 +142,13 @@ export default function TestimonialAlchemist() {
 
               <div className="grid grid-cols-2 gap-6 mb-6">
                 <div>
-                  <p className="text-xs text-[#52525B] mb-1">New Pipeline</p>
+                  <p className="text-xs text-[#52525B] mb-1">Proof Views</p>
                   <p className="text-2xl md:text-3xl font-bold font-mono text-[#FAFAFA]">
-                    <NumberCounter target={1240000} prefix="$" />
+                    <NumberCounter target={2840} />
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#52525B] mb-1">ROI Performance</p>
+                  <p className="text-xs text-[#52525B] mb-1">Impact Lift</p>
                   <div className="flex items-end gap-2">
                     <span className="text-2xl md:text-3xl font-bold font-mono text-[#10B981]">
                       <span className="text-zinc-500 text-sm font-normal mr-1">12% →</span>
@@ -170,8 +170,8 @@ export default function TestimonialAlchemist() {
               </div>
 
               <div className="flex items-center justify-between text-xs text-[#A1A1AA] mb-4">
-                <span>Time to Value: <strong className="text-[#FAFAFA]">14 days</strong></span>
-                <span>Deals Influenced: <strong className="text-[#FAFAFA]">12</strong></span>
+                <span>Time to Proof: <strong className="text-[#FAFAFA]">24 hours</strong></span>
+                <span>Verified Assets: <strong className="text-[#FAFAFA]">12</strong></span>
               </div>
 
               <div className="flex items-center gap-2 pt-4 border-t border-[rgba(255,255,255,0.06)]">

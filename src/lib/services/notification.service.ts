@@ -64,26 +64,7 @@ export const NotificationService = {
     );
   },
 
-  /**
-   * Called when a deal status changes to closed_won
-   */
-  async notifyDealWon(
-    orgId: string,
-    dealName: string,
-    dealValue: number,
-    dealId: string
-  ): Promise<Notification> {
-    const formattedValue = dealValue >= 1000
-      ? `$${(dealValue / 1000).toFixed(0)}K`
-      : `$${dealValue.toLocaleString()}`;
 
-    return NotificationRepository.create(
-      orgId,
-      "deal_won",
-      `Deal "${dealName}" closed won — ${formattedValue} revenue attributed! 🎉`,
-      { deal_id: dealId, deal_name: dealName, deal_value: dealValue }
-    );
-  },
 
   /**
    * Called when usage reaches 80% of limit (warning)

@@ -96,14 +96,14 @@ export default async function PublicCaseStudyPage({ params }: PublicCaseStudyPag
             highlight
           />
           <StatCard 
-            label="Pipeline Driven" 
-            value={`$${cs.pipeline_value.toLocaleString()}`} 
-            sub="Verifiable Revenue"
+            label="Impact Driven" 
+            value={cs.pipeline_value ? `$${cs.pipeline_value.toLocaleString()}` : "—"} 
+            sub="Verifiable ROI"
           />
           <StatCard 
-            label="Deals Influenced" 
-            value={cs.deals_influenced} 
-            sub="Sales Velocity"
+            label="Social Proof" 
+            value={cs.deals_influenced ?? "—"} 
+            sub="Community Signal"
           />
         </div>
 

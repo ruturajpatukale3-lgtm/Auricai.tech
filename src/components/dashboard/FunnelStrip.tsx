@@ -15,12 +15,12 @@ import type { FunnelStageMetrics } from "@/types";
  * - If sent === 0: show "No data yet"
  * - If sent > 0 && value === 0: show "Waiting"
  * - If value > 0: show number + conversion rate
- * - Visual link to PipelineBreakdown for deep insight
+ * - Visual link to ResponseFlow for deep insight
  */
 export function FunnelStrip({ metrics }: { metrics: FunnelStageMetrics }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
-  
+
   const total = metrics?.total || 0;
   const opened = metrics?.opened || 0;
   const completed = metrics?.completed || 0;
@@ -51,39 +51,39 @@ export function FunnelStrip({ metrics }: { metrics: FunnelStageMetrics }) {
     if (value === 0) {
       return { display: "Waiting", isPlaceholder: true, rateLabel: null };
     }
-    return { 
-      display: value, 
-      isPlaceholder: false, 
-      rateLabel: hasRate && rate !== undefined && rate > 0 ? `${rate}%` : null 
+    return {
+      display: value,
+      isPlaceholder: false,
+      rateLabel: hasRate && rate !== undefined && rate > 0 ? `${rate}%` : null
     };
   };
 
   const scrollToBreakdown = () => {
-    document.getElementById("pipeline-breakdown")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById("response-flow")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   // Build steps
   const steps = [
-    { 
-      label: "Sent", 
+    {
+      label: "Sent",
       ...getStageDisplay(total, false, undefined),
       drop: null,
       color: "text-zinc-400",
     },
-    { 
-      label: "Opened", 
+    {
+      label: "Opened",
       ...getStageDisplay(opened, true, rates?.sentToOpened),
       drop: !isEmpty && opened > 0 ? getDrop(total, opened) : null,
       color: "text-amber-400",
     },
-    { 
-      label: "Completed", 
+    {
+      label: "Completed",
       ...getStageDisplay(completed, true, rates?.openedToCompleted),
       drop: !isEmpty && completed > 0 ? getDrop(opened, completed) : null,
       color: "text-blue-400",
     },
-    { 
-      label: "Case Study", 
+    {
+      label: "Case Study",
       ...getStageDisplay(published, true, rates?.total),
       drop: !isEmpty && published > 0 ? getDrop(completed, published) : null,
       color: "text-purple-400",
@@ -96,7 +96,7 @@ export function FunnelStrip({ metrics }: { metrics: FunnelStageMetrics }) {
     <div className="w-full bg-[#111111] border border-white/10 rounded-xl overflow-hidden">
       {/* Inconsistency Banner */}
       {isInconsistent && (
-        <motion.div 
+        <motion.div
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: "auto", opacity: 1 }}
           className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2 flex items-center gap-2"
@@ -110,7 +110,7 @@ export function FunnelStrip({ metrics }: { metrics: FunnelStageMetrics }) {
 
       {/* Header */}
       <div className="px-6 pt-6 flex items-center justify-between mb-8">
-        <h3 className="text-xs font-bold text-white uppercase tracking-widest">Extraction Pipeline</h3>
+        <h3 className="text-xs font-bold text-white uppercase tracking-widest">Interview Progress</h3>
         <div className="flex items-center gap-4">
           {/* Visual link to breakdown */}
           <button
@@ -126,12 +126,12 @@ export function FunnelStrip({ metrics }: { metrics: FunnelStageMetrics }) {
           </div>
         </div>
       </div>
-      
+
       {/* Funnel Strip — Zero-Fake Display */}
       <div className="px-6 pb-6 flex flex-col md:flex-row items-center justify-between gap-4">
         {steps.map((step, i) => (
           <div key={step.label} className="flex items-center w-full">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.05 }}
@@ -145,7 +145,7 @@ export function FunnelStrip({ metrics }: { metrics: FunnelStageMetrics }) {
                   </span>
                 )}
               </div>
-              
+
               <div className="flex flex-col">
                 {step.isPlaceholder ? (
                   /* Placeholder: "Waiting" or "No data yet" — never numeric 0 */

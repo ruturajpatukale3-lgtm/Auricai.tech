@@ -9,7 +9,6 @@
 import useSWR from "swr";
 import type {
   Notification,
-  Deal,
   CaseStudy,
   Interview,
   DashboardMetrics,
@@ -111,26 +110,7 @@ export function useInterviews() {
   };
 }
 
-// ─── Deals ─────────────────────────────────────────────────
 
-export function useDeals(status?: string) {
-  const url = status ? `/api/deals?status=${status}` : "/api/deals";
-  const { data, error, isLoading, mutate } = useSWR<Deal[]>(
-    url,
-    fetcher,
-    {
-      revalidateOnFocus: true,
-      dedupingInterval: 5000,
-    }
-  );
-
-  return {
-    deals: data || [],
-    isLoading,
-    error,
-    mutate,
-  };
-}
 
 // ─── Analytics (Dashboard Metrics) ─────────────────────────
 

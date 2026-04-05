@@ -32,13 +32,13 @@ export default async function CommandCenterPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 mt-2">
         <div>
           <h1 className="text-2xl font-bold text-white mb-1 tracking-tight">Command Center</h1>
-          <p className="text-sm text-zinc-500">Your proof-driven sales engine at a glance.</p>
+          <p className="text-sm text-zinc-500">Your proof-driven engine at a glance.</p>
         </div>
         
         <DashboardActions />
       </div>
 
-      {/* 3. Stalled Revenue Alert (Critical Visibility) */}
+      {/* 3. Stalled Proof Alert (Critical Visibility) */}
       <Suspense fallback={null}>
         <DashboardAlerts orgId={orgId} />
       </Suspense>

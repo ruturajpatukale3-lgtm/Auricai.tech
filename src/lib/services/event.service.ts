@@ -77,34 +77,7 @@ export const EventService = {
     }
   },
 
-  /**
-   * Enhanced deal recording with Idempotency and Multi-Attribution support
-   */
-  async recordDealAttribution(
-    orgId: string,
-    caseStudyIds: string[],
-    dealId: string,
-    dealValue: number,
-    companyName: string
-  ): Promise<{ alreadyProcessed: boolean }> {
-    // Rely exclusively on Database Constraints
-    // The DB has UNIQUE INDEX on events(org_id, metadata->'deal_id')
-    
-    // Perform Attribution cleanly
-    const trackPromises = caseStudyIds.map(csId => 
-      this.track({
-        orgId,
-        type: "used_in_deal",
-        entityId: csId,
-        metadata: { deal_id: dealId, deal_value: dealValue, company_name: companyName },
-      })
-    );
 
-    await Promise.all(trackPromises);
-    
-    // 'track' gracefully handles the 23505 Conflict
-    return { alreadyProcessed: false };
-  },
 
   /**
    * Convenience loggers (ALL flowing through 'track')
@@ -158,7 +131,6 @@ export const EventService = {
   async caseStudyViewed(
     orgId: string, 
     caseStudyId: string, 
-    pipelineValue?: number,
     metadata: Record<string, unknown> = {}
   ) {
     // metadata is expected to contain ip/ua from headers

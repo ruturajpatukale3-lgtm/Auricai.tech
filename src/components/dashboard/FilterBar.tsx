@@ -22,11 +22,10 @@ export function FilterBar() {
           {["All", "Draft", "Pending", "Live"].map((status) => (
             <button
               key={status}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                status === "All"
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${status === "All"
                   ? "bg-white/10 text-white"
                   : "text-zinc-500 hover:text-white hover:bg-white/5"
-              }`}
+                }`}
             >
               {status}
             </button>
@@ -36,7 +35,7 @@ export function FilterBar() {
         {/* Sort Dropdown (Visual only for now) */}
         <button className="flex items-center gap-2 bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/5 transition-colors whitespace-nowrap">
           <Filter className="w-3.5 h-3.5" />
-          Pipeline ↓
+          Recent ↓
           <ChevronDown className="w-3.5 h-3.5 text-zinc-500" />
         </button>
       </div>

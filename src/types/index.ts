@@ -19,7 +19,7 @@ export type CaseStudyStatus = "draft" | "pending" | "live" | "complete";
 
 
 
-export type DealStatus = "open" | "closed_won" | "closed_lost";
+
 
 export type TeamRole = "owner" | "admin" | "editor";
 
@@ -38,7 +38,7 @@ export type EventType =
   | "case_study_viewed"
   | "case_study_published"
   | "case_study_shared"
-  | "used_in_deal"
+
   | "ai_generation_failed"
   | "reminder_sent"
   | "team_invited"
@@ -205,6 +205,8 @@ export interface CaseStudy {
   views: number;
   status: CaseStudyStatus;
   slug: string | null;
+  pipeline_value: number | null;
+  deals_influenced: number | null;
   created_at: string;
 }
 
@@ -351,8 +353,8 @@ export interface FunnelStageMetrics {
   };
 }
 
-/** Breakdown = state intelligence. Multi-state view, NOT mixed into funnel. */
-export interface PipelineBreakdown {
+/** Flow = state intelligence. Multi-state view, NOT mixed into funnel. */
+export interface ResponseFlow {
   notStarted: number;
   inProgress: number;
   completed: number;
@@ -372,7 +374,7 @@ export interface DuplicateFlag {
 /** Combined response from the refactored getFunnelMetrics */
 export interface StateIntelligenceMetrics {
   funnel: FunnelStageMetrics;
-  breakdown: PipelineBreakdown;
+  breakdown: ResponseFlow;
   duplicates: DuplicateFlag[];
   meta: {
     avgCompletionTimeMs: number | null;

@@ -23,11 +23,11 @@ const isProtectedAPI = createRouteMatcher([
   "/api/billing(.*)",
   "/api/case-studies(.*)",
   "/api/danger(.*)",
-  "/api/deals(.*)",
+
   "/api/domain(.*)",
   "/api/events(.*)",
   "/api/feedback(.*)",
-  "/api/integrations(.*)",
+
   "/api/interviews(.*)",
   "/api/jobs(.*)",
   "/api/notifications(.*)",

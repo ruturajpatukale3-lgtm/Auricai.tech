@@ -24,7 +24,7 @@ export function CaseStudyPreviewModal({ isOpen, onClose, caseStudy }: CaseStudyP
   const copyLink = () => {
     const origin = typeof window !== "undefined" ? window.location.origin : "https://auricai.com";
     const shareUrl = `${origin}/c/${caseStudy.slug}`;
-    
+
     // Copy to clipboard
     navigator.clipboard.writeText(shareUrl);
     toast.success("Public link copied to clipboard");
@@ -76,22 +76,21 @@ export function CaseStudyPreviewModal({ isOpen, onClose, caseStudy }: CaseStudyP
                 {caseStudy.company_name} Case Study
               </span>
             </div>
-            
+
             <h1 className={`text-3xl md:text-4xl font-extrabold tracking-tight px-4 leading-tight ${isComplete ? 'text-white' : 'text-zinc-500 italic'}`}>
               {headline}
             </h1>
-            
+
             <div className="flex items-center justify-center gap-2">
-               <span className={`px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded border ${
-                    caseStudy.status === 'live' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
-                    caseStudy.status === 'pending' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+              <span className={`px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded border ${caseStudy.status === 'live' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                  caseStudy.status === 'pending' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
                     isComplete ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
-                    'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
-                  }`}>
-                 {caseStudy.status === 'live' ? 'Live' : 
-                  caseStudy.status === 'pending' ? 'Approved' : 
-                  isComplete ? 'Review Ready' : 'Draft Generated'}
-               </span>
+                      'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
+                }`}>
+                {caseStudy.status === 'live' ? 'Live' :
+                  caseStudy.status === 'pending' ? 'Approved' :
+                    isComplete ? 'Review Ready' : 'Draft Generated'}
+              </span>
             </div>
           </div>
 
@@ -112,45 +111,45 @@ export function CaseStudyPreviewModal({ isOpen, onClose, caseStudy }: CaseStudyP
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Metric 1: Delta / Main Result */}
                 <div className="bg-[#1A1A1A] border border-white/5 p-5 rounded-xl flex flex-col items-center justify-center text-center">
-                    <span className="text-sm text-zinc-400 uppercase tracking-widest font-mono mb-2">Main Result</span>
-                    <span className="text-3xl font-extrabold text-white tracking-tighter">
-                      {caseStudy.delta_percent ? `+${caseStudy.delta_percent}%` : caseStudy.metric_type || "N/A"}
-                    </span>
-                    {caseStudy.delta_percent && <span className="text-xs text-zinc-500 mt-1">{caseStudy.metric_type}</span>}
+                  <span className="text-sm text-zinc-400 uppercase tracking-widest font-mono mb-2">Main Result</span>
+                  <span className="text-3xl font-extrabold text-white tracking-tighter">
+                    {caseStudy.delta_percent ? `+${caseStudy.delta_percent}%` : caseStudy.metric_type || "N/A"}
+                  </span>
+                  {caseStudy.delta_percent && <span className="text-xs text-zinc-500 mt-1">{caseStudy.metric_type}</span>}
                 </div>
 
-                {/* Metric 2: Before & After or Deals */}
+                {/* Metric 2: Before & After or Outcome */}
                 <div className="bg-[#1A1A1A] border border-white/5 p-5 rounded-xl flex flex-col items-center justify-center text-center">
-                    <span className="text-sm text-zinc-400 uppercase tracking-widest font-mono mb-2">Transformation</span>
-                    {caseStudy.before_value && caseStudy.after_value ? (
-                      <div className="flex items-center gap-2 text-white font-bold">
-                        <span className="text-zinc-500 line-through">{caseStudy.before_value}</span>
-                        <span className="text-zinc-600">→</span>
-                        <span className="text-green-400">{caseStudy.after_value}</span>
-                      </div>
-                    ) : (
-                      <span className="text-lg font-bold text-white tracking-tighter">
-                        {caseStudy.timeframe || "N/A"}
-                      </span>
-                    )}
+                  <span className="text-sm text-zinc-400 uppercase tracking-widest font-mono mb-2">Transformation</span>
+                  {caseStudy.before_value && caseStudy.after_value ? (
+                    <div className="flex items-center gap-2 text-white font-bold">
+                      <span className="text-zinc-500 line-through">{caseStudy.before_value}</span>
+                      <span className="text-zinc-600">→</span>
+                      <span className="text-green-400">{caseStudy.after_value}</span>
+                    </div>
+                  ) : (
+                    <span className="text-lg font-bold text-white tracking-tighter">
+                      {caseStudy.timeframe || "N/A"}
+                    </span>
+                  )}
                 </div>
 
                 {/* Metric 3: Organic Engagement */}
                 <div className="bg-[#1A1A1A] border border-white/5 p-5 rounded-xl flex flex-col items-center justify-center text-center">
-                    <span className="text-sm text-zinc-400 uppercase tracking-widest font-mono mb-2">Organic Reach</span>
-                    <span className="text-2xl font-extrabold text-white font-mono text-blue-400 tracking-tighter">
-                      {caseStudy.views || 0}
-                    </span>
-                    <span className="text-xs text-zinc-500 mt-1">Unique Proof Views</span>
+                  <span className="text-sm text-zinc-400 uppercase tracking-widest font-mono mb-2">Organic Reach</span>
+                  <span className="text-2xl font-extrabold text-white font-mono text-blue-400 tracking-tighter">
+                    {caseStudy.views || 0}
+                  </span>
+                  <span className="text-xs text-zinc-500 mt-1">Unique Proof Views</span>
                 </div>
               </div>
 
-              {/* Sales Enablement & Next Steps */}
+              {/* Proof Distribution & Next Steps */}
               <div className="pt-4 border-t border-white/5">
                 <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-blue-400" /> Sales Enablement Suggestions
+                  <TrendingUp className="w-4 h-4 text-blue-400" /> Proof Distribution Suggestions
                 </h3>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3 rounded-xl bg-white/5 border border-white/5 flex items-start gap-3 group hover:bg-white/10 transition-colors">
                     <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
@@ -163,7 +162,7 @@ export function CaseStudyPreviewModal({ isOpen, onClose, caseStudy }: CaseStudyP
                       </p>
                     </div>
                   </div>
-      
+
                   <div className="p-3 rounded-xl bg-white/5 border border-white/5 flex items-start gap-3 group hover:bg-white/10 transition-colors">
                     <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
                       <Layout className="w-4 h-4 text-purple-400" />

@@ -120,7 +120,7 @@ export const AnalyticsService = {
   async getUsageHistory(orgId: string, days: number = 30): Promise<{ date: string; count: number }[]> {
     return EventRepository.getUsageByDate(
       orgId, 
-      ["case_study_viewed", "case_study_shared", "used_in_deal"], 
+      ["case_study_viewed", "case_study_shared"], 
       days
     );
   },

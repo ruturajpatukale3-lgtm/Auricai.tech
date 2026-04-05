@@ -60,8 +60,6 @@ export const updateCaseStudySchema = z.object({
   after_value: z.string().max(50).optional(),
   delta_percent: z.number().optional(),
   timeframe: z.string().max(100).optional(),
-  pipeline_value: z.number().min(0).optional(),
-  deals_influenced: z.number().int().min(0).optional(),
 });
 
 // ─── Team ──────────────────────────────────────────────────
@@ -89,31 +87,7 @@ export const addDomainSchema = z.object({
     ),
 });
 
-// ─── Deals ─────────────────────────────────────────────────
 
-export const createDealSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Deal name required")
-    .max(200, "Deal name too long"),
-  value: z
-    .number()
-    .min(0, "Deal value must be positive")
-    .max(999_999_999, "Deal value too large"),
-  status: z.enum(["open", "closed_won", "closed_lost"]).default("open"),
-});
-
-export const attributeDealSchema = z.object({
-  deal_id: z.string().uuid("Invalid deal ID"),
-  case_study_id: z.string().uuid("Invalid case study ID"),
-});
-
-export const updateDealStatusSchema = z.object({
-  deal_id: z.string().uuid("Invalid deal ID"),
-  status: z.enum(["open", "closed_won", "closed_lost"], {
-    message: "Status must be open, closed_won, or closed_lost",
-  }),
-});
 
 // ─── Settings ──────────────────────────────────────────────
 

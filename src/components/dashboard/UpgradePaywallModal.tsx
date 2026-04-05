@@ -49,14 +49,14 @@ export function UpgradePaywallModal({ isOpen, onClose, metric, limit, planType }
   const features = isFree
     ? [
         "25 AI interviews for 7 days",
-        "Full analytics & deal signals",
+        "Full analytics & engagement signals",
         "Case study generation",
         "No credit card to start",
       ]
     : [
         "60 AI interviews per month",
         "2 team seats",
-        "Advanced analytics & deal signals",
+        "Advanced analytics & engagement signals",
         "Priority email support",
       ];
 

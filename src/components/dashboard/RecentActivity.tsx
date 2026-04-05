@@ -20,7 +20,7 @@ export function RecentActivity({ activities }: { activities: ActivityFeedItem[] 
         <h3 className="text-white font-semibold text-base tracking-tight">Recent Activity</h3>
         <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded uppercase tracking-widest border border-emerald-500/20">Live Audit</span>
       </div>
-      <p className="text-xs text-zinc-500 mb-8 font-medium">Verifiable system events across your sales funnel.</p>
+      <p className="text-xs text-zinc-500 mb-8 font-medium">Verifiable system events across your proof funnel.</p>
 
       <div className="flex-1 space-y-8 relative">
         {/* Vertical Timeline Line */}
@@ -49,7 +49,6 @@ export function RecentActivity({ activities }: { activities: ActivityFeedItem[] 
               bg = "bg-purple-400/10 border-purple-400/20";
               break;
             case "case_study_shared":
-            case "used_in_deal":
               Icon = Share2;
               color = "text-amber-400";
               bg = "bg-amber-400/10 border-amber-400/20";
@@ -82,16 +81,6 @@ export function RecentActivity({ activities }: { activities: ActivityFeedItem[] 
                     <Clock className="w-3 h-3 text-zinc-600" />
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
-
-                  {item.deal_value && (
-                    <>
-                      <div className="w-1 h-1 rounded-full bg-zinc-800" />
-                      <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3" />
-                        +${(Number(item.deal_value) / 1000).toFixed(0)}K Pipeline
-                      </p>
-                    </>
-                  )}
                 </div>
               </div>
             </motion.div>

@@ -74,10 +74,10 @@ export default function ProblemAgitation() {
               </div>
 
               <div className="space-y-3 mb-6">
-                <AIMessage role="ai" text="What was your pipeline conversion rate before implementing our solution?" />
+                <AIMessage role="ai" text="What was your content engagement rate before implementing our system?" />
                 <AIMessage role="user" text="It was around 12%" />
-                <AIMessage role="ai" text="And after implementing our solution?" />
-                <AIMessage role="user" text="Jumped to 31% in 60 days" />
+                <AIMessage role="ai" text="And after deploying your proof engine?" />
+                <AIMessage role="user" text="Jumped to 31% in 48 hours" />
               </div>
 
               {/* Extraction animation */}
@@ -116,9 +116,9 @@ export default function ProblemAgitation() {
           {/* Card 4 — Stat */}
           <motion.div variants={staggerItem}>
             <SpotlightCard className="h-full flex flex-col justify-center">
-              <p className="text-h2 text-[#FAFAFA] mb-2">$47,000</p>
+              <p className="text-h2 text-[#FAFAFA] mb-2">47% Higher</p>
               <p className="text-body text-[#A1A1AA] mb-4">
-                average pipeline lost per quarter from missing case studies
+                engagement rate for sales teams using verifiable proof over claims
               </p>
               <p className="text-caption text-[#52525B]">Source: Forrester Research</p>
             </SpotlightCard>

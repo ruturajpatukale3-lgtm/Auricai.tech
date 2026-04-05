@@ -18,7 +18,7 @@ const sections = [
   { id: "backups", title: "Backups and Recovery" },
   { id: "vulnerabilities", title: "Vulnerability Handling" },
   { id: "incident-response", title: "Incident Response" },
-  { id: "secure-integrations", title: "Secure Integrations" },
+  { id: "secure-integrations", title: "Enterprise Integrations" },
   { id: "disclosure", title: "Responsible Disclosure" },
 ];
 
@@ -70,7 +70,7 @@ export default function SecurityPage() {
       <section id="api-handling">
         <h2>API and Secret Handling</h2>
         <p>
-          External API keys (e.g., for HubSpot or CRM integrations) are stored securely as encrypted secrets on the server-side. We never expose these keys to the client-side browser, and we use scoped tokens where possible.
+          External API keys (e.g., for OAuth or analytics integrations) are stored securely as encrypted secrets on the server-side. We never expose these keys to the client-side browser, and we use scoped tokens where possible.
         </p>
       </section>
 
@@ -110,9 +110,9 @@ export default function SecurityPage() {
       </section>
 
       <section id="secure-integrations">
-        <h2>Secure Integrations</h2>
+        <h2>Enterprise Integrations</h2>
         <p>
-          When you connect Auricai to third-party tools like HubSpot, we use official OAuth flows. This means you never share your CRM password with us, and you can revoke our access at any time through your CRM provider.
+          When you connect Auricai to supported third-party tools, we use official OAuth flows. This means you never share your passwords with us, and you can revoke our access at any time through your provider.
         </p>
       </section>
 

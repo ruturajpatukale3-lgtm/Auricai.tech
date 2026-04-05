@@ -6,8 +6,6 @@ export type ExtractedMetrics = {
   before: number;
   after: number;
   timeframe: string;
-  pipelineValue: number;
-  dealsInfluenced: number;
   isVague: boolean;
   missingFields: string[];
 };
@@ -49,10 +47,8 @@ export const AIExtractor = {
       1. Identify the 'metricType' as exactly one of: "revenue", "conversion", "time", "efficiency", "cost", "retention".
       2. If "before" or "after" numbers exist in the user's answers, put them exactly as integers. If they wrote "$500k", put 500000. If they did NOT provide a specific number, you MUST use 0.
       3. "timeframe" is a string like "3 months", "Q4", or "1 year".
-      4. "pipelineValue" is the raw dollar amount generated (integer). Default 0 if none mentioned.
-      5. "dealsInfluenced" is the integer count of deals closed via this study. Default 0 if none.
-      6. If the user's answers lack hard numeric values anywhere, set "isVague" to true.
-      7. NEVER guess or invent numbers. Only extract what is explicitly stated in the text.
+      4. If the user's answers lack hard numeric values anywhere, set "isVague" to true.
+      5. NEVER guess or invent numbers. Only extract what is explicitly stated in the text.
     `;
 
     const userPayload = JSON.stringify(answers, null, 2);
@@ -69,8 +65,6 @@ export const AIExtractor = {
         before: Number(parsed.before) || 0,
         after: Number(parsed.after) || 0,
         timeframe: parsed.timeframe || "N/A",
-        pipelineValue: Number(parsed.pipelineValue) || 0,
-        dealsInfluenced: Number(parsed.dealsInfluenced) || 0,
         isVague: parsed.isVague === true,
         missingFields: Array.isArray(parsed.missingFields) ? parsed.missingFields : [],
       };

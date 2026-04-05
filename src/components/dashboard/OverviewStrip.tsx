@@ -84,7 +84,7 @@ export function OverviewStrip({ metrics }: { metrics: DashboardMetrics }) {
       </motion.div>
 
       {/* KPI Strip */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
         {kpis.map((kpi, i) => (
           <motion.div
             key={i}
