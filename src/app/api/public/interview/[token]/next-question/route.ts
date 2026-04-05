@@ -11,11 +11,17 @@ import { InterviewAnswerRepository } from "@/lib/repositories/interview-answer.r
 import { OrgProfileRepository } from "@/lib/repositories/org-profile.repository";
 import { InterviewService } from "@/lib/services/interview.service";
 import { QuestionEngine } from "@/lib/ai/question-engine";
+import { ContextEngine } from "@/lib/ai/context-engine";
+import { OrganizationRepository } from "@/lib/repositories/organization.repository";
+import { StateEngine } from "@/lib/ai/state-engine";
+import { AnswerProcessor } from "@/lib/ai/answer-processor";
+import { MemorySystem } from "@/lib/ai/memory-system";
+import { SystemMemoryRepository } from "@/lib/repositories/system-memory.repository";
 import { EventService } from "@/lib/services/event.service";
 import { validateInput, aiInterviewAnswerSchema } from "@/lib/validation";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AIValidator } from "@/lib/ai/validator";
-import type { InterviewIntent } from "@/types";
+import type { InterviewIntent, InterviewStage } from "@/types";
 
 // ─── Fallback Questions (ALWAYS available, zero dependencies) ────
 const FALLBACK_QUESTIONS: { question: string; intent: InterviewIntent }[] = [
@@ -136,6 +142,9 @@ export async function POST(
         // Fail open — accept the answer as-is
       }
 
+      // Classification (Layer 4)
+      const classification = AnswerProcessor.classifyAnswer(finalAnswerToStore, intent || "experience");
+
       // Store answer — wrapped
       try {
         await InterviewAnswerRepository.create({
@@ -143,7 +152,8 @@ export async function POST(
           question: body.question || "",
           answer: finalAnswerToStore,
           extracted: {
-            intent: intent || "business_context",
+            intent: intent || "experience",
+            classification,
             raw_answer: answer,
           },
         });
@@ -173,29 +183,40 @@ export async function POST(
 
     // ─── Load context (non-blocking) ───────────────────────
     let orgProfile: any = null;
-    let structuredAnswers: any = {};
+    let organization: any = null;
+    let existingAnswers: any[] = [];
+    let state: any = null;
     let questionCount = 0;
-
+    
     try {
-      [orgProfile, structuredAnswers] = await Promise.all([
+      [orgProfile, organization, existingAnswers] = await Promise.all([
         OrgProfileRepository.findByOrgId(interview.org_id).catch(() => null),
-        InterviewService.getStructuredAnswers(interview.id).catch(() => ({})),
+        OrganizationRepository.findById(interview.org_id).catch(() => null),
+        InterviewAnswerRepository.findByInterview(interview.id).catch(() => []),
       ]);
-    } catch (ctxErr) {
-      console.warn("[next-question] Context loading failed, using defaults:", ctxErr);
-    }
-
-    // Count existing answers — wrapped
-    try {
-      const existingAnswers = await InterviewAnswerRepository.findByInterview(interview.id);
+      
       questionCount = existingAnswers.length;
-    } catch (countErr) {
-      console.warn("[next-question] Answer count failed:", countErr);
-      // Estimate from structured answers
-      questionCount = Object.keys(structuredAnswers).length;
+      state = StateEngine.calculateState(existingAnswers);
+    } catch (ctxErr) {
+      console.warn("[next-question] Context loading failed:", ctxErr);
+      state = StateEngine.calculateState([]);
     }
 
-    console.log("[next-question] Context:", { hasOrgProfile: !!orgProfile, questionCount });
+    console.log("[next-question] Context:", { hasOrgProfile: !!orgProfile, questionCount, currentStage: state.stage });
+
+    // ─── Question Performance Tracking (Layer 7 & Outcome Loop) ────────────
+    if (finalAnswerToStore && body.question) {
+       const industry = orgProfile?.industry || "other";
+       // 1. Record that we used this question
+       await MemorySystem.recordUsage(body.question, "question", industry, state.stage, organization?.plan_type);
+
+       // 2. Identify if it produced an 'exact' metric and explicitly increase its priority
+       const lastClass = AnswerProcessor.classifyAnswer(finalAnswerToStore, intent || "improvement");
+       if (lastClass === "exact" || lastClass === "estimated") {
+           const increment = lastClass === "exact" ? 2 : 1;
+           await SystemMemoryRepository.recordOutcome(body.question, "question", increment);
+       }
+    }
 
     // ─── Update progress (non-blocking, NEVER crashes) ─────
     try {
@@ -214,19 +235,38 @@ export async function POST(
 
     try {
       console.log("[next-question] Calling QuestionEngine...");
-      aiResponse = await QuestionEngine.generateNextQuestion(
-        structuredAnswers,
-        orgProfile || ({
+      
+      const defaultProfile = {
           industry: "other",
           industry_raw: "General Business",
           service_category: "Professional Services",
           service_type: "Business services",
           target_customer: "Businesses",
-        } as any),
-        questionCount,
-        answer || undefined,
-        (intent as InterviewIntent) || undefined
-      );
+      };
+      
+      const context = ContextEngine.buildContext(orgProfile || defaultProfile, organization?.plan_type || "starter");
+      const policy = ContextEngine.getDynamicPolicy(context.industry);
+
+      // Check if we need an immediate vague follow-up before generating new questions
+      const lastAnswerObj = existingAnswers[existingAnswers.length - 1];
+      let isVagueFollowUp = false;
+      
+      if (lastAnswerObj && lastAnswerObj.extracted?.classification === "vague") {
+         const followUpText = await AnswerProcessor.generateEstimateFollowUp(lastAnswerObj.answer, lastAnswerObj.extracted.intent);
+         if (followUpText) {
+             aiResponse = { question: followUpText, intent: lastAnswerObj.extracted.intent, isFollowUp: true, isComplete: false };
+             isVagueFollowUp = true;
+         }
+      }
+
+      if (!isVagueFollowUp) {
+        aiResponse = await QuestionEngine.generateNextQuestion(
+          context,
+          policy,
+          state
+        );
+      }
+      
       console.log("[next-question] AI response:", { isComplete: aiResponse?.isComplete, hasQuestion: !!aiResponse?.question });
     } catch (aiErr) {
       console.error("[next-question] QuestionEngine CRASHED:", aiErr);

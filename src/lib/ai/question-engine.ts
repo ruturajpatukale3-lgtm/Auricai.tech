@@ -1,200 +1,154 @@
 // ═══════════════════════════════════════════════════════════
-// Auricai — AI Question Engine
-// Generates dynamic, context-aware interview questions.
-// Max 6 questions. Zero repetition. Vague-answer follow-ups.
+// Auricai — AI Question Engine (Layer 3)
+// Enforces "High-Value Only" data extraction logic.
 // ═══════════════════════════════════════════════════════════
 
 import { GeminiService } from "./gemini";
 import type {
-  OrgProfile,
-  StructuredAnswers,
   AIQuestionResponse,
-  InterviewIntent,
+  InterviewStage,
+  InterviewState,
 } from "@/types";
-
-const MAX_QUESTIONS = 6;
-
-// ─── Vague Answer Detection ─────────────────────────────────
-
-const VAGUE_PHRASES = [
-  "a lot",
-  "improved",
-  "better",
-  "significant",
-  "greatly",
-  "much better",
-  "way more",
-  "huge improvement",
-  "really good",
-  "pretty good",
-  "went up",
-  "went down",
-  "increased",
-  "decreased",
-  "some",
-  "many",
-  "several",
-];
-
-function isVagueAnswer(answer: string): boolean {
-  const lower = answer.toLowerCase().trim();
-  // Short answers are likely vague
-  if (lower.split(/\s+/).length < 4) return true;
-  // Check for vague phrases without specific numbers
-  const hasNumbers = /\d/.test(answer);
-  if (!hasNumbers && VAGUE_PHRASES.some((p) => lower.includes(p))) return true;
-  return false;
-}
-
-// ─── Intent Resolution ──────────────────────────────────────
-
-function getMissingIntents(answers: StructuredAnswers): InterviewIntent[] {
-  const allIntents: InterviewIntent[] = [
-    "business_context",
-    "problem",
-    "result",
-    "metrics",
-    "timeframe",
-    "testimonial",
-  ];
-  return allIntents.filter((intent) => !answers[intent]);
-}
-
-function isComplete(answers: StructuredAnswers): boolean {
-  const missing = getMissingIntents(answers);
-  return missing.length === 0;
-}
-
-// ─── Context Builder ────────────────────────────────────────
-
-function buildContextBlock(profile: OrgProfile): string {
-  const parts = [
-    `Industry: ${profile.industry_raw || profile.industry}`,
-    `Service Category: ${profile.service_category}`,
-    `Service: ${profile.service_type}`,
-    `Target Customer: ${profile.target_customer}`,
-  ];
-  return parts.join("\n");
-}
-
-// ─── Core Engine ────────────────────────────────────────────
+import { BusinessContext, DynamicPolicy, ContextEngine } from "./context-engine";
+import { StateEngine } from "./state-engine";
+import { MemorySystem } from "./memory-system";
 
 export const QuestionEngine = {
   /**
-   * Generate the next interview question based on current answers and org context.
-   * Returns isComplete=true when all intents are covered OR max questions reached.
+   * Generate the next interview question using the candidate generation & scoring engine.
    */
   async generateNextQuestion(
-    answers: StructuredAnswers,
-    orgProfile: OrgProfile,
-    questionCount: number,
-    lastAnswer?: string,
-    lastIntent?: InterviewIntent
+    context: BusinessContext,
+    policy: DynamicPolicy,
+    state: InterviewState
   ): Promise<AIQuestionResponse> {
-    // Hard cap
-    if (questionCount >= MAX_QUESTIONS || isComplete(answers)) {
-      return {
+    
+    // Default complete condition
+    if (state.stage === "recommendation" && state.answers.find(a => a.stage === "recommendation")) {
+       return {
         question: "",
         intent: "testimonial",
+        stage: "recommendation",
         isFollowUp: false,
         isComplete: true,
       };
     }
 
-    // Check if last answer was vague — generate follow-up
-    const needsFollowUp =
-      lastAnswer && lastIntent && isVagueAnswer(lastAnswer);
+    const { stage: targetStage } = state;
 
-    const missing = getMissingIntents(answers);
-    const nextIntent = needsFollowUp ? lastIntent : missing[0] || "testimonial";
+    const previousQuestions = state.answers.map(a => a.answer).join("\n");
+    const bestQuestionsFromMemory = await MemorySystem.getBestQuestions(context.industry, targetStage, context.plan);
 
-    const answeredSummary = Object.entries(answers)
-      .filter(([, v]) => v)
-      .map(([k, v]) => `${k}: "${v}"`)
-      .join("\n");
+    const systemPrompt = `You are a high-value DATA EXTRACTOR for a B2B case study system. You act as a conversion-focused strategist.
 
-    const isAlmostDone = questionCount >= 4 && questionCount < MAX_QUESTIONS;
+${ContextEngine.serializeContext(context, policy)}
+${StateEngine.serializeState(state)}
 
-    const systemPrompt = `You are a friendly AI interviewer collecting case study data for a B2B company.
+QUESTION SELECTION LOGIC (MANDATORY):
+Before generating any question, ask yourself: "Does this question increase case study strength?"
+If NO → Do not generate it.
 
-BUSINESS CONTEXT:
-${buildContextBlock(orgProfile)}
+RULES FOR CANDIDATE GENERATION:
+1. Target the '${targetStage}' stage.
+2. Reject storytelling. Ask questions that extract PROOF (Metrics, Before/After data, Timeframes).
+3. DO NOT repeat topics covered in [PREVIOUS ANSWERS].
 
-ALREADY COLLECTED:
-${answeredSummary || "(Nothing yet — this is the first question)"}
+HIGH-VALUE PATTERNS TO USE:
+- "What improved the most?"
+- "Roughly how much did it improve?"
+- "What was it before vs what is it now?"
+- "How long did it take to see results?"
 
-MISSING DATA CATEGORIES: ${missing.join(", ") || "none"}
+LOW-VALUE FORBIDDEN QUESTIONS:
+- "Tell me about your experience"
+- "How was it?"
+- "Can you elaborate?"
+- "Please provide more details"
 
-RULES:
-1. Ask exactly ONE question.
-2. Keep it short, warm, and conversational (max 2 sentences).
-3. Do NOT repeat any question already answered.
-4. Do NOT use jargon or buzzwords.
-5. Sound human — like a friendly colleague, not a survey bot.
-${needsFollowUp ? `6. The user's last answer was vague: "${lastAnswer}". Ask a FOLLOW-UP to get specific numbers, percentages, or concrete details. Be encouraging, not pushy.` : `6. Target the "${nextIntent}" category specifically.`}
-${isAlmostDone && !needsFollowUp ? `7. This is one of the final questions. Start your message with an encouraging transition (e.g., "We're almost done!", "Just a couple more questions!", or "Last thing...").` : ""}
+MEMORY PATTERNS (Top Performing Questions):
+${bestQuestionsFromMemory.join("\n")}
 
-INTENT DEFINITIONS:
-- business_context: What the client's company does, what they were looking for
-- problem: The specific challenge or pain point before working together
-- result: The outcome or transformation achieved
-- metrics: Specific numbers, percentages, dollar amounts, KPIs
-- timeframe: How long it took to see results
-- testimonial: A personal quote or recommendation they'd share
-
-Return JSON ONLY with this exact schema:
+Respond with ONLY valid JSON containing an array of 3 candidates exactly matching this schema:
 {
-  "question": "your question here",
-  "intent": "${nextIntent}",
-  "isFollowUp": ${needsFollowUp ? "true" : "false"}
+  "candidates": [
+    {
+      "question": "string (the short, specific question)",
+      "informationGainScore": number (1-10, how much new *hard evidence* this extracts),
+      "relevanceScore": number (1-10, relevance),
+      "answerProbabilityScore": number (1-10, ease of answering for a human)
+    }
+  ]
 }`;
 
-    const userPrompt = needsFollowUp
-      ? `The interviewee just answered: "${lastAnswer}". Ask a follow-up to get specifics.`
-      : `Generate the next question targeting: ${nextIntent}`;
-
+    let bestQuestion = this.getFallbackQuestion(targetStage);
+    
     try {
-      const parsed = await GeminiService.generateJSON<any>({
+      const parsed = await GeminiService.generateJSON<{
+        candidates: {
+          question: string;
+          informationGainScore: number;
+          relevanceScore: number;
+          answerProbabilityScore: number;
+        }[];
+      }>({
         systemPrompt,
-        userPrompt,
-        temperature: 0.7,
+        userPrompt: "Generate the 3 candidates and their raw scores. Ensure they are HIGH-VALUE data extractors.",
+        temperature: 0.7, 
       });
 
-      return {
-        question: parsed.question || this.getFallbackQuestion(nextIntent),
-        intent: nextIntent,
-        isFollowUp: needsFollowUp || false,
-        isComplete: false,
-      };
+      if (parsed?.candidates?.length > 0) {
+        let highestScore = -Infinity;
+        
+        for (const candidate of parsed.candidates) {
+          let repetition_penalty = 0;
+          let vagueness_penalty = 0;
+          
+          const qLower = candidate.question.toLowerCase();
+          
+          if (qLower.includes("tell me about") || qLower.includes("elaborate") || qLower.includes("how was it")) {
+            vagueness_penalty += 100; // Instantly kill weak formulations
+          }
+          
+          if (previousQuestions.toLowerCase().includes(qLower.slice(0, 15))) {
+            repetition_penalty += 50;
+          }
+
+          const rawScore = (candidate.informationGainScore * candidate.relevanceScore * candidate.answerProbabilityScore);
+          const finalScore = rawScore - repetition_penalty - vagueness_penalty;
+          
+          if (finalScore > highestScore) {
+            highestScore = finalScore;
+            bestQuestion = candidate.question;
+          }
+        }
+      }
     } catch (err) {
-      console.error("[QuestionEngine] Gemini call failed, using fallback:", err);
-      return {
-        question: this.getFallbackQuestion(nextIntent),
-        intent: nextIntent,
-        isFollowUp: false,
-        isComplete: false,
-      };
+      console.error("[QuestionEngine] Gemini generation failed, using fallback:", err);
     }
+
+    return {
+      question: bestQuestion,
+      intent: StateEngine.mapIntentToStage(targetStage) as any, // backwards compat
+      stage: targetStage,
+      isFollowUp: false,
+      isComplete: false,
+      fallbackQuestion: this.getFallbackQuestion(targetStage),
+    };
   },
 
   /**
-   * Fallback questions in case Gemini is unavailable
+   * Fallback questions optimized for high-value data.
    */
-  getFallbackQuestion(intent: InterviewIntent): string {
-    const fallbacks: Record<InterviewIntent, string> = {
-      business_context:
-        "Can you tell me a bit about your company and what you were looking for?",
-      problem:
-        "What was the main challenge you were facing before working with us?",
-      result:
-        "What changed after we started working together? What results did you see?",
-      metrics:
-        "Can you share any specific numbers — like percentage improvements, revenue gains, or time saved?",
-      timeframe:
-        "How quickly did you start seeing results?",
-      testimonial:
-        "If a colleague asked you about your experience, what would you tell them?",
+  getFallbackQuestion(stage: InterviewStage): string {
+    const fallbacks: Record<InterviewStage, string> = {
+      improvement: "What specific result or metric improved the most?",
+      metric: "Roughly how much did that improve? Can you give me a percentage or number?",
+      before_after: "What was it like before vs what is it now?",
+      timeframe: "How long did it take to see those results?",
+      impact: "What changed in your business after achieving that?",
+      experience: "Why did you choose us over the alternatives?", 
+      recommendation: "If a colleague asked you about your results, what would you tell them?",
     };
-    return fallbacks[intent];
+    return fallbacks[stage] || "What improved the most?";
   },
 };

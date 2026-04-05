@@ -4,6 +4,7 @@ import { CaseStudyService } from "@/lib/services/case-study.service";
 import { OrganizationRepository } from "@/lib/repositories/organization.repository";
 import { Metadata } from "next";
 import { PoweredByAuricaiStatic } from "@/components/shared/PoweredByAuricai";
+import { CaseStudyTracker } from "@/components/analytics/CaseStudyTracker";
 
 interface PublicCaseStudyPageProps {
   params: {
@@ -60,6 +61,7 @@ export default async function PublicCaseStudyPage({ params }: PublicCaseStudyPag
 
   return (
     <div className="min-h-screen bg-white text-black font-sans">
+      <CaseStudyTracker id={cs.id} />
       {/* Premium Header */}
       <nav className="border-b border-gray-100 py-6 px-10">
         <div className="max-w-5xl mx-auto flex items-center justify-between">

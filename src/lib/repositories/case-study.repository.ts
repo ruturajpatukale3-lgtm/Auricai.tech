@@ -5,6 +5,7 @@
 
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import type { CaseStudy, CaseStudyStatus } from "@/types";
+import { SystemMemoryRepository } from "./system-memory.repository";
 
 const TABLE = "case_studies";
 
@@ -150,6 +151,71 @@ export const CaseStudyRepository = {
           .update({ views: (data.views || 0) + 1 })
           .eq("id", id);
       }
+    }
+
+    // REAL-WORLD OPTIMIZATION
+    // When a case study gets views, log engagement for its hook and constituent questions.
+    try {
+      const { data: ctData } = await supabaseAdmin.from(TABLE).select("headline, interview_id").eq("id", id).single();
+      if (ctData) {
+         if (ctData.headline) {
+            await SystemMemoryRepository.recordOutcome(ctData.headline, "hook", 0.2); // Views are 0.2
+         }
+         
+         if (ctData.interview_id) {
+            // Log engagement to all questions generated in this specific interview
+            const { data: answers } = await supabaseAdmin.from("interview_answers").select("question").eq("interview_id", ctData.interview_id);
+            if (answers) {
+              for (const a of answers) {
+                 if (a.question) await SystemMemoryRepository.recordOutcome(a.question, "question", 0.2); // Views are 0.2
+              }
+            }
+         }
+      }
+    } catch (e) {
+      console.log("[incrementViews] Suppressed telemetry err:", e);
+    }
+  },
+
+  async incrementClicks(id: string): Promise<void> {
+    try {
+      const { data: ctData } = await supabaseAdmin.from(TABLE).select("headline, interview_id").eq("id", id).single();
+      if (ctData) {
+         if (ctData.headline) await SystemMemoryRepository.recordOutcome(ctData.headline, "hook", 0.6); // Clicks are 0.6
+         if (ctData.interview_id) {
+            const { data: answers } = await supabaseAdmin.from("interview_answers").select("question").eq("interview_id", ctData.interview_id);
+            if (answers) {
+              for (const a of answers) {
+                 if (a.question) await SystemMemoryRepository.recordOutcome(a.question, "question", 0.6);
+              }
+            }
+         }
+      }
+    } catch (e) {
+      // Non-blocking telemetry
+    }
+  },
+
+  /**
+   * Translates active seconds into an engagement signal.
+   * e.g., We give +0.2 every time this ping triggers (perhaps pinged every 10-20 seconds on client side).
+   */
+  async incrementReadTime(id: string, durationPingValue: number = 0.2): Promise<void> {
+    try {
+      const { data: ctData } = await supabaseAdmin.from(TABLE).select("headline, interview_id").eq("id", id).single();
+      if (ctData) {
+         if (ctData.headline) await SystemMemoryRepository.recordOutcome(ctData.headline, "hook", durationPingValue); 
+         if (ctData.interview_id) {
+            const { data: answers } = await supabaseAdmin.from("interview_answers").select("question").eq("interview_id", ctData.interview_id);
+            if (answers) {
+              for (const a of answers) {
+                 if (a.question) await SystemMemoryRepository.recordOutcome(a.question, "question", durationPingValue);
+              }
+            }
+         }
+      }
+    } catch (e) {
+      // Non-blocking telemetry
     }
   },
 

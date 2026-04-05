@@ -128,6 +128,34 @@ export const ALL_INTENTS: InterviewIntent[] = [
   "testimonial",
 ];
 
+export type InterviewStage = 
+  | "experience"
+  | "improvement"
+  | "metric"
+  | "before_after"
+  | "timeframe"
+  | "impact"
+  | "recommendation";
+
+export const ALL_STAGES: InterviewStage[] = [
+  "experience",
+  "improvement",
+  "metric",
+  "before_after",
+  "timeframe",
+  "impact",
+  "recommendation"
+];
+
+export type AnswerClassification = "exact" | "estimated" | "vague" | "qualitative";
+
+export interface InterviewState {
+  stage: InterviewStage;
+  answers: { stage: InterviewStage, answer: string, classification: AnswerClassification }[];
+  extractedMetrics: string[];
+  confidenceScore: number;
+}
+
 export interface StructuredAnswers {
   business_context?: string;
   problem?: string;
@@ -140,7 +168,10 @@ export interface StructuredAnswers {
 export interface AIQuestionResponse {
   question: string;
   intent: InterviewIntent;
+  stage?: InterviewStage;
   isFollowUp: boolean;
+  expectedAnswerType?: AnswerClassification;
+  fallbackQuestion?: string;
   isComplete: boolean;
 }
 
@@ -151,6 +182,7 @@ export interface AICaseStudyOutput {
   after: string;
   metrics: string;
   testimonial: string;
+  timeframe?: string;
   confidenceScore?: number;
 }
 
