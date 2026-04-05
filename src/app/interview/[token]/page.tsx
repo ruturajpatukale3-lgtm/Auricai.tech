@@ -66,7 +66,6 @@ export default function InterviewPage() {
   const [generatedCaseStudy, setGeneratedCaseStudy] = useState<any>(null);
   const [processingTimeout, setProcessingTimeout] = useState(false);
   const [processingStep, setProcessingStep] = useState(0);
-  const [shouldAutoStart, setShouldAutoStart] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -144,14 +143,14 @@ export default function InterviewPage() {
         setPlanName(response.data.plan_name);
       }
 
-      // ── Auto-start: skip welcome screen, go straight to interview ──
-      // Only auto-start if there's no cached session already in progress
+      // ── Session Detection & Initial Screen ────────
       const cachedStr = localStorage.getItem(`auricai_session_${token}`);
       const hasCachedMessages = cachedStr ? JSON.parse(cachedStr)?.messages?.length > 0 : false;
-      if (!hasCachedMessages) {
+      
+      if (hasCachedMessages) {
         setScreen("chat");
-        // callNextQuestion will be triggered by the autoStart effect below
-        setShouldAutoStart(true);
+      } else {
+        setScreen("welcome");
       }
     } catch (err: any) {
       console.error("INITIALIZATION ERROR:", err.message);
@@ -294,14 +293,6 @@ export default function InterviewPage() {
     [token]
   );
 
-  // ─── Auto-start trigger: fires first question after validation ────
-  useEffect(() => {
-    if (shouldAutoStart && !isValidating && screen === "chat" && messages.length === 0) {
-      setShouldAutoStart(false);
-      callNextQuestion();
-    }
-  }, [shouldAutoStart, isValidating, screen, messages.length, callNextQuestion]);
-
   // ─── Handlers ─────────────────────────────────────────────
   function handleStart() {
     setScreen("chat");
@@ -358,7 +349,7 @@ export default function InterviewPage() {
             <Loader2 className="w-5 h-5 text-[#A1A1AA]" />
           </motion.div>
           <p className="text-xs text-[#A1A1AA] tracking-wide">
-            Preparing your interview...
+            Verifying secure link
           </p>
         </div>
       </div>
