@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams } from "next/navigation";
 import {
-  Send,
   Loader2,
   CheckCircle2,
   ArrowRight,
@@ -329,7 +328,7 @@ export default function InterviewPage() {
   // ─── Hydration & Validation Guard ─────────────────────────
   if (!isMounted || isValidating) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "#000000", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "#0B0B0C", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
         <div className="text-center">
           <motion.div
             animate={{ rotate: 360 }}
@@ -351,7 +350,7 @@ export default function InterviewPage() {
     const isServerError = errorType === "SERVER_ERROR";
 
     return (
-      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "#000000", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "#0B0B0C", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
         <motion.div
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -396,7 +395,7 @@ export default function InterviewPage() {
     return (
       <div
         className="min-h-screen flex items-center justify-center p-6 sm:p-10 relative"
-        style={{ background: "#000000", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}
+        style={{ background: "#0B0B0C", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}
       >
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -508,7 +507,7 @@ export default function InterviewPage() {
   // ═══════════════════════════════════════
   if (screen === "review") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "#000000", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "#0B0B0C", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -718,7 +717,7 @@ export default function InterviewPage() {
   // ═══════════════════════════════════════
   if (screen === "complete") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 relative" style={{ background: "#000000", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
+      <div className="min-h-screen flex items-center justify-center p-6 relative" style={{ background: "#0B0B0C", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -784,145 +783,188 @@ export default function InterviewPage() {
   }
 
   // ═══════════════════════════════════════
-  // CHAT SCREEN
+  // INTERVIEW SCREEN (Structured Workflow)
   // ═══════════════════════════════════════
   const progress = Math.min((questionNumber / totalMax) * 100, 100);
 
   return (
-    <div className="min-h-screen flex flex-col max-w-2xl mx-auto" style={{ background: "#000000", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
-      {/* Progress Bar */}
-      <div className="sticky top-0 z-10 border-b border-[#1F1F1F] px-6 py-4" style={{ background: "rgba(0,0,0,0.9)", backdropFilter: "blur(12px)" }}>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-[#A1A1AA]">
-            Case Study Interview
-          </span>
-          <span className="text-xs font-mono text-white/30">
-            {questionNumber}/{totalMax}
-          </span>
-        </div>
-        <div className="w-full h-px bg-[#1F1F1F] overflow-hidden">
-          <motion.div
-            className="h-full bg-white/50"
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-          />
-        </div>
-      </div>
+    <div className="min-h-screen flex flex-col" style={{ background: "#0B0B0C", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
 
-      {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
-        <AnimatePresence mode="popLayout">
-          {messages.map((msg) => (
+      {/* ── Fixed Top Header ─────────────────────────────── */}
+      <div className="fixed top-0 left-0 right-0 z-20" style={{ background: "#0B0B0C" }}>
+        <div className="max-w-[680px] mx-auto px-6">
+          <div className="flex items-center justify-between py-5">
+            <div>
+              <h1 className="text-[13px] font-semibold text-white tracking-tight">
+                Case Study Interview
+              </h1>
+              <p className="text-[11px] text-[#A1A1AA] mt-0.5">
+                Structured response collection
+              </p>
+            </div>
+            <span className="text-[12px] font-medium text-[#A1A1AA] tabular-nums">
+              Step {questionNumber} of {totalMax}
+            </span>
+          </div>
+
+          {/* ── 2px Progress Bar ──────────────────────────── */}
+          <div className="w-full h-[2px] bg-[#1F1F1F] overflow-hidden">
             <motion.div
-              key={msg.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.25 }}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[85%] rounded-xl px-5 py-3.5 text-sm leading-relaxed ${
-                  msg.role === "user"
-                    ? "bg-white text-black rounded-br-sm"
-                    : "bg-[#111111] text-white/90 border border-[#1F1F1F] rounded-bl-sm"
-                }`}
-              >
-                {msg.role === "ai" && (
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider">
-                      Interviewer
-                    </span>
-                  </div>
-                )}
-                {msg.text}
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-
-        {/* Loading indicator */}
-        {isLoading && (
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex justify-start"
-          >
-            <div className="bg-[#111111] border border-[#1F1F1F] rounded-xl rounded-bl-sm px-5 py-4">
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <div className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <div className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: "300ms" }} />
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Error */}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex justify-center"
-          >
-            <div className="bg-[#111111] border border-[#1F1F1F] rounded-lg px-4 py-2.5 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-[#A1A1AA]" />
-              <span className="text-sm text-[#A1A1AA]">{error}</span>
-              <button
-                onClick={() => {
-                  setError(null);
-                  callNextQuestion();
-                }}
-                className="text-xs text-white underline ml-2"
-              >
-                Retry
-              </button>
-            </div>
-          </motion.div>
-        )}
-
-        <div ref={chatEndRef} />
-      </div>
-
-      {/* Chat Input */}
-      <div className="sticky bottom-0 border-t border-[#1F1F1F] px-6 py-4" style={{ background: "rgba(0,0,0,0.9)", backdropFilter: "blur(12px)" }}>
-        <form onSubmit={handleSubmit} className="flex items-end gap-3">
-          <div className="flex-1 relative">
-            <textarea
-              ref={inputRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type your answer..."
-              disabled={isLoading}
-              rows={1}
-              className="w-full bg-[#111111] border border-[#1F1F1F] rounded-lg px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-white/30 transition-colors resize-none disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ minHeight: "44px", maxHeight: "120px", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}
-              onInput={(e) => {
-                const target = e.target as HTMLTextAreaElement;
-                target.style.height = "auto";
-                target.style.height = Math.min(target.scrollHeight, 120) + "px";
-              }}
+              className="h-full bg-white/60"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
             />
           </div>
-          <button
-            type="submit"
-            disabled={isLoading || !inputValue.trim()}
-            className="flex-shrink-0 w-11 h-11 rounded-lg bg-white hover:opacity-90 disabled:bg-[#111111] disabled:border disabled:border-[#1F1F1F] disabled:cursor-not-allowed transition-all flex items-center justify-center"
-          >
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 text-[#A1A1AA] animate-spin" />
-            ) : (
-              <Send className="w-4 h-4 text-black" />
+        </div>
+      </div>
+
+      {/* ── Message Area ─────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto pt-[88px] pb-[180px]">
+        <div className="max-w-[680px] mx-auto px-6">
+          <div className="space-y-6">
+            <AnimatePresence mode="popLayout">
+              {messages.map((msg) => (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                >
+                  {msg.role === "ai" ? (
+                    /* ── AI Question Block ──────────────────── */
+                    <div className="max-w-[520px]">
+                      <div
+                        className="rounded-xl border px-5 py-5"
+                        style={{ background: "#111111", borderColor: "#1F1F1F" }}
+                      >
+                        <p className="text-[10px] font-medium uppercase tracking-widest mb-3" style={{ color: "#A1A1AA" }}>
+                          Question
+                        </p>
+                        <p className="text-[14px] font-medium text-white leading-relaxed">
+                          {msg.text}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    /* ── User Response Block ────────────────── */
+                    <div className="flex justify-end">
+                      <div className="max-w-[520px]">
+                        <div
+                          className="rounded-xl px-5 py-4"
+                          style={{ background: "#1A1A1A" }}
+                        >
+                          <p className="text-[10px] font-medium uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+                            Your Response
+                          </p>
+                          <p className="text-[14px] text-white/90 leading-relaxed">
+                            {msg.text}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {/* ── Loading Indicator ──────────────────────── */}
+            {isLoading && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="max-w-[520px]"
+              >
+                <div
+                  className="rounded-xl border px-5 py-5 flex items-center gap-3"
+                  style={{ background: "#111111", borderColor: "#1F1F1F" }}
+                >
+                  <Loader2 className="w-4 h-4 text-[#A1A1AA] animate-spin" />
+                  <span className="text-[13px] text-[#A1A1AA]">
+                    Preparing next question...
+                  </span>
+                </div>
+              </motion.div>
             )}
-          </button>
-        </form>
-        <p className="text-[10px] text-white/20 mt-2 text-center">
-          Press Enter to send · Shift+Enter for new line
-        </p>
+
+            {/* ── Error State (Clean) ────────────────────── */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex justify-center py-4"
+              >
+                <div className="text-center max-w-sm">
+                  <p className="text-[14px] text-[#A1A1AA] mb-4">
+                    This session could not be loaded.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setError(null);
+                      callNextQuestion();
+                    }}
+                    className="inline-flex items-center justify-center bg-white text-black px-5 h-10 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
+                  >
+                    Retry
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            <div ref={chatEndRef} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Fixed Bottom Input Section ───────────────────── */}
+      <div className="fixed bottom-0 left-0 right-0 z-20" style={{ background: "#0B0B0C" }}>
+        <div className="max-w-[680px] mx-auto px-6">
+          <div className="border-t py-4" style={{ borderColor: "#1F1F1F" }}>
+            <form onSubmit={handleSubmit}>
+              <textarea
+                ref={inputRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Provide a clear, specific answer. Include numbers if possible."
+                disabled={isLoading}
+                rows={2}
+                className="w-full bg-transparent text-[14px] text-white placeholder-white/20 focus:outline-none resize-none disabled:opacity-40 disabled:cursor-not-allowed leading-relaxed"
+                style={{ minHeight: "52px", maxHeight: "120px", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}
+                onInput={(e) => {
+                  const target = e.target as HTMLTextAreaElement;
+                  target.style.height = "auto";
+                  target.style.height = Math.min(target.scrollHeight, 120) + "px";
+                }}
+              />
+
+              <div className="flex items-center justify-between mt-3">
+                {/* Micro Hint */}
+                <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.25)" }}>
+                  Example: 12% → 31% in 60 days
+                </p>
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={isLoading || !inputValue.trim()}
+                  className="flex-shrink-0 inline-flex items-center justify-center gap-2 bg-white text-black rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+                  style={{ height: "44px", paddingLeft: "20px", paddingRight: "20px" }}
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <span>Submit</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
 
       {/* Branding */}
