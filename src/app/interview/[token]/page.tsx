@@ -112,14 +112,18 @@ export default function InterviewPage() {
   // ─── Initial Logic ─────────────────────────────────────────
   // ─── Auto-start: validate token then immediately begin interview ──
   const initializeInterview = useCallback(async () => {
+    console.log("STEP 1: Page loaded with token:", token);
     setIsValidating(true);
     setErrorType(null);
     setIsInvalid(false);
 
     try {
+      console.log("STEP 2: Fetch triggered — /api/public/interview/" + token);
       const res = await fetch(`/api/public/interview/${token}`);
+      console.log("STEP 5: API response status:", res.status);
 
       if (res.status === 404 || res.status === 410) {
+        console.warn("FAILURE POINT: STEP 5 — Token not found or expired (HTTP", res.status, ")");
         setErrorType("INVALID");
         setIsInvalid(true);
         return;
@@ -127,11 +131,14 @@ export default function InterviewPage() {
 
       if (!res.ok) {
         setErrorType("SERVER_ERROR");
+        setIsInvalid(true);
         const errData = await res.json().catch(() => ({}));
+        console.error("FAILURE POINT: STEP 5 — API error:", errData);
         throw new Error(errData?.error || `HTTP ${res.status}`);
       }
 
       const response = await res.json();
+      console.log("STEP 5: API response data:", { success: response.success, hasData: !!response.data, clientName: response.data?.client_name });
 
       if (response?.data?.client_name) {
         setClientName(response.data.client_name);
@@ -148,13 +155,16 @@ export default function InterviewPage() {
       const hasCachedMessages = cachedStr ? JSON.parse(cachedStr)?.messages?.length > 0 : false;
       
       if (hasCachedMessages) {
+        console.log("STEP 6: Resuming cached session");
         setScreen("chat");
       } else {
+        console.log("STEP 6: Showing welcome screen (fresh session)");
         setScreen("welcome");
       }
     } catch (err: any) {
-      console.error("INITIALIZATION ERROR:", err.message);
+      console.error("FAILURE POINT: INITIALIZATION ERROR:", err.message);
       setErrorType("SERVER_ERROR");
+      setIsInvalid(true);
       setError(err.message || "Failed to load interview");
     } finally {
       setIsValidating(false);
@@ -228,6 +238,7 @@ export default function InterviewPage() {
   // ─── API Call ──────────────────────────────────────────────
   const callNextQuestion = useCallback(
     async (answer?: string, intent?: string, question?: string) => {
+      console.log("STEP [callNextQuestion]: Calling next-question API", { answer: answer?.substring(0, 50), intent, question: question?.substring(0, 50) });
       setIsLoading(true);
       setError(null);
 
@@ -243,7 +254,9 @@ export default function InterviewPage() {
           body: JSON.stringify(body),
         });
 
+        console.log("STEP [callNextQuestion]: Response status:", res.status);
         const data: APIResponse = await res.json();
+        console.log("STEP [callNextQuestion]: Response data:", { success: data.success, hasQuestion: !!data.data?.question, isComplete: data.data?.isComplete, error: data.error });
 
         if (!res.ok || !data.success) {
           if (data.isComplete) {
@@ -272,6 +285,7 @@ export default function InterviewPage() {
         }
 
         if (data.data?.question) {
+          console.log("STEP [callNextQuestion]: Adding AI question to messages:", data.data.question.substring(0, 60));
           setMessages((prev) => [
             ...prev,
             {
@@ -285,6 +299,7 @@ export default function InterviewPage() {
           setCurrentIntent(data.data.intent || "business_context");
         }
       } catch (err: any) {
+        console.error("FAILURE POINT: callNextQuestion error:", err.message);
         setError(err.message || "Network error. Please try again.");
       } finally {
         setIsLoading(false);
@@ -907,8 +922,14 @@ export default function InterviewPage() {
                 className="flex justify-center py-4"
               >
                 <div className="text-center max-w-sm">
-                  <p className="text-[14px] text-[#A1A1AA] mb-4">
-                    This session could not be loaded.
+                  <div className="w-10 h-10 rounded-lg border border-[#1F1F1F] flex items-center justify-center mx-auto mb-4">
+                    <AlertCircle className="w-5 h-5 text-[#A1A1AA]" />
+                  </div>
+                  <p className="text-[14px] text-white mb-2 font-medium">
+                    Something went wrong
+                  </p>
+                  <p className="text-[13px] text-[#A1A1AA] mb-5">
+                    {error || "We couldn't connect to the server. Please check your connection and try again."}
                   </p>
                   <button
                     onClick={() => {

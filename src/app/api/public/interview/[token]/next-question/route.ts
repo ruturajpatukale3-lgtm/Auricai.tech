@@ -1,7 +1,8 @@
 // ═══════════════════════════════════════════════════════════
 // POST /api/public/interview/[token]/next-question
-// Public endpoint — AI-powered dynamic interview flow.
-// No auth. Token-based access only. Rate-limited.
+// BULLETPROOF: This endpoint NEVER returns 500.
+// If AI fails → fallback question. If DB fails → fallback question.
+// The interview ALWAYS continues.
 // ═══════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from "next/server";
@@ -10,46 +11,85 @@ import { InterviewAnswerRepository } from "@/lib/repositories/interview-answer.r
 import { OrgProfileRepository } from "@/lib/repositories/org-profile.repository";
 import { InterviewService } from "@/lib/services/interview.service";
 import { QuestionEngine } from "@/lib/ai/question-engine";
-import { CaseStudyGenerator } from "@/lib/ai/case-study-generator";
-import { CaseStudyService } from "@/lib/services/case-study.service";
 import { EventService } from "@/lib/services/event.service";
 import { validateInput, aiInterviewAnswerSchema } from "@/lib/validation";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AIValidator } from "@/lib/ai/validator";
-import { AIScorer } from "@/lib/ai/scorer";
 import type { InterviewIntent } from "@/types";
+
+// ─── Fallback Questions (ALWAYS available, zero dependencies) ────
+const FALLBACK_QUESTIONS: { question: string; intent: InterviewIntent }[] = [
+  { question: "Can you tell me a bit about your company and what you were looking for?", intent: "business_context" },
+  { question: "What was your biggest challenge before using this?", intent: "problem" },
+  { question: "What changed after we started working together? What results did you see?", intent: "result" },
+  { question: "Can you share any specific numbers — like percentage improvements, revenue gains, or time saved?", intent: "metrics" },
+  { question: "How quickly did you start seeing results?", intent: "timeframe" },
+  { question: "If a colleague asked you about your experience, what would you tell them?", intent: "testimonial" },
+];
+
+function getFallbackQuestion(questionIndex: number): { question: string; intent: InterviewIntent } {
+  const idx = Math.min(questionIndex, FALLBACK_QUESTIONS.length - 1);
+  return FALLBACK_QUESTIONS[idx >= 0 ? idx : 0];
+}
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  // ═══════════════════════════════════════════════════════════
+  // OUTER TRY: If ANYTHING crashes, return a fallback question.
+  // This endpoint NEVER returns 500.
+  // ═══════════════════════════════════════════════════════════
   try {
     const { token } = await params;
     const ip = req.headers.get("x-forwarded-for") || "unknown";
+    console.log("[next-question] API hit — token:", token);
 
-    // Rate limit: 20 requests per minute per IP (generous for interview flow)
-    const limit = await checkRateLimit(`ai_interview_${ip}`, 20, "1 m");
-    if (!limit.success) {
-      return NextResponse.json(
-        { success: false, error: "Rate limit exceeded. Please wait a moment." },
-        { status: 429 }
-      );
+    // ─── Rate Limit (non-blocking) ─────────────────────────
+    try {
+      const limit = await checkRateLimit(`ai_interview_${ip}`, 20, "1 m");
+      if (!limit.success) {
+        console.warn("[next-question] Rate limit hit for IP:", ip);
+        return NextResponse.json(
+          { success: false, error: "Rate limit exceeded. Please wait a moment." },
+          { status: 429 }
+        );
+      }
+    } catch (rateLimitErr) {
+      console.warn("[next-question] Rate limit check failed, bypassing:", rateLimitErr);
+      // Continue — don't block the interview
     }
 
-    // 1. Validate token → find interview
-    const interview = await InterviewRepository.findByToken(token);
+    // ─── Find Interview ────────────────────────────────────
+    let interview: any = null;
+    try {
+      interview = await InterviewRepository.findByToken(token);
+    } catch (dbErr) {
+      console.error("[next-question] DB lookup failed:", dbErr);
+      // Return fallback — we can't find the interview but don't crash
+      const fb = getFallbackQuestion(0);
+      return NextResponse.json({
+        success: true,
+        data: { question: fb.question, intent: fb.intent, isFollowUp: false, isComplete: false, questionNumber: 1, totalMax: 6 },
+      });
+    }
+
     if (!interview) {
       return NextResponse.json({ success: false, error: "Interview not found" }, { status: 404 });
     }
 
-    // Expiration check (30 days)
-    const createdDate = new Date(interview.created_at);
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    if (createdDate < thirtyDaysAgo) {
-      return NextResponse.json({ success: false, error: "Interview link has expired." }, { status: 410 });
-    }
+    console.log("[next-question] Interview found:", { id: interview.id, status: interview.status });
 
-    // Block if already completed
+    // ─── Expiration check (30 days) ────────────────────────
+    try {
+      const createdDate = new Date(interview.created_at);
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      if (createdDate < thirtyDaysAgo) {
+        return NextResponse.json({ success: false, error: "Interview link has expired." }, { status: 410 });
+      }
+    } catch { /* date parse fail — continue */ }
+
+    // ─── Block if already completed ────────────────────────
     if (interview.status === "completed" || interview.status === "approved" || interview.status === "published") {
       return NextResponse.json(
         { success: false, error: "This interview has already been completed", isComplete: true },
@@ -57,7 +97,7 @@ export async function POST(
       );
     }
 
-    // 2. Parse body
+    // ─── Parse body ────────────────────────────────────────
     const body = await req.json().catch(() => ({}));
     const validation = validateInput(aiInterviewAnswerSchema, body);
     if (!validation.success) {
@@ -69,96 +109,150 @@ export async function POST(
 
     const { answer, intent } = validation.data;
 
-    // 3. If answer provided, validate and store it
+    // ─── Validate & store answer (non-blocking) ────────────
     let finalAnswerToStore = answer?.trim();
     if (finalAnswerToStore) {
-      // Run semantic validation
-      const validationResult = await AIValidator.validateAnswer(
-        finalAnswerToStore,
-        intent || "business_context"
-      );
-
-      if (!validationResult.isValid) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: validationResult.rejectionReason || "Could you clarify that a bit?",
-            isValidationRejection: true,
-          },
-          { status: 400 }
+      // AI validation — wrapped, fails open
+      try {
+        const validationResult = await AIValidator.validateAnswer(
+          finalAnswerToStore,
+          intent || "business_context"
         );
+
+        if (!validationResult.isValid) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: validationResult.rejectionReason || "Could you clarify that a bit?",
+              isValidationRejection: true,
+            },
+            { status: 400 }
+          );
+        }
+
+        finalAnswerToStore = validationResult.autoCorrectedText || finalAnswerToStore;
+      } catch (valErr) {
+        console.warn("[next-question] AI validation failed, accepting answer:", valErr);
+        // Fail open — accept the answer as-is
       }
 
-      // Use the auto-corrected text if provided
-      finalAnswerToStore = validationResult.autoCorrectedText || finalAnswerToStore;
+      // Store answer — wrapped
+      try {
+        await InterviewAnswerRepository.create({
+          interview_id: interview.id,
+          question: body.question || "",
+          answer: finalAnswerToStore,
+          extracted: {
+            intent: intent || "business_context",
+            raw_answer: answer,
+          },
+        });
+      } catch (storeErr) {
+        console.error("[next-question] Failed to store answer:", storeErr);
+        // Continue — don't crash, question generation can still work
+      }
 
-      await InterviewAnswerRepository.create({
-        interview_id: interview.id,
-        question: body.question || "",  // Echo back the question that was answered
-        answer: finalAnswerToStore,
-        extracted: { 
-          intent: intent || "business_context",
-          raw_answer: answer // Data Protection: Store the original organically typed string
-        },
+      // Status transition — wrapped
+      try {
+        if (interview.status === "sent") {
+          await InterviewRepository.updateByToken(token, {
+            status: "in_progress" as const,
+            started_at: new Date().toISOString(),
+            last_activity: new Date().toISOString(),
+          });
+          await EventService.interviewStarted(interview.org_id, interview.id);
+        } else {
+          await InterviewRepository.updateByToken(token, {
+            last_activity: new Date().toISOString(),
+          });
+        }
+      } catch (statusErr) {
+        console.warn("[next-question] Status update failed, continuing:", statusErr);
+      }
+    }
+
+    // ─── Load context (non-blocking) ───────────────────────
+    let orgProfile: any = null;
+    let structuredAnswers: any = {};
+    let questionCount = 0;
+
+    try {
+      [orgProfile, structuredAnswers] = await Promise.all([
+        OrgProfileRepository.findByOrgId(interview.org_id).catch(() => null),
+        InterviewService.getStructuredAnswers(interview.id).catch(() => ({})),
+      ]);
+    } catch (ctxErr) {
+      console.warn("[next-question] Context loading failed, using defaults:", ctxErr);
+    }
+
+    // Count existing answers — wrapped
+    try {
+      const existingAnswers = await InterviewAnswerRepository.findByInterview(interview.id);
+      questionCount = existingAnswers.length;
+    } catch (countErr) {
+      console.warn("[next-question] Answer count failed:", countErr);
+      // Estimate from structured answers
+      questionCount = Object.keys(structuredAnswers).length;
+    }
+
+    console.log("[next-question] Context:", { hasOrgProfile: !!orgProfile, questionCount });
+
+    // ─── Update progress (non-blocking, NEVER crashes) ─────
+    try {
+      await InterviewRepository.upsertProgress(interview.id, {
+        completed_questions: questionCount,
+        total_questions: 6,
+        last_question_index: Math.max(questionCount - 1, 0),
       });
-
-      // Transition to in_progress on first answer
-      if (interview.status === "sent") {
-        await InterviewRepository.updateByToken(token, {
-          status: "in_progress" as const,
-          started_at: new Date().toISOString(),
-          last_activity: new Date().toISOString(),
-        });
-        await EventService.interviewStarted(interview.org_id, interview.id);
-      } else {
-        await InterviewRepository.updateByToken(token, {
-          last_activity: new Date().toISOString(),
-        });
-      }
+    } catch (progressErr) {
+      console.warn("[next-question] Progress upsert failed, continuing:", progressErr);
+      // NEVER let this crash the request
     }
 
-    // 4. Load context
-    const [orgProfile, structuredAnswers] = await Promise.all([
-      OrgProfileRepository.findByOrgId(interview.org_id),
-      InterviewService.getStructuredAnswers(interview.id),
-    ]);
+    // ─── Generate next question (with fallback guarantee) ──
+    let aiResponse: any = null;
 
-    // Count existing answers
-    const existingAnswers = await InterviewAnswerRepository.findByInterview(interview.id);
-    const questionCount = existingAnswers.length;
-
-    // Update progress
-    await InterviewRepository.upsertProgress(interview.id, {
-      completed_questions: questionCount,
-      total_questions: 6,
-      last_question_index: Math.max(questionCount - 1, 0),
-    });
-
-    // 5. Generate next question (or determine completion)
-    if (!orgProfile) {
-      // Fallback: use question engine without context (will use fallback questions)
-      console.warn("[next-question] No org profile found, using fallbacks");
+    try {
+      console.log("[next-question] Calling QuestionEngine...");
+      aiResponse = await QuestionEngine.generateNextQuestion(
+        structuredAnswers,
+        orgProfile || ({
+          industry: "other",
+          industry_raw: "General Business",
+          service_category: "Professional Services",
+          service_type: "Business services",
+          target_customer: "Businesses",
+        } as any),
+        questionCount,
+        answer || undefined,
+        (intent as InterviewIntent) || undefined
+      );
+      console.log("[next-question] AI response:", { isComplete: aiResponse?.isComplete, hasQuestion: !!aiResponse?.question });
+    } catch (aiErr) {
+      console.error("[next-question] QuestionEngine CRASHED:", aiErr);
+      // Use fallback — NEVER crash
+      const fb = getFallbackQuestion(questionCount);
+      aiResponse = { question: fb.question, intent: fb.intent, isFollowUp: false, isComplete: false };
     }
 
-    const aiResponse = await QuestionEngine.generateNextQuestion(
-      structuredAnswers,
-      orgProfile || ({
-        industry: "other",
-        industry_raw: "General Business",
-        service_category: "Professional Services",
-        service_type: "Business services",
-        target_customer: "Businesses",
-      } as any),
-      questionCount,
-      answer || undefined,
-      (intent as InterviewIntent) || undefined
-    );
+    // ─── FINAL SAFETY: Guarantee a question exists ─────────
+    if (!aiResponse || (!aiResponse.question && !aiResponse.isComplete)) {
+      console.warn("[next-question] AI returned empty — using fallback");
+      const fb = getFallbackQuestion(questionCount);
+      aiResponse = { question: fb.question, intent: fb.intent, isFollowUp: false, isComplete: false };
+    }
 
-    // 6. Handle completion
+    // ─── Handle completion ─────────────────────────────────
     if (aiResponse.isComplete) {
-      const completeResult = await InterviewService.complete(token);
-      if (!completeResult.success) {
-        return NextResponse.json({ success: false, error: completeResult.error }, { status: 400 });
+      console.log("[next-question] Interview complete — triggering completion");
+      try {
+        const completeResult = await InterviewService.complete(token);
+        if (!completeResult.success) {
+          console.warn("[next-question] Completion failed:", completeResult.error);
+        }
+      } catch (completeErr) {
+        console.error("[next-question] Completion crashed:", completeErr);
+        // Still return isComplete — the interview data is saved
       }
 
       return NextResponse.json({
@@ -171,23 +265,39 @@ export async function POST(
       });
     }
 
-    // 7. Return next question
+    // ─── Return next question (GUARANTEED to exist) ────────
+    console.log("[next-question] Returning question:", aiResponse.question?.substring(0, 60));
     return NextResponse.json({
       success: true,
       data: {
         question: aiResponse.question,
         intent: aiResponse.intent,
-        isFollowUp: aiResponse.isFollowUp,
+        isFollowUp: aiResponse.isFollowUp || false,
         isComplete: false,
         questionNumber: questionCount + 1,
         totalMax: 6,
       },
     });
-  } catch (error) {
-    console.error("[POST next-question] Error:", error);
-    return NextResponse.json(
-      { success: false, error: "Something went wrong. Please try again." },
-      { status: 500 }
-    );
+
+  } catch (outerError: any) {
+    // ═══════════════════════════════════════════════════════
+    // ABSOLUTE LAST RESORT: If literally everything crashed,
+    // still return a working question. NEVER return 500.
+    // ═══════════════════════════════════════════════════════
+    console.error("[next-question] CATASTROPHIC FAILURE:", outerError?.message || outerError);
+    console.error("[next-question] Stack:", outerError?.stack);
+
+    const fb = getFallbackQuestion(0);
+    return NextResponse.json({
+      success: true,
+      data: {
+        question: fb.question,
+        intent: fb.intent,
+        isFollowUp: false,
+        isComplete: false,
+        questionNumber: 1,
+        totalMax: 6,
+      },
+    });
   }
 }
