@@ -11,6 +11,9 @@ import {
   MessageCircle,
   ArrowRight,
   AlertCircle,
+  Clock,
+  Lock,
+  TrendingUp,
 } from "lucide-react";
 import { PoweredByAuricai } from "@/components/shared/PoweredByAuricai";
 
@@ -58,6 +61,7 @@ export default function InterviewPage() {
   const [totalMax] = useState(6);
   const [currentIntent, setCurrentIntent] = useState<string>("business_context");
   const [orgName, setOrgName] = useState<string>("");
+  const [clientName, setClientName] = useState<string>("");
   const [planName, setPlanName] = useState<string>("starter");
   const [isInvalid, setIsInvalid] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -154,8 +158,14 @@ export default function InterviewPage() {
       console.log("Response:", response);
       console.log("FETCH SUCCESS:", response?.data?.id);
 
+      // The API returns the interview row. The `client_name` is the interviewee.
       if (response?.data?.client_name) {
-        setOrgName(response.data.client_name);
+        setClientName(response.data.client_name);
+      }
+      
+      // Handle org name if available (we might not have it yet from the API)
+      if (response?.data?.client_name) {
+        setOrgName(response.data.client_name); // Legacy: previously this was used for the company name, fallback for now.
       }
       
       // Handle plan branding
@@ -457,59 +467,73 @@ export default function InterviewPage() {
   // WELCOME SCREEN
   // ═══════════════════════════════════════
   if (screen === "welcome") {
+    // Determine enterprise/white-label state depending on your planName, assuming 'premium' or similar removes branding if present
+    const isEnterprise = planName === "business" || planName === "scale";
+
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="min-h-screen flex items-center justify-center p-6 sm:p-10 bg-gradient-to-br from-black to-[#0a001a] relative overflow-hidden">
+        {/* Subtle radial glow overlay */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-purple-900/20 blur-[120px] rounded-full pointer-events-none" />
+        {/* Noise overlay could go here if an image was available, omitted for pure CSS */}
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center max-w-lg"
+          className="relative text-center w-full max-w-[560px] bg-[#0c0c0c]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 sm:p-10 shadow-2xl z-10"
         >
-          {/* Logo */}
+          {/* Subtle top indicator */}
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-            className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-8 shadow-[0_0_40px_rgba(99,102,241,0.3)]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="mb-6"
           >
-            <MessageCircle className="w-10 h-10 text-white" />
+            <span className="text-xs font-bold tracking-widest uppercase text-purple-400">
+              {clientName ? `Hi ${clientName} — this will take ~3 minutes` : "This will take ~3 minutes"}
+            </span>
           </motion.div>
 
           <motion.h1
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="text-3xl font-bold text-white mb-3 tracking-tight"
+            className="text-2xl sm:text-3xl font-bold text-white mb-4 tracking-tight leading-tight"
           >
-            Share Your Experience
+            Turn Your Results Into a Case Study
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="text-zinc-400 mb-6 text-lg"
+            className="text-white/70 mb-8 text-base leading-relaxed max-w-sm mx-auto"
           >
-            {orgName ? `${orgName} would love to hear your feedback.` : "We'd love to hear about your results."}
+            {orgName 
+              ? `You're helping ${orgName} create a professional case study based on your results. `
+              : "Answer a few quick questions. "}
+            We'll transform your responses into a polished, data-driven case study.
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10 text-sm text-zinc-400 bg-white/5 border border-white/10 p-6 rounded-2xl"
+            className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 mb-10 text-xs text-white/50"
           >
-            <div className="flex items-center justify-center md:justify-start gap-2">
-              <CheckCircle2 className="w-4 h-4 text-green-400" />
-              <span>3-minute chat</span>
+            <div className="flex items-center gap-1.5 whitespace-nowrap">
+              <Clock className="w-3.5 h-3.5" />
+              <span>3 minutes</span>
             </div>
-            <div className="flex items-center justify-center md:justify-start gap-2">
-              <CheckCircle2 className="w-4 h-4 text-green-400" />
-              <span>No calls required</span>
+            <div className="hidden sm:block w-1 h-1 rounded-full bg-white/20" />
+            <div className="flex items-center gap-1.5 whitespace-nowrap">
+              <Lock className="w-3.5 h-3.5" />
+              <span>No login required</span>
             </div>
-            <div className="flex items-center justify-center md:justify-start gap-2">
-              <CheckCircle2 className="w-4 h-4 text-green-400" />
-              <span>You approve everything</span>
+            <div className="hidden sm:block w-1 h-1 rounded-full bg-white/20" />
+            <div className="flex items-center gap-1.5 whitespace-nowrap">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>You approve before publishing</span>
             </div>
           </motion.div>
 
@@ -518,15 +542,27 @@ export default function InterviewPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
             onClick={handleStart}
-            className="group inline-flex items-center gap-3 bg-white text-black px-8 py-3.5 rounded-xl text-base font-bold hover:bg-zinc-200 transition-all shadow-[0_0_30px_rgba(255,255,255,0.15)] hover:shadow-[0_0_40px_rgba(255,255,255,0.25)]"
+            className="w-full relative group flex items-center justify-center gap-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white h-12 sm:h-[56px] rounded-xl text-base font-bold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(124,58,237,0.3)] hover:shadow-[0_0_30px_rgba(124,58,237,0.5)]"
           >
-            Let's Go
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            <span>Start 3-Minute Interview</span>
+            <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
           </motion.button>
 
-          {/* Premium branding — inline/centered on welcome screen */}
-          <PoweredByAuricai position="inline" hidden={isEnterprise} delay={0.9} />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+            className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/5 text-[11px] text-white/40"
+          >
+            <TrendingUp className="w-3 h-3 text-emerald-400" />
+            <span>Example outcome: +158% conversion increase in 60 days</span>
+          </motion.div>
         </motion.div>
+
+        {/* Minimal branding */}
+        <div className="absolute bottom-6 w-full flex justify-center opacity-70">
+          <PoweredByAuricai position="inline" hidden={isEnterprise} delay={1.0} />
+        </div>
       </div>
     );
   }
