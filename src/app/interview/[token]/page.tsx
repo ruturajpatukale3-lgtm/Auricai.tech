@@ -66,7 +66,7 @@ export default function InterviewPage() {
   const [isInvalid, setIsInvalid] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [isValidating, setIsValidating] = useState(true);
-  const [errorType, setErrorType] = useState<"NOT_FOUND" | "EXPIRED" | "SERVER_ERROR" | null>(null);
+  const [errorType, setErrorType] = useState<"INVALID" | "SERVER_ERROR" | null>(null);
   const [pollingError, setPollingError] = useState(false);
   const [showSuccessMoment, setShowSuccessMoment] = useState(false);
   const [generatedCaseStudy, setGeneratedCaseStudy] = useState<any>(null);
@@ -135,14 +135,9 @@ export default function InterviewPage() {
       const res = await fetch(`/api/public/interview/${token}`);
       console.log("FETCH STATUS:", res.status);
 
-      if (res.status === 404) {
-        setErrorType("NOT_FOUND");
-        setIsInvalid(true);
-        return;
-      }
-
-      if (res.status === 410) {
-        setErrorType("EXPIRED");
+      // Invalid or expired link (404 or 410)
+      if (res.status === 404 || res.status === 410) {
+        setErrorType("INVALID");
         setIsInvalid(true);
         return;
       }
@@ -150,22 +145,20 @@ export default function InterviewPage() {
       if (!res.ok) {
         setErrorType("SERVER_ERROR");
         const errData = await res.json().catch(() => ({}));
-        const combinedError = errData?.stack ? JSON.stringify(errData, null, 2) : (errData?.error || `HTTP ${res.status}`);
-        throw new Error(combinedError);
+        throw new Error(errData?.error || `HTTP ${res.status}`);
       }
 
       const response = await res.json();
-      console.log("Response:", response);
-      console.log("FETCH SUCCESS:", response?.data?.id);
+      console.log("Interview API response:", response);
 
       // The API returns the interview row. The `client_name` is the interviewee.
       if (response?.data?.client_name) {
         setClientName(response.data.client_name);
       }
       
-      // Handle org name if available (we might not have it yet from the API)
+      // Handle org name if available
       if (response?.data?.client_name) {
-        setOrgName(response.data.client_name); // Legacy: previously this was used for the company name, fallback for now.
+        setOrgName(response.data.client_name);
       }
       
       // Handle plan branding
@@ -390,35 +383,7 @@ export default function InterviewPage() {
 
   // ─── Invalid Token / Error States ─────────────────────────
   if (isInvalid) {
-    const errorConfigs = {
-      NOT_FOUND: {
-        title: "Interview Not Found",
-        message: "This interview link is invalid. Please double-check the URL or contact your interviewer.",
-        icon: AlertCircle,
-        color: "text-red-400",
-        bg: "bg-red-500/10",
-        border: "border-red-500/20"
-      },
-      EXPIRED: {
-        title: "Link Expired",
-        message: "This interview link has expired or has already been completed.",
-        icon: AlertCircle,
-        color: "text-amber-400",
-        bg: "bg-amber-500/10",
-        border: "border-amber-500/20"
-      },
-      SERVER_ERROR: {
-        title: "Connection Error",
-        message: error || "We're having trouble connecting to the server. Please try again.",
-        icon: AlertCircle,
-        color: "text-zinc-400",
-        bg: "bg-white/5",
-        border: "border-white/10"
-      }
-    };
-
-    const config = errorConfigs[errorType || "SERVER_ERROR"];
-    const Icon = config.icon;
+    const isServerError = errorType === "SERVER_ERROR";
 
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-[#0A0A0A]">
@@ -427,23 +392,17 @@ export default function InterviewPage() {
           animate={{ opacity: 1, scale: 1 }}
           className="text-center max-w-md"
         >
-          <div className={`w-16 h-16 rounded-2xl ${config.bg} ${config.border} border flex items-center justify-center mx-auto mb-6 shadow-lg`}>
-            <Icon className={`w-8 h-8 ${config.color}`} />
+          <div className={`w-16 h-16 rounded-2xl ${isServerError ? "bg-white/5 border-white/10" : "bg-red-500/10 border-red-500/20"} border flex items-center justify-center mx-auto mb-6 shadow-lg`}>
+            <AlertCircle className={`w-8 h-8 ${isServerError ? "text-zinc-400" : "text-red-400"}`} />
           </div>
           <h1 className="text-xl font-bold text-white mb-2">
-            {config.title}
+            {isServerError ? "Connection Error" : "Invalid Interview Link"}
           </h1>
-          
-          {typeof config.message === 'string' && config.message.startsWith('{') ? (
-            <pre className="text-xs text-left text-red-400 bg-red-900/20 p-4 rounded-xl border border-red-500/20 mb-8 overflow-auto max-h-64 whitespace-pre-wrap font-mono">
-              {config.message}
-            </pre>
-          ) : (
-            <p className="text-sm text-zinc-500 mb-8 leading-relaxed">
-              {config.message}
-            </p>
-          )}
-          
+          <p className="text-sm text-zinc-500 mb-8 leading-relaxed">
+            {isServerError
+              ? (error || "We're having trouble connecting to the server. Please try again.")
+              : "This interview link is invalid or expired."}
+          </p>
           <div className="flex flex-col gap-3">
             <button
               onClick={() => initializeInterview()}

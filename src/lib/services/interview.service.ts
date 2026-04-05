@@ -152,7 +152,7 @@ export const InterviewService = {
    * Tracks 'opened' event on first hit
    */
    async getByToken(token: string, metadata: Record<string, unknown> = {}): Promise<Interview | null> {
-    // 2. Lookup by token natively (no explicit joins because of PGRST200 missing FK)
+    // Simple: token → interview → return. No joins.
     const { data: interview, error: fetchError } = await supabaseAdmin
       .from("interviews")
       .select("*")
@@ -161,15 +161,7 @@ export const InterviewService = {
 
     if (fetchError || !interview) return null;
 
-    // Fetch the active subscription independently gracefully
-    const { data: sub } = await supabaseAdmin
-      .from("subscriptions")
-      .select("plan_name")
-      .eq("org_id", interview.org_id)
-      .eq("status", "active")
-      .single();
-
-    // 1. Expiration check (30 days)
+    // Expiration check (30 days)
     const createdDate = new Date(interview.created_at);
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     if (createdDate < thirtyDaysAgo) {
@@ -177,19 +169,13 @@ export const InterviewService = {
       return null;
     }
 
-    // 2. Log engagement event
+    // Log engagement event
     await EventService.interviewOpened(interview.org_id, interview.id, metadata);
     
-    // 3. Update last activity
+    // Update last activity
     await InterviewRepository.updateByToken(token, { last_activity: new Date().toISOString() });
 
-    // 4. Flatten the response for consistency
-    const result = {
-      ...interview,
-      plan_name: sub?.plan_name || "starter"
-    };
-
-    return result;
+    return interview as Interview;
   },
 
   /**
