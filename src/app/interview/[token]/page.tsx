@@ -6,14 +6,9 @@ import { useParams } from "next/navigation";
 import {
   Send,
   Loader2,
-  Sparkles,
   CheckCircle2,
-  MessageCircle,
   ArrowRight,
   AlertCircle,
-  Clock,
-  Lock,
-  TrendingUp,
 } from "lucide-react";
 import { PoweredByAuricai } from "@/components/shared/PoweredByAuricai";
 
@@ -77,7 +72,6 @@ export default function InterviewPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // ─── LocalStorage Session Persistence ─────────────────────
-  // Load cached state on mount
   useEffect(() => {
     try {
       const cachedStr = localStorage.getItem(`auricai_session_${token}`);
@@ -93,7 +87,6 @@ export default function InterviewPage() {
     } catch { /* ignore */ }
   }, [token]);
 
-  // Save state on change
   useEffect(() => {
     if (messages.length > 0 || screen !== "welcome") {
       try {
@@ -107,12 +100,10 @@ export default function InterviewPage() {
     }
   }, [messages, screen, questionNumber, currentIntent, token]);
 
-  // Auto-scroll chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Auto-focus input
   useEffect(() => {
     if (screen === "chat" && !isLoading) {
       setTimeout(() => inputRef.current?.focus(), 300);
@@ -120,22 +111,14 @@ export default function InterviewPage() {
   }, [screen, isLoading, messages.length]);
 
   // ─── Initial Logic ─────────────────────────────────────────
-
-  // Unified persistent initialization function
   const initializeInterview = useCallback(async () => {
     setIsValidating(true);
     setErrorType(null);
     setIsInvalid(false);
 
-    console.log("----------------------------------");
-    console.log("INITIALIZING INTERVIEW:", token);
-    console.log("Token:", token);
-
     try {
       const res = await fetch(`/api/public/interview/${token}`);
-      console.log("FETCH STATUS:", res.status);
 
-      // Invalid or expired link (404 or 410)
       if (res.status === 404 || res.status === 410) {
         setErrorType("INVALID");
         setIsInvalid(true);
@@ -149,23 +132,16 @@ export default function InterviewPage() {
       }
 
       const response = await res.json();
-      console.log("Interview API response:", response);
 
-      // The API returns the interview row. The `client_name` is the interviewee.
       if (response?.data?.client_name) {
         setClientName(response.data.client_name);
       }
-      
-      // Handle org name if available
       if (response?.data?.client_name) {
         setOrgName(response.data.client_name);
       }
-      
-      // Handle plan branding
       if (response?.data?.plan_name) {
         setPlanName(response.data.plan_name);
       }
-
     } catch (err: any) {
       console.error("INITIALIZATION ERROR:", err.message);
       setErrorType("SERVER_ERROR");
@@ -175,7 +151,6 @@ export default function InterviewPage() {
     }
   }, [token]);
 
-  // Run on mount
   useEffect(() => {
     setIsMounted(true);
     if (token) {
@@ -189,10 +164,7 @@ export default function InterviewPage() {
       const res = await fetch(`/api/public/interview/${token}/status`);
       const data = await res.json();
       if (data.success && data.data.status === "review_ready") {
-        // Success Moment Transition
         setShowSuccessMoment(true);
-        
-        // Brief delay for the 'Success' moment to feel earned
         setTimeout(() => {
           setGeneratedCaseStudy(data.data.caseStudy);
           setScreen("review");
@@ -209,7 +181,6 @@ export default function InterviewPage() {
     }
   }, [token]);
 
-  // Cycle processing steps
   useEffect(() => {
     let stepInterval: NodeJS.Timeout;
     if (screen === "review" && !generatedCaseStudy) {
@@ -220,7 +191,6 @@ export default function InterviewPage() {
     return () => clearInterval(stepInterval);
   }, [screen, generatedCaseStudy]);
 
-  // Polling loop
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (screen === "review" && !generatedCaseStudy && !pollingError && !processingTimeout) {
@@ -232,13 +202,12 @@ export default function InterviewPage() {
     return () => clearInterval(interval);
   }, [screen, generatedCaseStudy, fetchStatus, pollingError, processingTimeout]);
 
-  // 60-second processing timeout
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (screen === "review" && !generatedCaseStudy && !processingTimeout) {
       timer = setTimeout(() => {
         setProcessingTimeout(true);
-      }, 60000); // 60 seconds
+      }, 60000);
     }
     return () => clearTimeout(timer);
   }, [screen, generatedCaseStudy, processingTimeout]);
@@ -273,7 +242,6 @@ export default function InterviewPage() {
             return;
           }
           if (data.isValidationRejection) {
-            // The AI specifically rejected the answer via semantic validator
             setMessages((prev) => [
               ...prev,
               {
@@ -282,14 +250,14 @@ export default function InterviewPage() {
                 text: data.error || "Could you clarify that a bit?",
               },
             ]);
-            return; // Don't advance the state or error out
+            return;
           }
           throw new Error(data.error || "Something went wrong");
         }
 
         if (data.data?.isComplete) {
           localStorage.removeItem(`auricai_session_${token}`);
-          setScreen("review"); // Transition to review state (polling if case study missing)
+          setScreen("review");
           return;
         }
 
@@ -318,7 +286,7 @@ export default function InterviewPage() {
   // ─── Handlers ─────────────────────────────────────────────
   function handleStart() {
     setScreen("chat");
-    callNextQuestion(); // Get first question
+    callNextQuestion();
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -326,15 +294,12 @@ export default function InterviewPage() {
     const answer = inputValue.trim();
     if (!answer || isLoading) return;
 
-    // Add user message
     const lastAiMessage = [...messages].reverse().find((m) => m.role === "ai");
     setMessages((prev) => [
       ...prev,
       { id: `user-${Date.now()}`, role: "user", text: answer },
     ]);
     setInputValue("");
-
-    // Send to API
     callNextQuestion(answer, currentIntent, lastAiMessage?.text);
   }
 
@@ -364,17 +329,17 @@ export default function InterviewPage() {
   // ─── Hydration & Validation Guard ─────────────────────────
   if (!isMounted || isValidating) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-[#0A0A0A]">
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "#000000", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
         <div className="text-center">
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-4"
+            className="w-10 h-10 border border-[#1F1F1F] rounded-lg flex items-center justify-center mx-auto mb-4"
           >
-            <Loader2 className="w-6 h-6 text-blue-500" />
+            <Loader2 className="w-5 h-5 text-[#A1A1AA]" />
           </motion.div>
-          <p className="text-sm text-zinc-500 font-medium animate-pulse">
-            Verifying secure link...
+          <p className="text-xs text-[#A1A1AA] tracking-wide">
+            Verifying secure link
           </p>
         </div>
       </div>
@@ -386,33 +351,33 @@ export default function InterviewPage() {
     const isServerError = errorType === "SERVER_ERROR";
 
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-[#0A0A0A]">
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "#000000", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
+          initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           className="text-center max-w-md"
         >
-          <div className={`w-16 h-16 rounded-2xl ${isServerError ? "bg-white/5 border-white/10" : "bg-red-500/10 border-red-500/20"} border flex items-center justify-center mx-auto mb-6 shadow-lg`}>
-            <AlertCircle className={`w-8 h-8 ${isServerError ? "text-zinc-400" : "text-red-400"}`} />
+          <div className="w-12 h-12 rounded-lg border border-[#1F1F1F] flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="w-5 h-5 text-[#A1A1AA]" />
           </div>
-          <h1 className="text-xl font-bold text-white mb-2">
+          <h1 className="text-lg font-semibold text-white mb-2 tracking-tight">
             {isServerError ? "Connection Error" : "Invalid Interview Link"}
           </h1>
-          <p className="text-sm text-zinc-500 mb-8 leading-relaxed">
+          <p className="text-sm text-[#A1A1AA] mb-8 leading-relaxed">
             {isServerError
               ? (error || "We're having trouble connecting to the server. Please try again.")
-              : "This interview link is invalid or expired."}
+              : "This interview link is invalid or has expired."}
           </p>
           <div className="flex flex-col gap-3">
             <button
               onClick={() => initializeInterview()}
-              className="inline-flex items-center justify-center gap-2 bg-white text-black px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-zinc-200 transition-all active:scale-95"
+              className="inline-flex items-center justify-center gap-2 bg-white text-black px-6 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
             >
               Try Again
             </button>
-            <a 
+            <a
               href="/"
-              className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors py-2"
+              className="text-xs text-[#A1A1AA] hover:text-white transition-colors py-2"
             >
               Return Home
             </a>
@@ -426,95 +391,112 @@ export default function InterviewPage() {
   // WELCOME SCREEN
   // ═══════════════════════════════════════
   if (screen === "welcome") {
-    // Determine enterprise/white-label state depending on your planName, assuming 'premium' or similar removes branding if present
     const isEnterprise = planName === "business" || planName === "scale";
 
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 sm:p-10 bg-gradient-to-br from-black to-[#0a001a] relative overflow-hidden">
-        {/* Subtle radial glow overlay */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-purple-900/20 blur-[120px] rounded-full pointer-events-none" />
-        {/* Noise overlay could go here if an image was available, omitted for pure CSS */}
-
+      <div
+        className="min-h-screen flex items-center justify-center p-6 sm:p-10 relative"
+        style={{ background: "#000000", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}
+      >
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="relative text-center w-full max-w-[560px] bg-[#0c0c0c]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 sm:p-10 shadow-2xl z-10"
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="relative w-full max-w-[480px]"
         >
-          {/* 1. Subtle top indicator */}
+          {/* Brand header */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="mb-10"
+          >
+            {orgName ? (
+              <p className="text-xs text-white/40 tracking-wide">
+                Requested by {orgName}
+              </p>
+            ) : (
+              <p className="text-xs text-white/40 tracking-wide">
+                Case Study Interview
+              </p>
+            )}
+          </motion.div>
+
+          {/* Time estimate */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="mb-2"
+            className="mb-6"
           >
-            <span className="text-sm text-white/60">
-              {clientName ? `Hi ${clientName} — this will take ~3 minutes` : "This will take ~3 minutes"}
+            <span className="text-sm text-[#A1A1AA]">
+              This will take approximately 3 minutes.
             </span>
           </motion.div>
 
-          {/* 2. Headline */}
+          {/* Headline */}
           <motion.h1
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="text-3xl font-bold text-white mb-4 tracking-tight leading-tight"
+            className="text-2xl sm:text-3xl font-semibold text-white mb-4 tracking-tight leading-tight"
           >
-            Turn Your Results Into a Case Study
+            Submit Your Results for Case Study Documentation
           </motion.h1>
 
-          {/* 3. Context Line */}
+          {/* Context */}
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="text-base text-white/70 max-w-[420px] mx-auto leading-relaxed"
+            className="text-[15px] text-[#A1A1AA] leading-relaxed mb-8"
           >
-            {orgName 
-              ? `You're helping ${orgName} create a professional case study based on your results.`
-              : "You're helping create a professional case study based on your results."}
+            Your responses will be used to create a structured case study outlining measurable outcomes.
           </motion.p>
 
-          {/* 4. Trust Strip */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="mt-3 text-sm text-white/50"
-          >
-            <span>5 questions</span>
-            <span className="mx-3">•</span>
-            <span>No login</span>
-            <span className="mx-3">•</span>
-            <span>You approve before publishing</span>
-          </motion.div>
-
-          {/* 5. Primary CTA */}
-          <motion.button
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            onClick={handleStart}
-            className="w-full mt-6 relative group flex items-center justify-center gap-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white h-[52px] rounded-xl text-base font-bold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(124,58,237,0.3)] hover:shadow-[0_0_30px_rgba(124,58,237,0.5)]"
-          >
-            <span>Start 3-Minute Interview</span>
-            <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-          </motion.button>
-
-          {/* 6. Micro Proof */}
+          {/* Trust lines — stacked with subtle separators */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            className="mt-4 text-xs sm:text-sm text-white/50 text-center"
+            transition={{ delay: 0.5 }}
+            className="mb-8 space-y-0"
           >
-            <p>Clients typically share results like:</p>
-            <p className="font-semibold text-white/60 mt-0.5">+158% conversion increase in 60 days</p>
+            <div className="flex items-center gap-3 py-3 border-t border-[#1F1F1F]">
+              <span className="text-sm text-[#A1A1AA]">5 structured questions</span>
+            </div>
+            <div className="flex items-center gap-3 py-3 border-t border-[#1F1F1F]">
+              <span className="text-sm text-[#A1A1AA]">No login required</span>
+            </div>
+            <div className="flex items-center gap-3 py-3 border-t border-[#1F1F1F] border-b">
+              <span className="text-sm text-[#A1A1AA]">Final approval required before publication</span>
+            </div>
           </motion.div>
+
+          {/* CTA */}
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            onClick={handleStart}
+            className="w-full flex items-center justify-center gap-2 bg-white text-black h-12 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            <span>Begin Interview</span>
+            <ArrowRight className="w-4 h-4" />
+          </motion.button>
+
+          {/* Micro proof */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+            className="mt-6 text-xs text-white/30 leading-relaxed"
+          >
+            Typical submissions include measurable improvements (e.g. conversion rate increases).
+          </motion.p>
         </motion.div>
 
         {/* Minimal branding */}
-        <div className="absolute bottom-6 w-full flex justify-center opacity-70">
+        <div className="absolute bottom-6 w-full flex justify-center">
           <PoweredByAuricai position="inline" hidden={isEnterprise} delay={1.0} />
         </div>
       </div>
@@ -526,33 +508,34 @@ export default function InterviewPage() {
   // ═══════════════════════════════════════
   if (screen === "review") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-[#0A0A0A]">
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "#000000", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           className="max-w-2xl w-full"
         >
           {!generatedCaseStudy ? (
             <div className="text-center py-12">
-              <div className="relative w-20 h-20 mx-auto mb-8">
+              {/* Processing indicator */}
+              <div className="relative w-16 h-16 mx-auto mb-8">
                 <AnimatePresence mode="wait">
                   {showSuccessMoment ? (
                     <motion.div
                       key="success"
-                      initial={{ scale: 0, rotate: -45 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      className="absolute inset-0 rounded-full bg-emerald-500/20 border-2 border-emerald-500/40 flex items-center justify-center"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute inset-0 rounded-full border border-[#1F1F1F] flex items-center justify-center"
                     >
-                      <CheckCircle2 className="w-10 h-10 text-emerald-500" />
+                      <CheckCircle2 className="w-8 h-8 text-white" />
                     </motion.div>
                   ) : processingTimeout ? (
                     <motion.div
                       key="timeout"
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="absolute inset-0 rounded-full bg-amber-500/10 border-2 border-amber-500/20 flex items-center justify-center"
+                      className="absolute inset-0 rounded-full border border-[#1F1F1F] flex items-center justify-center"
                     >
-                      <Loader2 className="w-10 h-10 text-amber-500 animate-spin" />
+                      <Loader2 className="w-8 h-8 text-[#A1A1AA] animate-spin" />
                     </motion.div>
                   ) : (
                     <motion.div
@@ -560,15 +543,15 @@ export default function InterviewPage() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="relative w-20 h-20"
+                      className="relative w-16 h-16"
                     >
                       <motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                        className="absolute inset-0 rounded-full border-2 border-t-blue-500 border-r-transparent border-b-purple-500 border-l-transparent"
+                        className="absolute inset-0 rounded-full border border-t-white/60 border-r-transparent border-b-white/20 border-l-transparent"
                       />
-                      <div className="absolute inset-2 rounded-full bg-blue-500/5 flex items-center justify-center">
-                        <Sparkles className="w-8 h-8 text-blue-400" />
+                      <div className="absolute inset-2 rounded-full flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 text-[#A1A1AA]" />
                       </div>
                     </motion.div>
                   )}
@@ -580,32 +563,32 @@ export default function InterviewPage() {
                   {showSuccessMoment ? (
                     <motion.h2
                       key="success-text"
-                      initial={{ opacity: 0, y: 10 }}
+                      initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="text-2xl font-bold text-emerald-400 tracking-tight"
+                      className="text-xl font-semibold text-white tracking-tight"
                     >
                       Your case study is ready
                     </motion.h2>
                   ) : processingTimeout ? (
                     <motion.h2
                       key="timeout-text"
-                      initial={{ opacity: 0, y: 10 }}
+                      initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="text-2xl font-bold text-amber-400 tracking-tight"
+                      className="text-xl font-semibold text-[#A1A1AA] tracking-tight"
                     >
-                      Almost there...
+                      Still processing
                     </motion.h2>
                   ) : (
                     <motion.h2
                       key={processingStep}
-                      initial={{ opacity: 0, y: 10 }}
+                      initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="text-2xl font-bold text-white tracking-tight"
+                      exit={{ opacity: 0, y: -8 }}
+                      className="text-xl font-semibold text-white tracking-tight"
                     >
                       {[
                         "Extracting key metrics",
-                        "Validating ROI data",
+                        "Validating data points",
                         "Structuring case study"
                       ][processingStep]}
                     </motion.h2>
@@ -613,47 +596,42 @@ export default function InterviewPage() {
                 </AnimatePresence>
               </div>
 
-              <p className="text-zinc-500 max-w-sm mx-auto mb-8 text-sm leading-relaxed">
-                {showSuccessMoment 
-                  ? "Finalizing presentation..." 
-                  : processingTimeout 
-                    ? "Your case study is processing in the background. You'll receive an email confirmation once it's ready for review."
-                    : "Analyzing your feedback. Estimated time: ~10 seconds."}
+              <p className="text-sm text-[#A1A1AA] max-w-sm mx-auto mb-8 leading-relaxed">
+                {showSuccessMoment
+                  ? "Finalizing document."
+                  : processingTimeout
+                    ? "Your case study is processing in the background. You will receive an email once it is ready for review."
+                    : "Analyzing your responses. Estimated time: ~10 seconds."}
               </p>
 
-              {/* Precise Progress Bar */}
+              {/* Progress Bar */}
               {!processingTimeout && (
-                <div className="max-w-xs mx-auto mb-10 h-1 bg-white/5 rounded-full overflow-hidden">
+                <div className="max-w-xs mx-auto mb-10 h-px bg-[#1F1F1F] overflow-hidden">
                   <motion.div
                     initial={{ width: "0%" }}
-                    animate={{ 
-                      width: showSuccessMoment ? "100%" : (processingStep === 0 ? "33%" : processingStep === 1 ? "66%" : "95%") 
+                    animate={{
+                      width: showSuccessMoment ? "100%" : (processingStep === 0 ? "33%" : processingStep === 1 ? "66%" : "95%")
                     }}
                     transition={{ duration: showSuccessMoment ? 0.3 : 3.5, ease: "linear" }}
-                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                    className="h-full bg-white/60"
                   />
                 </div>
               )}
 
               <div className="flex flex-col items-center gap-4">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Secure & Private</span>
-                </div>
-
                 {(pollingError || processingTimeout) && (
                   <div className="space-y-4">
-                    <button 
+                    <button
                       onClick={() => { setPollingError(false); setProcessingTimeout(false); fetchStatus(); }}
-                      className="text-xs text-blue-400 underline hover:text-blue-300"
+                      className="text-xs text-[#A1A1AA] underline hover:text-white transition-colors"
                     >
                       Check status again
                     </button>
                     {processingTimeout && (
                       <div className="pt-4">
-                        <button 
+                        <button
                           onClick={() => setScreen("complete")}
-                          className="px-6 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white hover:bg-white/10 transition-colors"
+                          className="px-6 py-2 rounded-lg border border-[#1F1F1F] text-xs text-[#A1A1AA] hover:text-white hover:border-white/20 transition-colors"
                         >
                           Return to Home
                         </button>
@@ -665,70 +643,67 @@ export default function InterviewPage() {
             </div>
           ) : (
             <div className="space-y-8">
-              <div className="text-center space-y-4">
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
-                  <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                  <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">Verified Result</span>
-                </div>
-                
-                <h1 className="text-4xl font-extrabold text-white tracking-tight leading-[1.1]">
+              {/* Review header */}
+              <div className="space-y-4">
+                <p className="text-xs text-[#A1A1AA] uppercase tracking-widest font-medium">
+                  Case Study Preview
+                </p>
+
+                <h1 className="text-3xl font-semibold text-white tracking-tight leading-tight">
                   {generatedCaseStudy.headline}
                 </h1>
 
-                <div className="flex items-center justify-center gap-2 py-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  <p className="text-sm font-medium text-emerald-500/90">
+                <div className="flex items-center gap-2 py-2">
+                  <CheckCircle2 className="w-4 h-4 text-white/60" />
+                  <p className="text-sm text-[#A1A1AA]">
                     This will be published exactly as shown below.
                   </p>
                 </div>
               </div>
 
               {/* Metric Card */}
-              <div className="bg-white/5 border border-white/10 rounded-3xl p-8 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <Sparkles className="w-24 h-24 text-blue-400" />
-                </div>
-                
-                <div className="relative z-10 space-y-6">
+              <div className="bg-[#111111] border border-[#1F1F1F] rounded-xl p-8">
+                <div className="space-y-6">
                   <div className="flex items-end gap-3">
-                    <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
+                    <div className="text-4xl font-semibold text-white">
                       +{generatedCaseStudy.deltaPercent}%
                     </div>
-                    <div className="text-zinc-500 font-medium mb-1.5 uppercase tracking-wider text-xs">
-                       Increase in {generatedCaseStudy.metricType || "Target Result"}
+                    <div className="text-[#A1A1AA] font-medium mb-1 text-sm">
+                      increase in {generatedCaseStudy.metricType || "target result"}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-8 pt-6 border-t border-white/10">
+                  <div className="grid grid-cols-2 gap-8 pt-6 border-t border-[#1F1F1F]">
                     <div>
-                      <div className="text-xs text-zinc-500 uppercase tracking-widest mb-1">Before</div>
-                      <div className="text-xl font-bold text-white">{generatedCaseStudy.before || "N/A"}</div>
+                      <div className="text-xs text-[#A1A1AA] uppercase tracking-widest mb-1">Before</div>
+                      <div className="text-xl font-semibold text-white">{generatedCaseStudy.before || "N/A"}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-zinc-500 uppercase tracking-widest mb-1">After</div>
-                      <div className="text-xl font-bold text-white">{generatedCaseStudy.after || "N/A"}</div>
+                      <div className="text-xs text-[#A1A1AA] uppercase tracking-widest mb-1">After</div>
+                      <div className="text-xl font-semibold text-white">{generatedCaseStudy.after || "N/A"}</div>
                     </div>
                   </div>
                 </div>
               </div>
 
+              {/* Approve */}
               <div className="flex flex-col gap-4">
                 <button
                   onClick={handleApprove}
                   disabled={isLoading}
-                  className="w-full bg-white text-black h-14 rounded-2xl font-bold text-lg hover:bg-zinc-200 transition-all shadow-[0_20px_40px_rgba(255,255,255,0.1)] flex items-center justify-center gap-3 disabled:opacity-50"
+                  className="w-full bg-white text-black h-12 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {isLoading ? (
-                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     <>
-                      Looks Perfect - Approve
-                      <CheckCircle2 className="w-6 h-6" />
+                      Approve Case Study
+                      <CheckCircle2 className="w-4 h-4" />
                     </>
                   )}
                 </button>
-                <p className="text-center text-xs text-zinc-600">
-                  By clicking approve, you permit {orgName || "this workspace"} to feature these results in their case study.
+                <p className="text-center text-xs text-[#A1A1AA]">
+                  By approving, you permit {orgName || "this organization"} to feature these results in their case study.
                 </p>
               </div>
             </div>
@@ -741,63 +716,52 @@ export default function InterviewPage() {
   // ═══════════════════════════════════════
   // COMPLETION SCREEN
   // ═══════════════════════════════════════
-
   if (screen === "complete") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-[#050505] relative overflow-hidden">
-        {/* Animated Background Elements */}
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: "1s" }} />
-        
+      <div className="min-h-screen flex items-center justify-center p-6 relative" style={{ background: "#000000", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="text-center max-w-lg relative z-10"
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="text-center max-w-md relative z-10"
         >
-          {/* Main Icon with Glow */}
+          {/* Icon */}
           <motion.div
-            initial={{ scale: 0, rotate: -15 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 150, damping: 15 }}
-            className="w-24 h-24 rounded-[32px] bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center mx-auto mb-10 shadow-[0_20px_50px_rgba(16,185,129,0.3)] relative group"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 180, damping: 18 }}
+            className="w-16 h-16 rounded-xl border border-[#1F1F1F] flex items-center justify-center mx-auto mb-8"
           >
-            <div className="absolute inset-0 rounded-[32px] bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <CheckCircle2 className="w-12 h-12 text-white" />
+            <CheckCircle2 className="w-8 h-8 text-white" />
           </motion.div>
 
-          <h1 className="text-4xl font-extrabold text-white mb-4 tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white to-zinc-400">
-            You're All Done! 🎉
+          <h1 className="text-2xl font-semibold text-white mb-3 tracking-tight">
+            Submission Complete
           </h1>
-          
-          <p className="text-zinc-400 text-lg mb-10 leading-relaxed font-medium">
-            Thank you for sharing your results. Your insights will help build a powerful story.
+
+          <p className="text-[#A1A1AA] text-sm mb-8 leading-relaxed">
+            Thank you for your time. Your responses have been recorded and will be used to create a structured case study.
           </p>
 
           {/* Status Card */}
-          <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-6 mb-12 backdrop-blur-sm">
+          <div className="bg-[#111111] border border-[#1F1F1F] rounded-xl p-6 mb-8">
             {generatedCaseStudy ? (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="space-y-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-3"
               >
-                <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 rounded-full px-5 py-2 text-xs text-blue-400 font-bold uppercase tracking-widest">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  AI Verification Complete
-                </div>
-                <div className="text-3xl font-black text-white">
-                  {generatedCaseStudy.confidenceScore || 100}% <span className="text-sm font-medium text-zinc-500">Confidence</span>
-                </div>
+                <p className="text-xs text-[#A1A1AA] uppercase tracking-widest font-medium">
+                  Status
+                </p>
+                <p className="text-lg font-semibold text-white">
+                  Case study generated
+                </p>
               </motion.div>
             ) : (
-              <div className="flex flex-col items-center gap-4 py-2">
-                <div className="flex gap-1.5 Items-center">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: "300ms" }} />
-                </div>
-                <span className="text-sm font-semibold text-zinc-400">Generating your surgical case study...</span>
+              <div className="flex flex-col items-center gap-3 py-1">
+                <Loader2 className="w-5 h-5 text-[#A1A1AA] animate-spin" />
+                <span className="text-sm text-[#A1A1AA]">Processing your case study</span>
               </div>
             )}
           </div>
@@ -805,14 +769,14 @@ export default function InterviewPage() {
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 1.2 }}
-            className="text-xs font-medium text-zinc-600 tracking-wide uppercase"
+            transition={{ delay: 1.0 }}
+            className="text-xs text-white/30 tracking-wide"
           >
-            Safe to close this window · We'll handle the rest
+            You may close this window.
           </motion.p>
 
-          <div className="mt-8">
-            <PoweredByAuricai position="inline" hidden={isEnterprise} delay={1.6} />
+          <div className="mt-6">
+            <PoweredByAuricai position="inline" hidden={isEnterprise} delay={1.4} />
           </div>
         </motion.div>
       </div>
@@ -825,23 +789,20 @@ export default function InterviewPage() {
   const progress = Math.min((questionNumber / totalMax) * 100, 100);
 
   return (
-    <div className="min-h-screen flex flex-col max-w-2xl mx-auto">
+    <div className="min-h-screen flex flex-col max-w-2xl mx-auto" style={{ background: "#000000", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
       {/* Progress Bar */}
-      <div className="sticky top-0 z-10 bg-[#0A0A0A]/80 backdrop-blur-xl border-b border-white/5 px-6 py-4">
+      <div className="sticky top-0 z-10 border-b border-[#1F1F1F] px-6 py-4" style={{ background: "rgba(0,0,0,0.9)", backdropFilter: "blur(12px)" }}>
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-blue-400" />
-            <span className="text-xs font-medium text-zinc-400">
-              AI Interview
-            </span>
-          </div>
-          <span className="text-xs font-mono text-zinc-500">
+          <span className="text-xs font-medium text-[#A1A1AA]">
+            Case Study Interview
+          </span>
+          <span className="text-xs font-mono text-white/30">
             {questionNumber}/{totalMax}
           </span>
         </div>
-        <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden">
+        <div className="w-full h-px bg-[#1F1F1F] overflow-hidden">
           <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500"
+            className="h-full bg-white/50"
             initial={{ width: 0 }}
             animate={{ width: `${progress}%` }}
             transition={{ duration: 0.5, ease: "easeOut" }}
@@ -855,24 +816,23 @@ export default function InterviewPage() {
           {messages.map((msg) => (
             <motion.div
               key={msg.id}
-              initial={{ opacity: 0, y: 12, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.3 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.25 }}
               className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[85%] rounded-2xl px-5 py-3.5 text-sm leading-relaxed ${
+                className={`max-w-[85%] rounded-xl px-5 py-3.5 text-sm leading-relaxed ${
                   msg.role === "user"
-                    ? "bg-blue-600 text-white rounded-br-md"
-                    : "bg-white/[0.07] text-zinc-200 border border-white/10 rounded-bl-md"
+                    ? "bg-white text-black rounded-br-sm"
+                    : "bg-[#111111] text-white/90 border border-[#1F1F1F] rounded-bl-sm"
                 }`}
               >
                 {msg.role === "ai" && (
                   <div className="flex items-center gap-1.5 mb-1.5">
-                    <Sparkles className="w-3 h-3 text-blue-400" />
-                    <span className="text-[10px] font-medium text-blue-400/70 uppercase tracking-wider">
-                      AI Interviewer
+                    <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider">
+                      Interviewer
                     </span>
                   </div>
                 )}
@@ -885,18 +845,17 @@ export default function InterviewPage() {
         {/* Loading indicator */}
         {isLoading && (
           <motion.div
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             className="flex justify-start"
           >
-            <div className="bg-white/[0.07] border border-white/10 rounded-2xl rounded-bl-md px-5 py-4">
+            <div className="bg-[#111111] border border-[#1F1F1F] rounded-xl rounded-bl-sm px-5 py-4">
               <div className="flex items-center gap-2">
                 <div className="flex gap-1">
-                  <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
-                <span className="text-xs text-zinc-500 ml-1">Thinking...</span>
               </div>
             </div>
           </motion.div>
@@ -909,15 +868,15 @@ export default function InterviewPage() {
             animate={{ opacity: 1 }}
             className="flex justify-center"
           >
-            <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-red-400" />
-              <span className="text-sm text-red-300">{error}</span>
+            <div className="bg-[#111111] border border-[#1F1F1F] rounded-lg px-4 py-2.5 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-[#A1A1AA]" />
+              <span className="text-sm text-[#A1A1AA]">{error}</span>
               <button
                 onClick={() => {
                   setError(null);
                   callNextQuestion();
                 }}
-                className="text-xs text-red-400 underline ml-2"
+                className="text-xs text-white underline ml-2"
               >
                 Retry
               </button>
@@ -929,7 +888,7 @@ export default function InterviewPage() {
       </div>
 
       {/* Chat Input */}
-      <div className="sticky bottom-0 bg-[#0A0A0A]/80 backdrop-blur-xl border-t border-white/5 px-6 py-4">
+      <div className="sticky bottom-0 border-t border-[#1F1F1F] px-6 py-4" style={{ background: "rgba(0,0,0,0.9)", backdropFilter: "blur(12px)" }}>
         <form onSubmit={handleSubmit} className="flex items-end gap-3">
           <div className="flex-1 relative">
             <textarea
@@ -940,8 +899,8 @@ export default function InterviewPage() {
               placeholder="Type your answer..."
               disabled={isLoading}
               rows={1}
-              className="w-full bg-white/[0.07] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 transition-all resize-none disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ minHeight: "44px", maxHeight: "120px" }}
+              className="w-full bg-[#111111] border border-[#1F1F1F] rounded-lg px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-white/30 transition-colors resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ minHeight: "44px", maxHeight: "120px", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
                 target.style.height = "auto";
@@ -952,21 +911,21 @@ export default function InterviewPage() {
           <button
             type="submit"
             disabled={isLoading || !inputValue.trim()}
-            className="flex-shrink-0 w-11 h-11 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-white/10 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-[0_0_15px_rgba(37,99,235,0.3)] disabled:shadow-none"
+            className="flex-shrink-0 w-11 h-11 rounded-lg bg-white hover:opacity-90 disabled:bg-[#111111] disabled:border disabled:border-[#1F1F1F] disabled:cursor-not-allowed transition-all flex items-center justify-center"
           >
             {isLoading ? (
-              <Loader2 className="w-4 h-4 text-white animate-spin" />
+              <Loader2 className="w-4 h-4 text-[#A1A1AA] animate-spin" />
             ) : (
-              <Send className="w-4 h-4 text-white" />
+              <Send className="w-4 h-4 text-black" />
             )}
           </button>
         </form>
-        <p className="text-[10px] text-zinc-600 mt-2 text-center">
+        <p className="text-[10px] text-white/20 mt-2 text-center">
           Press Enter to send · Shift+Enter for new line
         </p>
       </div>
 
-      {/* Fixed bottom-right branding badge on chat screen */}
+      {/* Branding */}
       <PoweredByAuricai position="fixed" hidden={isEnterprise} delay={1.5} />
     </div>
   );
