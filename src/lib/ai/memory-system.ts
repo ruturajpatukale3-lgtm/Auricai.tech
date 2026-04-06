@@ -13,15 +13,15 @@ export const MemorySystem = {
    */
   getFallbackRandomQuestion(stage: InterviewStage): string {
     const wildcards: Record<string, string[]> = {
-      improvement: [
+      result: [
         "What was the single biggest metric that changed for your team?",
         "If you had to point to one undeniable result we delivered, what would it be?",
       ],
-      metric: [
+      metrics: [
         "Roughly how much did that jump? Were we talking 20% or 200%?",
         "Do you have an estimate on the exact numbers behind that?",
       ],
-      before_after: [
+      problem: [
         "Paint a picture for me: what was the absolute worst part of this before we started?",
         "How is your daily workflow different now compared to day one?",
       ],
@@ -29,22 +29,19 @@ export const MemorySystem = {
         "How fast did you actually see those results materialize?",
         "Did it take a week, a month, or a year to see that outcome?",
       ],
-      impact: [
-        "How did hitting those numbers actually affect your business culturally?",
-        "What does achieving this let you do next?",
-      ],
-      experience: [
+      business_context: [
         "Why did you trust us vs the alternatives?",
         "What surprised you most about the whole process?",
       ],
-      recommendation: [
+      testimonial: [
         "If another founder was on the fence, what explicitly would you tell them?",
         "Who is this service a perfect fit for?",
       ]
     };
+
     
     // Pick randomly from the target stage
-    const possibilities = wildcards[stage] || wildcards["improvement"];
+    const possibilities = wildcards[stage] || wildcards["result"];
     return possibilities[Math.floor(Math.random() * possibilities.length)];
   },
 

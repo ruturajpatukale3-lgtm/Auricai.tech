@@ -85,6 +85,23 @@ export const PADDLE_PRICE_IDS: Record<string, PlanType> = {
   [process.env.PADDLE_ENTERPRISE_YEARLY_PRICE_ID || "pri_enterprise_yearly"]: "enterprise",
 };
 
+/**
+ * Returns true if the price ID belongs to a yearly billing cycle.
+ */
+export function isYearlyPriceId(priceId: string): boolean {
+  const yearlyIds = [
+    process.env.PADDLE_STARTER_YEARLY_PRICE_ID,
+    process.env.PADDLE_GROWTH_YEARLY_PRICE_ID,
+    process.env.PADDLE_ENTERPRISE_YEARLY_PRICE_ID,
+    // Add fallback IDs for testing
+    "pri_starter_yearly",
+    "pri_growth_yearly",
+    "pri_enterprise_yearly"
+  ].filter(Boolean); // Filter out undefined if env vars are missing
+  return yearlyIds.includes(priceId);
+}
+
+
 // ─── Limit Checks (Server-side Only) ──────────────────────
 
 export function getPlanLimits(planType: PlanType): PlanLimits {

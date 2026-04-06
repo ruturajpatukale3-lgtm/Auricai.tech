@@ -144,7 +144,7 @@ export async function POST(
       }
 
       // Classification (Layer 4)
-      const classification = AnswerProcessor.classifyAnswer(finalAnswerToStore, intent || "experience");
+      const classification = AnswerProcessor.classifyAnswer(finalAnswerToStore, intent || "business_context");
 
       // Structured Metric Extraction (NEW: Layer 4.5)
       let extractedMetrics: any[] = [];
@@ -161,7 +161,7 @@ export async function POST(
           question: body.question || "",
           answer: finalAnswerToStore,
           extracted: {
-            intent: intent || "experience",
+            intent: intent || "business_context",
             classification,
             raw_answer: answer,
             metrics: extractedMetrics, // Store locked metrics for future state calculation
@@ -221,7 +221,7 @@ export async function POST(
        await MemorySystem.recordUsage(body.question, "question", industry, state.stage, organization?.plan_type);
 
        // 2. Identify if it produced an 'exact' metric and explicitly increase its priority
-       const lastClass = AnswerProcessor.classifyAnswer(finalAnswerToStore, intent || "improvement");
+       const lastClass = AnswerProcessor.classifyAnswer(finalAnswerToStore, intent || "result");
        if (lastClass === "exact" || lastClass === "estimated") {
            const increment = lastClass === "exact" ? 2 : 1;
            await SystemMemoryRepository.recordOutcome(body.question, "question", increment);

@@ -90,6 +90,7 @@ export const OrganizationRepository = {
     orgId: string,
     subData: {
       plan_type?: string;
+      billing_cycle?: "monthly" | "yearly";
       subscription_id?: string;
       subscription_status?: string;
       current_period_end?: string;
@@ -139,6 +140,7 @@ export const OrganizationRepository = {
     };
 
     if (subData.current_period_end) subUpdates.current_period_end = subData.current_period_end;
+    if (subData.billing_cycle) subUpdates.billing_cycle = subData.billing_cycle;
     if (subData.next_plan !== undefined) subUpdates.next_plan = subData.next_plan;
     if (subData.trial_end !== undefined) subUpdates.trial_end = subData.trial_end;
     if (subData.trial_consumed !== undefined) subUpdates.trial_consumed = subData.trial_consumed;

@@ -16,7 +16,7 @@ export const CaseStudyRepository = {
   ): Promise<CaseStudy[]> {
     let query = supabaseAdmin
       .from(TABLE)
-      .select("id, company_name, headline, metric_type, delta_percent, status, slug, created_at, views")
+      .select("id, company_name, headline, metric_type, delta_percent, status, slug, created_at, views, clicks, total_read_time")
       .eq("org_id", orgId)
       .order("created_at", { ascending: false });
 
@@ -179,6 +179,10 @@ export const CaseStudyRepository = {
 
   async incrementClicks(id: string): Promise<void> {
     try {
+      // 1. Permanent Persistence (Atomic)
+      await supabaseAdmin.rpc("increment_clicks", { case_study_id: id });
+
+      // 2. Telemetry (AI Logic)
       const { data: ctData } = await supabaseAdmin.from(TABLE).select("headline, interview_id").eq("id", id).single();
       if (ctData) {
          if (ctData.headline) await SystemMemoryRepository.recordOutcome(ctData.headline, "hook", 0.6); // Clicks are 0.6
@@ -192,7 +196,7 @@ export const CaseStudyRepository = {
          }
       }
     } catch (e) {
-      // Non-blocking telemetry
+      console.log("[incrementClicks] Suppressed telemetry err:", e);
     }
   },
 
@@ -202,6 +206,11 @@ export const CaseStudyRepository = {
    */
   async incrementReadTime(id: string, durationPingValue: number = 0.2): Promise<void> {
     try {
+      // 1. Permanent Persistence (Atomic)
+      // durationPingValue is passed from the beacon (e.g. 15.0s per heartbeat)
+      await supabaseAdmin.rpc("increment_read_time", { case_study_id: id, ping_value: durationPingValue });
+
+      // 2. Telemetry (AI Logic)
       const { data: ctData } = await supabaseAdmin.from(TABLE).select("headline, interview_id").eq("id", id).single();
       if (ctData) {
          if (ctData.headline) await SystemMemoryRepository.recordOutcome(ctData.headline, "hook", durationPingValue); 
@@ -215,7 +224,7 @@ export const CaseStudyRepository = {
          }
       }
     } catch (e) {
-      // Non-blocking telemetry
+      console.log("[incrementReadTime] Suppressed telemetry err:", e);
     }
   },
 
@@ -237,6 +246,27 @@ export const CaseStudyRepository = {
   },
 
   // ─── Aggregations ────────────────────────────────────────
+
+  async getAggregateMetrics(orgId: string): Promise<{ views: number; clicks: number; totalReadTime: number }> {
+    const { data, error } = await supabaseAdmin
+      .from(TABLE)
+      .select("views, clicks, total_read_time")
+      .eq("org_id", orgId);
+
+    if (error) {
+      console.warn("[CaseStudyRepository] Error fetching aggregate metrics:", error);
+      return { views: 0, clicks: 0, totalReadTime: 0 };
+    }
+
+    return (data || []).reduce(
+      (acc, curr) => ({
+        views: acc.views + (curr.views || 0),
+        clicks: acc.clicks + (curr.clicks || 0),
+        totalReadTime: acc.totalReadTime + (curr.total_read_time || 0),
+      }),
+      { views: 0, clicks: 0, totalReadTime: 0 }
+    );
+  },
 
 
 

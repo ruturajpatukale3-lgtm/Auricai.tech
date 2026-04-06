@@ -85,7 +85,8 @@ export const BillingService = {
     const currentPlan = (currentSub?.plan_name || "free") as PlanType;
     const trialConsumed = !!currentSub?.trial_consumed;
 
-    const { getPlanPriority, isUpgrade: isUpgradeFn } = await import("@/lib/plans");
+    const { getPlanPriority, isUpgrade: isUpgradeFn, isYearlyPriceId } = await import("@/lib/plans");
+    const billingCycle = priceId && isYearlyPriceId(priceId) ? "yearly" : "monthly";
     const currentPriority = getPlanPriority(currentPlan);
 
     // 2. TRIAL ACTIVATION LOCK (Requirement 5)
@@ -124,6 +125,7 @@ export const BillingService = {
     // Apply the transition
     await OrganizationRepository.updateSubscription(orgId, {
       plan_type: targetPlan,
+      billing_cycle: billingCycle,
       subscription_id: event.data.id,
       subscription_status: "active",
       payment_status: "active",
@@ -170,9 +172,10 @@ export const BillingService = {
 
     const currentPlan = (currentSub?.plan_name || "free") as PlanType;
 
-    const { getPlanPriority, isUpgrade: isUpgradeFn, isDowngrade: isDowngradeFn } = await import("@/lib/plans");
+    const { getPlanPriority, isUpgrade: isUpgradeFn, isDowngrade: isDowngradeFn, isYearlyPriceId } = await import("@/lib/plans");
     const { EventService } = await import("@/lib/services/event.service");
 
+    const billingCycle = priceId && isYearlyPriceId(priceId) ? "yearly" : "monthly";
     const currentPriority = getPlanPriority(currentPlan);
     const incomingPriority = getPlanPriority(incomingPlan);
 
@@ -182,6 +185,7 @@ export const BillingService = {
       // Use next_plan logic to keep current benefits until period end.
       await OrganizationRepository.updateSubscription(orgId, {
         next_plan: incomingPlan,
+        billing_cycle: billingCycle,
         subscription_status: event.data.status || "active",
         ...(event.data.current_billing_period?.ends_at && {
           current_period_end: event.data.current_billing_period.ends_at
@@ -194,6 +198,7 @@ export const BillingService = {
       await OrganizationRepository.updateSubscription(orgId, {
         plan_type: incomingPlan,
         next_plan: null,
+        billing_cycle: billingCycle,
         subscription_status: event.data.status || "active",
         payment_status: "active",
         trial_end: null, // Clear trial if upgrading to paid
@@ -206,6 +211,7 @@ export const BillingService = {
     } else {
       // RENEWAL / SYNC
       await OrganizationRepository.updateSubscription(orgId, {
+        billing_cycle: billingCycle,
         subscription_status: event.data.status || "active",
         payment_status: "active",
         ...(event.data.current_billing_period?.ends_at && {

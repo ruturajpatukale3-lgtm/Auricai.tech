@@ -24,28 +24,28 @@ export const QuestionEngine = {
   ): Promise<AIQuestionResponse> {
     
     // Default complete condition with FINAL QUALITY SCAN
-    if (state.stage === "recommendation" && state.answers.find(a => a.stage === "recommendation")) {
+    if (state.stage === "testimonial" && state.answers.find(a => a.stage === "testimonial")) {
        // FINAL QUALITY SCAN: If we are 'done' but missing critical bits, force one last targeted question.
        const hasTimeframe = state.answers.some(a => a.stage === "timeframe");
-       const hasImpact = state.answers.some(a => a.stage === "impact");
+       const hasImpact = state.answers.some(a => a.stage === "testimonial");
        const hasLockedMetric = state.metrics.some(m => m.isLocked);
 
        if (state.qualityScore < 70 && state.answers.length < 8) {
           if (!hasLockedMetric) {
-             return { question: "One last thing—to make this story really powerful, could you provide any specific revenue or pipeline numbers?", intent: "metrics", stage: "metric", isFollowUp: true, isComplete: false };
+             return { question: "One last thing—to make this story really powerful, could you provide any specific revenue or pipeline numbers?", intent: "metrics", stage: "metrics", isFollowUp: true, isComplete: false };
           }
           if (!hasTimeframe) {
              return { question: "Quickly, how long did it take for you to start seeing these results?", intent: "timeframe", stage: "timeframe", isFollowUp: true, isComplete: false };
           }
           if (!hasImpact) {
-             return { question: "And finally, what was the biggest impact this had on your day-to-day business operations?", intent: "result", stage: "impact", isFollowUp: true, isComplete: false };
+             return { question: "And finally, what was the biggest impact this had on your day-to-day business operations?", intent: "result", stage: "testimonial", isFollowUp: true, isComplete: false };
           }
        }
 
        return {
         question: "",
         intent: "testimonial",
-        stage: "recommendation",
+        stage: "testimonial",
         isFollowUp: false,
         isComplete: true,
       };
@@ -56,50 +56,47 @@ export const QuestionEngine = {
     const previousQuestions = state.answers.map(a => a.answer).join("\n");
     const bestQuestionsFromMemory = await MemorySystem.getBestQuestions(context.industry, targetStage, context.plan);
 
-    const systemPrompt = `You are a high-value DATA EXTRACTOR for a B2B case study system. You act as a conversion-focused strategist.
+    const systemPrompt = `You are the Auricai Production-Grade Interview Engine. Your goal is high-value DATA EXTRACTION for a B2B case study.
+You act as a deterministic strategist, NOT a creative chatbot.
 
 ${ContextEngine.serializeContext(context, policy)}
 ${StateEngine.serializeState(state)}
 
-METRIC LOCKING & PRIORITY SELECTION (MANDATORY):
-1. Review the [LOCKED METRICS] in the state. 
-2. If a metric type is LOCKED, DO NOT ask for it again.
-3. PRIORITY: revenue > pipeline > conversion_rate > leads.
-4. If a higher-priority metric is NOT locked, your question MUST target it specifically.
-5. Once a core metric is locked, target:
-   - DOWNSTREAM IMPACT (Business-wide effect)
-   - TIME-SAVING & EFFICIENCY
-   - STRATEGIC VALUE
+[NON-NEGOTIABLE RULES]
+1. The "stage" field in your JSON MUST ALWAYS be one of:
+   - "business_context" (Company background, industry, service type)
+   - "problem" (The pain, challenge, or situation before using our service)
+   - "result" (The outcome, improvement, or broad success achieved)
+   - "metrics" (Hard numbers, percentages, ROI, conversions)
+   - "timeframe" (How long it took to see results, duration)
+   - "testimonial" (Direct feedback, impact on day-to-day, or colleague recommendation)
 
-STAGE-SPECIFIC RULES:
-1. Target the '${targetStage}' stage.
-2. Reject storytelling. Ask questions that extract PROOF.
-3. DO NOT repeat topics covered in [PREVIOUS ANSWERS] or [LOCKED METRICS].
+2. ZERO-CRASH GUARANTEE: You must NEVER return an invalid, undefined, or null stage.
+3. If the stage is unclear, DEFAULT TO: "result".
+4. Each question must target NEW information and move the flow forward. DO NOT repeat topics from [PREVIOUS ANSWERS] or [LOCKED METRICS].
 
-HIGH-VALUE PATTERNS:
-- "What was the specific impact on your revenue or pipeline?"
-- "What was it before vs what is it now?"
-- "How long did it take to see those results?"
-- "What was it before vs what is it now?"
-- "How long did it take to see results?"
+[METRIC LOCKING & PRIORITY]
+- If a metric type is LOCKED in the state, DO NOT ask for it again.
+- PRIORITY: revenue > pipeline > conversion_rate > leads. 
+- If a high-priority metric isn't locked, your question MUST target it specifically.
 
-LOW-VALUE FORBIDDEN QUESTIONS:
-- "Tell me about your experience"
-- "How was it?"
-- "Can you elaborate?"
-- "Please provide more details"
-
-MEMORY PATTERNS (Top Performing Questions):
-${bestQuestionsFromMemory.join("\n")}
+[STAGE MAPPING ENGINE (INTERNAL BRAIN)]
+If you internally think:
+- background/experience → business_context
+- pain/challenge → problem
+- outcome/improvement → result
+- numbers/conversion → metrics
+- duration → timeframe
+- feedback/impact/recommendation → testimonial
 
 Respond with ONLY valid JSON containing an array of 3 candidates exactly matching this schema:
 {
   "candidates": [
     {
-      "question": "string (the short, specific question)",
-      "informationGainScore": number (1-10, how much new *hard evidence* this extracts),
-      "relevanceScore": number (1-10, relevance),
-      "answerProbabilityScore": number (1-10, ease of answering for a human)
+      "question": "string (the specific, Proof-extraction question)",
+      "informationGainScore": number (1-10),
+      "relevanceScore": number (1-10),
+      "answerProbabilityScore": number (1-10)
     }
   ]
 }`;
@@ -165,13 +162,12 @@ Respond with ONLY valid JSON containing an array of 3 candidates exactly matchin
    */
   getFallbackQuestion(stage: InterviewStage): string {
     const fallbacks: Record<InterviewStage, string> = {
-      improvement: "What specific result or metric improved the most?",
-      metric: "Roughly how much did that improve? Can you give me a percentage or number?",
-      before_after: "What was it like before vs what is it now?",
+      result: "What specific result or metric improved the most?",
+      metrics: "Roughly how much did that improve? Can you give me a percentage or number?",
+      problem: "What was it like before vs what is it now?",
       timeframe: "How long did it take to see those results?",
-      impact: "What changed in your business after achieving that?",
-      experience: "Why did you choose us over the alternatives?", 
-      recommendation: "If a colleague asked you about your results, what would you tell them?",
+      testimonial: "If a colleague asked you about your results, what would you tell them?",
+      business_context: "Why did you choose us over the alternatives?", 
     };
     return fallbacks[stage] || "What improved the most?";
   },

@@ -25,31 +25,39 @@ export function AnalyticsKPIStrip({ metrics }: { metrics: DashboardMetrics }) {
     {
       title: "Total Engagement",
       value: formatValue(metrics.totalUsage, 'number'),
-      trend: isEmpty ? "Unlock insights" : "Views & Shares",
+      trend: isEmpty ? "Unlock insights" : `${metrics.totalViews} views • ${metrics.totalClicks} clicks`,
       icon: FileStack,
       color: "text-blue-400",
       bgHover: "hover:bg-blue-500/5",
     },
     {
-      title: "Unique Visitors",
-      value: formatValue(metrics.uniqueVisitors, 'number'),
-      trend: isEmpty ? "Waiting for traffic" : "Total unique reach",
+      title: "Avg Read Time",
+      value: metrics.avgReadTime > 0 ? `${metrics.avgReadTime}s` : "No data yet",
+      trend: isEmpty ? "Waiting for traffic" : "Time spent per view",
       icon: TrendingUp,
       color: "text-emerald-400",
       bgHover: "hover:bg-emerald-500/5",
     },
     {
-      title: "Completion Rate",
+      title: "Success Rate",
       value: formatValue(metrics.conversionRate, 'percent'),
-      trend: isEmpty ? "Send first interview" : "Interview to Case Study",
+      trend: isEmpty ? "Send first interview" : "Interview completion",
       icon: Target,
       color: "text-purple-400",
       bgHover: "hover:bg-purple-500/5",
     },
     {
+      title: "Unique Visitors",
+      value: formatValue(metrics.uniqueVisitors, 'number'),
+      trend: isEmpty ? "Analyze reach" : "Total unique prospects",
+      icon: Globe,
+      color: "text-zinc-300",
+      bgHover: "hover:bg-white/5",
+    },
+    {
       title: "Case Studies Live",
       value: formatValue(metrics.caseStudiesLive, 'number'),
-      trend: isEmpty ? "Collect more proof" : "Publicly verifiable stories",
+      trend: isEmpty ? "Collect more proof" : "Verified public proof",
       icon: Globe,
       color: "text-zinc-300",
       bgHover: "hover:bg-white/5",
@@ -57,7 +65,7 @@ export function AnalyticsKPIStrip({ metrics }: { metrics: DashboardMetrics }) {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 w-full">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
       {kpis.map((kpi, i) => (
         <motion.div
           key={kpi.title}

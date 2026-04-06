@@ -25,6 +25,7 @@ export const AnalyticsService = {
           caseStudiesLive,
           uniqueVisitors,
           stalledInterviewsResult,
+          aggregateEngagement, 
         ] = await Promise.all([
           EventRepository.countByTypes(orgId, ["case_study_viewed"]).catch(() => 0),
           EventRepository.countByTypes(orgId, ["case_study_shared"]).catch(() => 0),
@@ -33,6 +34,7 @@ export const AnalyticsService = {
           CaseStudyRepository.countByStatus(orgId, "live").catch(() => 0),
           EventRepository.getUniqueVisitorCount(orgId).catch(() => 0),
           InterviewRepository.findStalled(orgId, new Date(Date.now() - 24 * 60 * 60 * 1000)).catch(() => []),
+          CaseStudyRepository.getAggregateMetrics(orgId).catch(() => ({ views: 0, clicks: 0, totalReadTime: 0 })),
         ]);
 
         const stalledInterviewsCount = (stalledInterviewsResult || []).length;
@@ -41,11 +43,18 @@ export const AnalyticsService = {
           ? Math.round((interviewsCompleted / interviewsSent) * 100)
           : 0;
 
-        const totalUsage = totalViews + totalShares;
+        const totalClicks = aggregateEngagement.clicks;
+        const avgReadTime = totalViews > 0 
+          ? Math.round(aggregateEngagement.totalReadTime / totalViews) 
+          : 0;
+
+        const totalUsage = totalViews + totalShares + totalClicks;
 
         return {
           totalViews,
           totalShares,
+          totalClicks,
+          avgReadTime,
           totalUsage, 
           uniqueVisitors,
           interviewsSent,
@@ -94,6 +103,15 @@ export const AnalyticsService = {
         title: "High Resonance",
         description: `Your case studies have crossed 50 views this period. They are gaining significant traction.`,
         value: metrics.totalViews,
+      });
+    }
+
+    if (metrics.avgReadTime > 45) {
+      insights.push({
+        type: "achievement",
+        title: "Elite Engagement",
+        description: `Average read time is ${metrics.avgReadTime}s. Prospects are deeply engaging with your proof.`,
+        value: `${metrics.avgReadTime}s`,
       });
     }
 

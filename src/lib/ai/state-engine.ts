@@ -16,12 +16,12 @@ export const StateEngine = {
    */
   getExpectedFlow(): InterviewStage[] {
     return [
-      "improvement",     // AKA "result"
-      "metric",
-      "before_after",
+      "business_context",
+      "problem",
+      "result",
+      "metrics",
       "timeframe",
-      "impact",
-      "experience"       // lowest priority
+      "testimonial"
     ];
   },
 
@@ -31,7 +31,7 @@ export const StateEngine = {
   calculateState(rawAnswers: InterviewAnswer[]): InterviewState {
     const answers = rawAnswers.map(a => {
       const meta = a.extracted as any || {};
-      const intentValue = meta.intent || "improvement";
+      const intentValue = meta.intent || "result";
       const classificationValue = meta.classification || "qualitative";
 
       const mappedStage = this.mapIntentToStage(intentValue);
@@ -80,15 +80,15 @@ export const StateEngine = {
     });
 
     // If we've started the metric phase but haven't locked a high-priority one yet, stay on 'metric'
-    if (answeredStages.has("improvement") && highestPriorityMetricNeeded && rawAnswers.length < 5) {
+    if (answeredStages.has("result") && highestPriorityMetricNeeded && rawAnswers.length < 5) {
       // If we don't have ANY metrics yet, or our best one isn't locked, keep pushing
       const bestMetric = metrics.find(m => METRIC_PRIORITY.indexOf(m.type) <= METRIC_PRIORITY.indexOf(highestPriorityMetricNeeded));
       if (!bestMetric || !bestMetric.isLocked) {
-         nextStage = "metric";
+         nextStage = "metrics";
       }
     }
 
-    if (nextStage !== "metric") {
+    if (nextStage !== "metrics") {
       for (const stage of flow) {
         if (!answeredStages.has(stage)) {
           nextStage = stage;
@@ -101,8 +101,8 @@ export const StateEngine = {
     let qualityScore = 0;
     const hasLockedMetric = metrics.some(m => m.isLocked);
     const hasTimeframe = answeredStages.has("timeframe");
-    const hasImpact = answeredStages.has("impact");
-    const hasBeforeAfter = answeredStages.has("before_after");
+    const hasImpact = answeredStages.has("testimonial");
+    const hasBeforeAfter = answeredStages.has("problem");
 
     if (hasLockedMetric) qualityScore += 40;
     else if (metrics.length > 0) qualityScore += 20;
@@ -133,22 +133,39 @@ export const StateEngine = {
    * Maps older 'Intent' strings to the new 'Stage' flow
    */
   mapIntentToStage(intent: string): InterviewStage {
-    const validStages = new Set(ALL_STAGES as string[]);
-    if (validStages.has(intent)) {
-      return intent as InterviewStage;
-    }
-
-    const mapping: Record<string, InterviewStage> = {
-      "result": "improvement",
-      "metrics": "metric",
-      "problem": "before_after",
+    const raw = (intent || "").toLowerCase();
+    
+    // Hard Validation Layer (Strict Enum check)
+    const valid: Record<string, InterviewStage> = {
+      "business_context": "business_context",
+      "problem": "problem",
+      "result": "result",
+      "metrics": "metrics",
       "timeframe": "timeframe",
-      "impact": "impact",
-      "business_context": "experience",
-      "testimonial": "recommendation"
+      "testimonial": "testimonial"
     };
 
-    return mapping[intent] || "improvement";
+    if (valid[raw]) return valid[raw];
+
+    // Mapping Engine (Synonyms)
+    const synonyms: Record<string, InterviewStage> = {
+      "experience": "business_context",
+      "background": "business_context",
+      "pain": "problem",
+      "challenge": "problem",
+      "before_after": "problem",
+      "improvement": "result",
+      "outcome": "result",
+      "metric": "metrics",
+      "conversion": "metrics",
+      "numbers": "metrics",
+      "duration": "timeframe",
+      "impact": "testimonial",
+      "recommendation": "testimonial",
+      "feedback": "testimonial"
+    };
+
+    return synonyms[raw] || "result"; // Failsafe default to 'result'
   },
 
   computeConfidence(answers: { classification: AnswerClassification }[]): number {

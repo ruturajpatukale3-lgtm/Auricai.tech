@@ -129,23 +129,22 @@ export const ALL_INTENTS: InterviewIntent[] = [
 ];
 
 export type InterviewStage = 
-  | "experience"
-  | "improvement"
-  | "metric"
-  | "before_after"
+  | "business_context"
+  | "problem"
+  | "result"
+  | "metrics"
   | "timeframe"
-  | "impact"
-  | "recommendation";
+  | "testimonial";
 
 export const ALL_STAGES: InterviewStage[] = [
-  "experience",
-  "improvement",
-  "metric",
-  "before_after",
+  "business_context",
+  "problem",
+  "result",
+  "metrics",
   "timeframe",
-  "impact",
-  "recommendation"
+  "testimonial"
 ];
+
 
 export type AnswerClassification = "exact" | "estimated" | "vague" | "qualitative";
 
@@ -248,6 +247,8 @@ export interface CaseStudy {
   delta_percent: number | null;
   timeframe: string | null;
   views: number;
+  clicks: number;
+  total_read_time: number;
   status: CaseStudyStatus;
   slug: string | null;
   pipeline_value: number | null;
@@ -355,7 +356,9 @@ export interface PlanLimits {
 
 export interface DashboardMetrics {
   totalViews: number;
-  totalShares: number;
+  totalShares: number; // For backward compatibility with existing "Shared" UI
+  totalClicks: number;
+  avgReadTime: number;
   totalUsage: number;
   uniqueVisitors: number;
   interviewsSent: number;
