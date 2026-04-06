@@ -30,15 +30,16 @@ export const QuestionEngine = {
        const hasImpact = state.answers.some(a => a.stage === "testimonial");
        const hasLockedMetric = state.metrics.some(m => m.isLocked);
 
-       if (state.qualityScore < 70 && state.answers.length < 8) {
+       // Absolute Hard Limit: 7 questions
+       if (state.qualityScore < 70 && state.answers.length < 7) {
           if (!hasLockedMetric) {
-             return { question: "One last thing—to make this story really powerful, could you provide any specific revenue or pipeline numbers?", intent: "metrics", stage: "metrics", isFollowUp: true, isComplete: false };
+             return { question: "I know this can be tricky to estimate—but ballpark, would you say the improvement was closer to 20% or 50%?", intent: "metrics", stage: "metrics", isFollowUp: true, isComplete: false };
           }
           if (!hasTimeframe) {
-             return { question: "Quickly, how long did it take for you to start seeing these results?", intent: "timeframe", stage: "timeframe", isFollowUp: true, isComplete: false };
+             return { question: "Quickly, did it take about 2 weeks or 2 months to start seeing those results?", intent: "timeframe", stage: "timeframe", isFollowUp: true, isComplete: false };
           }
           if (!hasImpact) {
-             return { question: "And finally, what was the biggest impact this had on your day-to-day business operations?", intent: "result", stage: "testimonial", isFollowUp: true, isComplete: false };
+             return { question: "And finally—how would you describe the biggest benefit this had on your workflow?", intent: "result", stage: "testimonial", isFollowUp: true, isComplete: false };
           }
        }
 
@@ -52,6 +53,14 @@ export const QuestionEngine = {
     }
 
     const { stage: targetStage } = state;
+    const isForcedMetric = targetStage === "metrics" && state.answers.length >= 4 && !state.metrics.some(m => m.isLocked);
+
+    const recoveryRules = isForcedMetric ? `
+[URGENT: METRIC RECOVERY MODE]
+The user hasn't provided a hard metric yet and we are reaching the end of the interview.
+1. You MUST provide a "Mental Anchor" (a range) in your question.
+2. Example: "Was the improvement closer to 15% or 40%?" or "Did you save closer to 5 hours or 20 hours a week?"
+3. Force a ballpark estimate. Do NOT be vague.` : "";
 
     const previousQuestions = state.answers.map(a => a.answer).join("\n");
     const bestQuestionsFromMemory = await MemorySystem.getBestQuestions(context.industry, targetStage, context.plan);
@@ -61,6 +70,7 @@ You act as a deterministic strategist, NOT a creative chatbot.
 
 ${ContextEngine.serializeContext(context, policy)}
 ${StateEngine.serializeState(state)}
+${recoveryRules}
 
 [NON-NEGOTIABLE RULES]
 1. The "stage" field in your JSON MUST ALWAYS be one of:

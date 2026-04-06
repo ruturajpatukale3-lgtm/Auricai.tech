@@ -83,6 +83,33 @@ Return JSON ONLY with this exact schema:
         temperature: 0.4,
       });
 
+      // LAYER 10: Post-Generation Validation & Inference Pass
+      if (!parsed.metrics || parsed.metrics === "Not provided" || parsed.metrics.length < 5) {
+         console.log("[CaseStudyGenerator] Initial metrics weak. Triggering Inference Pass...");
+         const inferencePrompt = `The previous case study generation missed a specific metric.
+         RAW DATA: ${formattedAnswers}
+         
+         Analyze the data above. If no exact number exists, can you INFER a directional outcome?
+         (e.g., "Significantly reduced turnaround time" or "Increased lead flow by roughly 2x").
+         
+         Return a single string for the 'metrics' field.`;
+         
+         const inferredMetric = await GeminiService.generateText({
+            systemPrompt: "You are an expert data analyst. Infer a result from the raw data.",
+            userPrompt: inferencePrompt,
+            temperature: 0.1
+         });
+         
+         if (inferredMetric) parsed.metrics = inferredMetric;
+      }
+
+      // FINAL VALIDATION: Headline Quality
+      if (parsed.headline?.toLowerCase().includes("achieved") || parsed.headline?.toLowerCase().includes("results")) {
+         if (parsed.metrics && parsed.metrics !== "Not provided") {
+            parsed.headline = `${parsed.metrics}: A Case Study in ${orgProfile.industry_raw || context.industry}`;
+         }
+      }
+
       const finalOutput = {
         headline: parsed.headline || "Case Study",
         summary: parsed.summary || "",

@@ -72,6 +72,8 @@ export const StateEngine = {
 
     // 2. PRIORITY OVERRIDE: Check if higher priority metrics are missing/unlocked
     const answeredStages = new Set(answers.map(a => a.stage));
+    const questionCount = rawAnswers.length;
+    const hasLockedMetric = metrics.some(m => m.isLocked);
     
     // Find highest priority missing or unlocked metric
     const highestPriorityMetricNeeded = METRIC_PRIORITY.find(type => {
@@ -79,16 +81,18 @@ export const StateEngine = {
       return !found || !found.isLocked;
     });
 
-    // If we've started the metric phase but haven't locked a high-priority one yet, stay on 'metric'
-    if (answeredStages.has("result") && highestPriorityMetricNeeded && rawAnswers.length < 5) {
-      // If we don't have ANY metrics yet, or our best one isn't locked, keep pushing
-      const bestMetric = metrics.find(m => METRIC_PRIORITY.indexOf(m.type) <= METRIC_PRIORITY.indexOf(highestPriorityMetricNeeded));
-      if (!bestMetric || !bestMetric.isLocked) {
-         nextStage = "metrics";
-      }
+    // ─── METRIC MANDATE (NEW) ───
+    // If we've hit question 4 or 5 and STILL don't have a locked metric, FORCE it.
+    if (questionCount >= 4 && !hasLockedMetric && questionCount < 6) {
+       nextStage = "metrics";
+    } 
+    // ─── FINAL GUARD (NEW) ───
+    // If we are about to end but have NO metric, take one final "Extreme" shot.
+    else if (questionCount === 5 && !hasLockedMetric) {
+       nextStage = "metrics";
     }
-
-    if (nextStage !== "metrics") {
+    else {
+      // Standard Flow
       for (const stage of flow) {
         if (!answeredStages.has(stage)) {
           nextStage = stage;
@@ -99,7 +103,6 @@ export const StateEngine = {
 
     // 3. QUALITY SCORING (0-100)
     let qualityScore = 0;
-    const hasLockedMetric = metrics.some(m => m.isLocked);
     const hasTimeframe = answeredStages.has("timeframe");
     const hasImpact = answeredStages.has("testimonial");
     const hasBeforeAfter = answeredStages.has("problem");
@@ -110,10 +113,18 @@ export const StateEngine = {
     if (hasBeforeAfter) qualityScore += 20;
     if (hasTimeframe) qualityScore += 15;
     if (hasImpact) qualityScore += 15;
-    if (rawAnswers.length >= 5) qualityScore += 10;
+    if (questionCount >= 5) qualityScore += 10;
 
-    // Force recommendation only if quality is decent OR we hit raw length limit
-    if (rawAnswers.length >= 6 || (qualityScore >= QUALITY_THRESHOLD && hasLockedMetric)) {
+    // ─── COMPLETION LOGIC ───
+    // Elite Standard: Never end without a metric unless we hit the Absolute Hard Limit (7)
+    const canComplete = hasLockedMetric || questionCount >= 7;
+
+    if (nextStage === "recommendation" && !canComplete) {
+       // If logic wants to end but we have no metric, force metrics or problem (to get context)
+       nextStage = hasLockedMetric ? "recommendation" : "metrics";
+    }
+
+    if (questionCount >= 7 || (qualityScore >= QUALITY_THRESHOLD && hasLockedMetric && questionCount >= 4)) {
       nextStage = "recommendation";
     }
 

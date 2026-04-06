@@ -60,8 +60,43 @@ export const GeminiService = {
         return JSON.parse(repaired) as T;
       }
     } catch (error) {
-      console.error("[GeminiService] Generation Error:", error);
+      console.error("[GeminiService] JSON Generation Error:", error);
       throw error;
+    }
+  },
+
+  /**
+   * Raw text generation wrapper.
+   */
+  async generateText(params: {
+    systemPrompt: string;
+    userPrompt: string;
+    temperature?: number;
+    model?: string;
+  }): Promise<string | null> {
+    const model = genAI.getGenerativeModel({
+      model: params.model || "gemini-2.5-flash",
+      systemInstruction: params.systemPrompt,
+    });
+
+    const generationConfig: GenerationConfig = {
+      temperature: params.temperature ?? 0.7,
+      topP: 0.95,
+      topK: 64,
+      maxOutputTokens: 2048,
+    };
+
+    try {
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: params.userPrompt }] }],
+        generationConfig,
+      });
+
+      const response = await result.response;
+      return response.text().trim();
+    } catch (error) {
+      console.error("[GeminiService] Raw Generation Error:", error);
+      return null;
     }
   },
 };

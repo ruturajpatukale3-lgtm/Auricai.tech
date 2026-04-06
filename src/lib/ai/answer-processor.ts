@@ -10,7 +10,9 @@ const VAGUE_PHRASES = [
   "a lot", "improved", "better", "significant", "greatly",
   "much better", "way more", "huge improvement", "really good",
   "pretty good", "went up", "went down", "increased",
-  "decreased", "some", "many", "several"
+  "decreased", "some", "many", "several", "fine", "ok", "okay",
+  "good", "nice", "helped", "made it better", "satisfied",
+  "good results", "happy with it", "no complaints", "worked well"
 ];
 
 export const AnswerProcessor = {
@@ -18,20 +20,21 @@ export const AnswerProcessor = {
    * Layer 4 - Classify the answer based on rules.
    * Can be augmented with Gemini.
    */
-  classifyAnswer(answer: string, targetStage: string): AnswerClassification {
-    const lower = answer.toLowerCase().trim();
+  classifyAnswer(answer: string, targetStage: string | undefined): AnswerClassification {
+    const lower = (answer || "").toLowerCase().trim();
     const hasNumbers = /\d/.test(answer);
-    const hasPercent = /%|percent|x/.test(answer);
+    const hasPercent = /%|percent|x|fold/i.test(answer);
+    
+    // REAL USER MODE: Short answers are inherently vague/weak for B2B Case Studies.
+    if (lower.split(/\s+/).length < 5 && !hasNumbers) return "vague";
     
     if (hasNumbers && hasPercent) return "exact";
-    if (hasNumbers && !hasPercent) return "estimated"; // Often a number of leads or raw time is an estimate or exact
+    if (hasNumbers && !hasPercent) return "estimated"; 
     
     // Check for vague phrases without specific numbers
     if (!hasNumbers && VAGUE_PHRASES.some((p) => lower.includes(p))) {
       return "vague";
     }
-
-    if (lower.split(/\s+/).length < 4) return "vague";
     
     return "qualitative";
   },
@@ -39,24 +42,22 @@ export const AnswerProcessor = {
   /**
    * Generate an estimate-based follow-up if the answer is vague.
    */
-  async generateEstimateFollowUp(answer: string, targetStage: string): Promise<string | null> {
-    const systemPrompt = `You are a friendly AI interviewer collecting case study data.
-The user just gave a vague answer to a question regarding the '${targetStage}' stage.
-Their answer: "${answer}"
+  async generateEstimateFollowUp(answer: string, targetStage: string | undefined): Promise<string | null> {
+    const systemPrompt = `You are an elite B2B analyst interviewing a client for a high-end Case Study.
+The user just gave a weak or vague answer regarding the '${targetStage || "result"}' of their experience.
+User Answer: "${answer}"
 
-Your task is to generate a SHORT follow-up question (1 sentence) asking them for their best ESTIMATE.
-Give them a multiple-choice like range to make it easy to answer.
-
-Examples:
-- "Roughly how much did that improve? Closer to 20% or 40%?"
-- "About how many more leads? 10 or 50?"
-- "What's your best estimate? A few days or a few weeks?"
+Your goal is to extract a REAL value without being annoying. 
+Instead of asking "can you be more specific", provide a MENTAL ANCHOR (range) they can just agree with or correct.
 
 RULES:
-1. Do NOT ask "can you elaborate" or "be more specific".
-2. Force an estimate range relevant to the context.
-3. Use words like "Roughly", "Approximately", "About".
-4. Output valid JSON in the format { "followUp": "your question" }`;
+1. Be sharp and professional.
+2. Provide a logical range (e.g., "closer to 10% or 30%?") so they only have to pick one.
+3. Use words like "Roughly", "Estimated", "Ballpark".
+4. If the stage is 'metrics', force a range.
+5. If the stage is 'timeframe', give them two durations (e.g., "a few weeks or a few months?").
+
+Output format: JSON { "followUp": "your question" }`;
 
     try {
       const parsed = await GeminiService.generateJSON<{ followUp: string }>({
