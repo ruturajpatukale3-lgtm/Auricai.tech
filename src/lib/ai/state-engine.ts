@@ -81,14 +81,23 @@ export const StateEngine = {
       return !found || !found.isLocked;
     });
 
-    // ─── METRIC MANDATE (NEW) ───
+    // 2. DETECT LOW-INTENT (NEW)
+    let consecutiveVague = 0;
+    for (let i = answers.length - 1; i >= 0; i--) {
+      if (answers[i].classification === "vague") consecutiveVague++;
+      else break;
+    }
+    const isLowIntent = consecutiveVague >= 2;
+
+    // ─── METRIC MANDATE (REFINED) ───
     // If we've hit question 4 or 5 and STILL don't have a locked metric, FORCE it.
-    if (questionCount >= 4 && !hasLockedMetric && questionCount < 6) {
+    // OPT-OUT: If the user is being vague (Low-Intent), STOP pestering and skip to testimonial.
+    if (questionCount >= 4 && !hasLockedMetric && questionCount < 6 && !isLowIntent) {
        nextStage = "metrics";
     } 
-    // ─── FINAL GUARD (NEW) ───
-    // If we are about to end but have NO metric, take one final "Extreme" shot.
-    else if (questionCount === 5 && !hasLockedMetric) {
+    // ─── FINAL GUARD (REFINED) ───
+    // If we are about to end but have NO metric, take one final "Extreme" shot (if intent is not low).
+    else if (questionCount === 5 && !hasLockedMetric && !isLowIntent) {
        nextStage = "metrics";
     }
     else {
@@ -106,6 +115,8 @@ export const StateEngine = {
     const hasTimeframe = answeredStages.has("timeframe");
     const hasImpact = answeredStages.has("testimonial");
     const hasBeforeAfter = answeredStages.has("problem");
+    const hasContext = answeredStages.has("business_context");
+    const hasResult = answeredStages.has("result");
 
     if (hasLockedMetric) qualityScore += 40;
     else if (metrics.length > 0) qualityScore += 20;
@@ -115,16 +126,27 @@ export const StateEngine = {
     if (hasImpact) qualityScore += 15;
     if (questionCount >= 5) qualityScore += 10;
 
-    // ─── COMPLETION LOGIC ───
-    // Elite Standard: Never end without a metric unless we hit the Absolute Hard Limit (7)
-    const canComplete = hasLockedMetric || questionCount >= 7;
+    // ─── COMPLETION LOGIC (REFINED) ───
+    // 1. EARLY EXIT: If we have Context + Problem + Result + Locked Metric by question 4.
+    const hasFullTransformation = hasContext && hasBeforeAfter && hasResult && hasLockedMetric;
+    const earlyExitCondition = hasFullTransformation && questionCount >= 4;
+
+    // 2. LOW-INTENT EXIT: If they are being uncooperative, end early to keep it premium.
+    const lowIntentExitCondition = isLowIntent && questionCount >= 4;
+
+    const canComplete = hasLockedMetric || questionCount >= 7 || lowIntentExitCondition || earlyExitCondition;
 
     if (nextStage === "recommendation" && !canComplete) {
-       // If logic wants to end but we have no metric, force metrics or problem (to get context)
        nextStage = hasLockedMetric ? "recommendation" : "metrics";
     }
 
-    if (questionCount >= 7 || (qualityScore >= QUALITY_THRESHOLD && hasLockedMetric && questionCount >= 4)) {
+    // High Quality Exit OR Early Exit
+    if (canComplete && (questionCount >= 4 || isLowIntent)) {
+      nextStage = "recommendation";
+    }
+
+    // Force Exit
+    if (questionCount >= 7) {
       nextStage = "recommendation";
     }
 

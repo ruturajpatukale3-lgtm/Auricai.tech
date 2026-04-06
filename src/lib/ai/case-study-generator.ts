@@ -83,30 +83,56 @@ Return JSON ONLY with this exact schema:
         temperature: 0.4,
       });
 
-      // LAYER 10: Post-Generation Validation & Inference Pass
+      // LAYER 10: Trusted Inference Pass (High-Confidence Only)
       if (!parsed.metrics || parsed.metrics === "Not provided" || parsed.metrics.length < 5) {
-         console.log("[CaseStudyGenerator] Initial metrics weak. Triggering Inference Pass...");
+         console.log("[CaseStudyGenerator] Initial metrics weak. Triggering Trusted Inference...");
          const inferencePrompt = `The previous case study generation missed a specific metric.
          RAW DATA: ${formattedAnswers}
          
-         Analyze the data above. If no exact number exists, can you INFER a directional outcome?
-         (e.g., "Significantly reduced turnaround time" or "Increased lead flow by roughly 2x").
+         Analyze the data above. If no exact number exists, INFER a directional outcome and provide a confidence score (0-100).
          
-         Return a single string for the 'metrics' field.`;
+         RULES:
+         1. Use SOFT LANGUAGE: "Approximately", "Estimated", "Directional", "Roughly".
+         2. Confidence >= 80 means you are reasonably sure based on the context.
+         3. Confidence < 80 means the claim is pure speculation.
          
-         const inferredMetric = await GeminiService.generateText({
-            systemPrompt: "You are an expert data analyst. Infer a result from the raw data.",
+         OUTPUT: JSON { "inferredMetric": "string", "confidenceScore": number }`;
+         
+         const inferenceResult = await GeminiService.generateJSON<{ inferredMetric: string, confidenceScore: number }>({
+            systemPrompt: "You are an expert data analyst. Infer a result only if evidence is strong.",
             userPrompt: inferencePrompt,
             temperature: 0.1
          });
          
-         if (inferredMetric) parsed.metrics = inferredMetric;
+         if (inferenceResult?.confidenceScore >= 80) {
+            parsed.metrics = inferenceResult.inferredMetric;
+         } else {
+            console.log("[CaseStudyGenerator] Inference confidence too low:", inferenceResult?.confidenceScore);
+         }
       }
 
-      // FINAL VALIDATION: Headline Quality
+      // FINAL VALIDATION: Headline Refinement (Non-Destructive)
       if (parsed.headline?.toLowerCase().includes("achieved") || parsed.headline?.toLowerCase().includes("results")) {
          if (parsed.metrics && parsed.metrics !== "Not provided") {
-            parsed.headline = `${parsed.metrics}: A Case Study in ${orgProfile.industry_raw || context.industry}`;
+            // REFINEMENT: Weave the metric into the original hook instead of replacing it.
+            const refinementPrompt = `Refine this headline to be more specific and include the outcome below.
+            ORIGINAL: "${parsed.headline}"
+            OUTCOME: "${parsed.metrics}"
+            
+            RULES:
+            1. Preserve the original hook's structure (clarity/specificity).
+            2. Weave the outcome in naturally.
+            3. Do NOT replace the entire headline.
+            
+            Respond with ONLY the refined headline string.`;
+            
+            const refinedHeadline = await GeminiService.generateText({
+               systemPrompt: "You are an elite B2B editor. Refineheadlines for outcome strength.",
+               userPrompt: refinementPrompt,
+               temperature: 0.2
+            });
+            
+            if (refinedHeadline) parsed.headline = refinedHeadline;
          }
       }
 

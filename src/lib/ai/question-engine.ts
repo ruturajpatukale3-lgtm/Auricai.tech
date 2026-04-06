@@ -33,13 +33,13 @@ export const QuestionEngine = {
        // Absolute Hard Limit: 7 questions
        if (state.qualityScore < 70 && state.answers.length < 7) {
           if (!hasLockedMetric) {
-             return { question: "I know this can be tricky to estimate—but ballpark, would you say the improvement was closer to 20% or 50%?", intent: "metrics", stage: "metrics", isFollowUp: true, isComplete: false };
+             return { question: "Help me ballpark this—would you say the improvement was closer to 10%, 25%, 50%, or something else?", intent: "metrics", stage: "metrics", isFollowUp: true, isComplete: false };
           }
           if (!hasTimeframe) {
-             return { question: "Quickly, did it take about 2 weeks or 2 months to start seeing those results?", intent: "timeframe", stage: "timeframe", isFollowUp: true, isComplete: false };
+             return { question: "Quickly, did it take about 2 weeks, 2 months, or something else to start seeing those results?", intent: "timeframe", stage: "timeframe", isFollowUp: true, isComplete: false };
           }
           if (!hasImpact) {
-             return { question: "And finally—how would you describe the biggest benefit this had on your workflow?", intent: "result", stage: "testimonial", isFollowUp: true, isComplete: false };
+             return { question: "Mainly—how would you describe the biggest benefit? Did it mostly save time, reduce costs, or something else?", intent: "result", stage: "testimonial", isFollowUp: true, isComplete: false };
           }
        }
 
@@ -57,10 +57,10 @@ export const QuestionEngine = {
 
     const recoveryRules = isForcedMetric ? `
 [URGENT: METRIC RECOVERY MODE]
-The user hasn't provided a hard metric yet and we are reaching the end of the interview.
-1. You MUST provide a "Mental Anchor" (a range) in your question.
+The user hasn't provided a hard metric yet. 
+1. Suggest 2-3 specific ranges or options (GUIDED CHOICES) to reduce cognitive load.
 2. Example: "Was the improvement closer to 15% or 40%?" or "Did you save closer to 5 hours or 20 hours a week?"
-3. Force a ballpark estimate. Do NOT be vague.` : "";
+3. Avoid open-ended "how much" questions.` : "";
 
     const previousQuestions = state.answers.map(a => a.answer).join("\n");
     const bestQuestionsFromMemory = await MemorySystem.getBestQuestions(context.industry, targetStage, context.plan);
