@@ -21,6 +21,7 @@ import { EventService } from "@/lib/services/event.service";
 import { validateInput, aiInterviewAnswerSchema } from "@/lib/validation";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AIValidator } from "@/lib/ai/validator";
+import { MetricExtractor } from "@/lib/ai/metric-extractor";
 import type { InterviewIntent, InterviewStage } from "@/types";
 
 // ─── Fallback Questions (ALWAYS available, zero dependencies) ────
@@ -145,6 +146,14 @@ export async function POST(
       // Classification (Layer 4)
       const classification = AnswerProcessor.classifyAnswer(finalAnswerToStore, intent || "experience");
 
+      // Structured Metric Extraction (NEW: Layer 4.5)
+      let extractedMetrics: any[] = [];
+      try {
+        extractedMetrics = await MetricExtractor.extract(finalAnswerToStore);
+      } catch (extractErr) {
+        console.warn("[next-question] Metric extraction failed:", extractErr);
+      }
+
       // Store answer — wrapped
       try {
         await InterviewAnswerRepository.create({
@@ -155,6 +164,7 @@ export async function POST(
             intent: intent || "experience",
             classification,
             raw_answer: answer,
+            metrics: extractedMetrics, // Store locked metrics for future state calculation
           },
         });
       } catch (storeErr) {

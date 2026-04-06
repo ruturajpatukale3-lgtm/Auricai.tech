@@ -3,7 +3,11 @@
 // Enforces PRIORITY ORDER: result -> metric -> before_after -> timeframe -> impact -> experience
 // ═══════════════════════════════════════════════════════════
 
-import { InterviewStage, InterviewState, ALL_STAGES, AnswerClassification, InterviewAnswer } from "@/types";
+import { InterviewStage, InterviewState, ALL_STAGES, AnswerClassification, InterviewAnswer, InterviewMetric } from "@/types";
+import { MetricExtractor } from "./metric-extractor";
+
+const METRIC_PRIORITY = ["revenue", "pipeline", "conversion_rate", "leads", "efficiency"];
+const QUALITY_THRESHOLD = 70;
 
 export const StateEngine = {
   /**
@@ -40,43 +44,88 @@ export const StateEngine = {
     });
 
     const flow = this.getExpectedFlow();
-    let nextStage: InterviewStage | "recommendation" = "recommendation"; // default if all done
+    let nextStage: InterviewStage | "recommendation" = "recommendation";
 
-    // Track satisfied intents/stages
+    // 1. Extract structured metrics for locking & priority
+    const metrics: InterviewMetric[] = [];
+    rawAnswers.forEach(a => {
+      const meta = a.extracted as any || {};
+      if (meta.metrics && Array.isArray(meta.metrics)) {
+        meta.metrics.forEach((m: InterviewMetric) => {
+          const normType = MetricExtractor.normalizeType(m.type);
+          
+          // LOCK CONDITION: before+after present OR complete + high confidence
+          const isHardLocked = (!!m.before && !!m.after) || (m.status === "complete" && (m.confidence || 0) > 90);
+          
+          const existing = metrics.find(em => em.type === normType);
+          if (!existing || (existing.status === "estimated" && m.status === "complete") || (!existing.isLocked && isHardLocked)) {
+            const updatedMetric = { ...m, type: normType, isLocked: isHardLocked };
+            if (existing) {
+               metrics[metrics.indexOf(existing)] = updatedMetric;
+            } else {
+               metrics.push({ ...m, type: normType, isLocked: isHardLocked });
+            }
+          }
+        });
+      }
+    });
+
+    // 2. PRIORITY OVERRIDE: Check if higher priority metrics are missing/unlocked
     const answeredStages = new Set(answers.map(a => a.stage));
     
-    // Dynamic Skipping logic: If strong metric appears early, skip lower priority areas
-    const hasExactMetric = answers.some(a => ["exact", "estimated"].includes(a.classification));
-    
-    if (hasExactMetric) {
-      answeredStages.add("experience");
-      answeredStages.add("improvement");
-    }
+    // Find highest priority missing or unlocked metric
+    const highestPriorityMetricNeeded = METRIC_PRIORITY.find(type => {
+      const found = metrics.find(m => m.type === type);
+      return !found || !found.isLocked;
+    });
 
-    for (const stage of flow) {
-      if (!answeredStages.has(stage)) {
-        nextStage = stage;
-        break;
+    // If we've started the metric phase but haven't locked a high-priority one yet, stay on 'metric'
+    if (answeredStages.has("improvement") && highestPriorityMetricNeeded && rawAnswers.length < 5) {
+      // If we don't have ANY metrics yet, or our best one isn't locked, keep pushing
+      const bestMetric = metrics.find(m => METRIC_PRIORITY.indexOf(m.type) <= METRIC_PRIORITY.indexOf(highestPriorityMetricNeeded));
+      if (!bestMetric || !bestMetric.isLocked) {
+         nextStage = "metric";
       }
     }
 
-    // Force loop caps to 4-6 if we already have strong data
-    if (rawAnswers.length >= 4 && hasExactMetric && answeredStages.has("before_after") && answeredStages.has("timeframe")) {
-      nextStage = "recommendation";
+    if (nextStage !== "metric") {
+      for (const stage of flow) {
+        if (!answeredStages.has(stage)) {
+          nextStage = stage;
+          break;
+        }
+      }
     }
 
-    // Extract metrics strings for passing up
-    const extractedMetrics = answers
-      .filter(a => a.classification === "exact" || a.classification === "estimated")
-      .map(a => a.answer);
+    // 3. QUALITY SCORING (0-100)
+    let qualityScore = 0;
+    const hasLockedMetric = metrics.some(m => m.isLocked);
+    const hasTimeframe = answeredStages.has("timeframe");
+    const hasImpact = answeredStages.has("impact");
+    const hasBeforeAfter = answeredStages.has("before_after");
+
+    if (hasLockedMetric) qualityScore += 40;
+    else if (metrics.length > 0) qualityScore += 20;
+
+    if (hasBeforeAfter) qualityScore += 20;
+    if (hasTimeframe) qualityScore += 15;
+    if (hasImpact) qualityScore += 15;
+    if (rawAnswers.length >= 5) qualityScore += 10;
+
+    // Force recommendation only if quality is decent OR we hit raw length limit
+    if (rawAnswers.length >= 6 || (qualityScore >= QUALITY_THRESHOLD && hasLockedMetric)) {
+      nextStage = "recommendation";
+    }
 
     const confidenceScore = this.computeConfidence(answers);
 
     return {
       stage: nextStage as InterviewStage,
       answers,
-      extractedMetrics,
-      confidenceScore
+      metrics,
+      extractedMetrics: metrics.map(m => `${m.value} ${m.type}`),
+      confidenceScore,
+      qualityScore
     };
   },
 
@@ -118,13 +167,17 @@ export const StateEngine = {
       `[${a.stage.toUpperCase()}] Class: ${a.classification} \nAnswer: "${a.answer}"`
     ).join("\n\n");
 
+    const lockedMetrics = state.metrics
+      .map(m => `[${m.type.toUpperCase()}] status: ${m.status}, value: ${m.value}`)
+      .join("\n");
+
     return `[INTERVIEW STATE]
 Current Target Stage: ${state.stage.toUpperCase()}
 Total Answered: ${state.answers.length}
 Confidence Score: ${state.confidenceScore}/100
 
-[EXTRACTED METRICS SO FAR]
-${state.extractedMetrics.length > 0 ? state.extractedMetrics.join(" | ") : "None yet"}
+[LOCKED METRICS - DO NOT REPEAT]
+${lockedMetrics || "None yet"}
 
 [PREVIOUS ANSWERS]
 ${answeredSummary || "(No answers yet)"}`;

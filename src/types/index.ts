@@ -149,11 +149,24 @@ export const ALL_STAGES: InterviewStage[] = [
 
 export type AnswerClassification = "exact" | "estimated" | "vague" | "qualitative";
 
+export interface InterviewMetric {
+  type: string;
+  status: "complete" | "estimated";
+  value: string;
+  before?: string;
+  after?: string;
+  timeframe?: string;
+  confidence: number;
+  isLocked?: boolean;
+}
+
 export interface InterviewState {
   stage: InterviewStage;
   answers: { stage: InterviewStage, answer: string, classification: AnswerClassification }[];
+  metrics: InterviewMetric[];
   extractedMetrics: string[];
   confidenceScore: number;
+  qualityScore: number;
 }
 
 export interface StructuredAnswers {

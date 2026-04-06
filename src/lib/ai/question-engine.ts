@@ -23,8 +23,25 @@ export const QuestionEngine = {
     state: InterviewState
   ): Promise<AIQuestionResponse> {
     
-    // Default complete condition
+    // Default complete condition with FINAL QUALITY SCAN
     if (state.stage === "recommendation" && state.answers.find(a => a.stage === "recommendation")) {
+       // FINAL QUALITY SCAN: If we are 'done' but missing critical bits, force one last targeted question.
+       const hasTimeframe = state.answers.some(a => a.stage === "timeframe");
+       const hasImpact = state.answers.some(a => a.stage === "impact");
+       const hasLockedMetric = state.metrics.some(m => m.isLocked);
+
+       if (state.qualityScore < 70 && state.answers.length < 8) {
+          if (!hasLockedMetric) {
+             return { question: "One last thing—to make this story really powerful, could you provide any specific revenue or pipeline numbers?", intent: "metrics", stage: "metric", isFollowUp: true, isComplete: false };
+          }
+          if (!hasTimeframe) {
+             return { question: "Quickly, how long did it take for you to start seeing these results?", intent: "timeframe", stage: "timeframe", isFollowUp: true, isComplete: false };
+          }
+          if (!hasImpact) {
+             return { question: "And finally, what was the biggest impact this had on your day-to-day business operations?", intent: "result", stage: "impact", isFollowUp: true, isComplete: false };
+          }
+       }
+
        return {
         question: "",
         intent: "testimonial",
@@ -44,18 +61,25 @@ export const QuestionEngine = {
 ${ContextEngine.serializeContext(context, policy)}
 ${StateEngine.serializeState(state)}
 
-QUESTION SELECTION LOGIC (MANDATORY):
-Before generating any question, ask yourself: "Does this question increase case study strength?"
-If NO → Do not generate it.
+METRIC LOCKING & PRIORITY SELECTION (MANDATORY):
+1. Review the [LOCKED METRICS] in the state. 
+2. If a metric type is LOCKED, DO NOT ask for it again.
+3. PRIORITY: revenue > pipeline > conversion_rate > leads.
+4. If a higher-priority metric is NOT locked, your question MUST target it specifically.
+5. Once a core metric is locked, target:
+   - DOWNSTREAM IMPACT (Business-wide effect)
+   - TIME-SAVING & EFFICIENCY
+   - STRATEGIC VALUE
 
-RULES FOR CANDIDATE GENERATION:
+STAGE-SPECIFIC RULES:
 1. Target the '${targetStage}' stage.
-2. Reject storytelling. Ask questions that extract PROOF (Metrics, Before/After data, Timeframes).
-3. DO NOT repeat topics covered in [PREVIOUS ANSWERS].
+2. Reject storytelling. Ask questions that extract PROOF.
+3. DO NOT repeat topics covered in [PREVIOUS ANSWERS] or [LOCKED METRICS].
 
-HIGH-VALUE PATTERNS TO USE:
-- "What improved the most?"
-- "Roughly how much did it improve?"
+HIGH-VALUE PATTERNS:
+- "What was the specific impact on your revenue or pipeline?"
+- "What was it before vs what is it now?"
+- "How long did it take to see those results?"
 - "What was it before vs what is it now?"
 - "How long did it take to see results?"
 
