@@ -57,14 +57,14 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
     return (
       <>
         <div className="w-full h-[400px] bg-[#0A0A0A] border border-white/5 rounded-2xl flex flex-col items-center justify-center p-8 text-center mt-6 shadow-[0_8px_40px_rgba(0,0,0,0.5)]">
-          <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mb-8 border border-white/10 shadow-[0_0_30px_rgba(255,255,255,0.02)]">
-            <Mail className="w-8 h-8 text-white/40" />
+          <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-6 border border-white/10 shadow-[0_0_30px_rgba(255,255,255,0.02)]">
+            <Mail className="w-6 h-6 text-white/40" />
           </div>
-          <h3 className="text-2xl font-bold text-white mb-3 tracking-tight">
-            You don&apos;t have any case studies yet.
+          <h3 className="text-xl font-bold text-white mb-2 tracking-tight">
+            No case studies yet.
           </h3>
-          <p className="text-zinc-500 max-w-sm mb-10 leading-relaxed text-sm">
-            Send your first interview to generate a case study automatically in under 24 hours.
+          <p className="text-zinc-500 max-w-sm mb-8 leading-relaxed text-sm">
+            Create your first one by sending an interview to your client. We&apos;ll handle the generation.
           </p>
           <button 
             onClick={() => setIsSendInterviewOpen(true)}
