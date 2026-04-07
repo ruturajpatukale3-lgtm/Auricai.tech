@@ -19,9 +19,41 @@ export const AIValidator = {
     rejectionReason?: string;
     autoCorrectedText?: string;
   }> {
-    // Basic fast-fail for extremely short or repetitive keyboard smashes
+    // ─── LAYER 1: Fast-fail for extremely short input ──────
     if (answer.trim().length <= 2) {
       return { isValid: false, rejectionReason: "Please provide a bit more detail." };
+    }
+
+    // ─── LAYER 2: Deterministic gibberish detector ──────────
+    // Catches keyboard smashes BEFORE burning an AI call.
+    const cleaned = answer.trim().toLowerCase().replace(/[^a-z]/g, "");
+    if (cleaned.length >= 3) {
+      // Check 1: Vowel ratio — real English has ~35-40% vowels. Below 15% is gibberish.
+      const vowelCount = (cleaned.match(/[aeiou]/g) || []).length;
+      const vowelRatio = vowelCount / cleaned.length;
+      if (vowelRatio < 0.15) {
+        return { isValid: false, rejectionReason: "That doesn't look like a real answer. Could you try again?" };
+      }
+
+      // Check 2: Repeated character sequences (e.g., "aaa", "qqq", "asdfasdf")
+      if (/(.)\1{2,}/.test(cleaned)) {
+        return { isValid: false, rejectionReason: "Could you share a real response? Even a short one is fine." };
+      }
+
+      // Check 3: Known keyboard smash patterns
+      const SMASH_PATTERNS = ["asdf", "qwer", "zxcv", "hjkl", "uiop", "fghj", "bnmv", "tyui", "dfgh", "xcvb"];
+      const hasSmash = SMASH_PATTERNS.some(p => cleaned.includes(p));
+      if (hasSmash) {
+        return { isValid: false, rejectionReason: "That doesn't look like a real answer. Could you try again?" };
+      }
+
+      // Check 4: Repeated substring pattern (e.g., "abcabc", "xyzxyz")
+      if (cleaned.length >= 6) {
+        const half = cleaned.substring(0, Math.floor(cleaned.length / 2));
+        if (cleaned === half.repeat(Math.ceil(cleaned.length / half.length)).substring(0, cleaned.length)) {
+          return { isValid: false, rejectionReason: "Could you share a real response? Even a short one is fine." };
+        }
+      }
     }
 
 const systemPrompt = `You are a strict data quality validator for case study interviews.

@@ -30,8 +30,11 @@ import {
   AlertCircle,
   Activity,
   Calendar,
+  CheckCircle2,
 } from "lucide-react";
 import { useSubscription, type PlanType } from "@/context/SubscriptionContext";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { fetcher } from "@/lib/utils";
 import { FEATURES } from "@/lib/config/features";
 
 // ═══════════════════════════════════════
@@ -57,21 +60,6 @@ const tabs: TabItem[] = [
   { id: "legal", label: "Legal & Policies", icon: Shield },
   { id: "danger", label: "Danger Zone", icon: AlertTriangle, color: "text-red-400" },
 ];
-
-const fetcher = async (url: string) => {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      const info = await res.json().catch(() => ({}));
-      console.error(`[SWR Fetch Error] ${url}:`, res.status, info);
-      throw new Error(info.error || "Failed to fetch data");
-    }
-    return res.json();
-  } catch (err) {
-    console.error(`[SWR Network Error] ${url}:`, err);
-    throw err;
-  }
-};
 
 // ═══════════════════════════════════════
 // SHARED COMPONENTS
@@ -367,6 +355,39 @@ function BusinessProfileSection({ orgProfile, mutate }: { orgProfile: any; mutat
               />
               <p className="text-xs text-zinc-600">Your ideal customer profile (ICP) — who benefits from your service.</p>
             </div>
+
+            {/* AI CONTROLS */}
+            <div className="pt-6 border-t border-white/10 space-y-6">
+              <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-blue-400" />
+                AI Content Controls
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-zinc-400">Interview Tone</label>
+                  <select
+                    value={orgProfile?.ai_tone || "professional"}
+                    name="ai_tone"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white appearance-none focus:outline-none focus:border-blue-500/50 transition-all cursor-pointer"
+                  >
+                    <option value="professional">Professional & Direct</option>
+                    <option value="conversational">Conversational & Friendly</option>
+                    <option value="technical">Technical & Detail-Oriented</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-zinc-400">Case Study Strategy</label>
+                  <select
+                    value={orgProfile?.ai_case_study_style || "story_driven"}
+                    name="ai_case_study_style"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white appearance-none focus:outline-none focus:border-blue-500/50 transition-all cursor-pointer"
+                  >
+                    <option value="story_driven">Story-Driven (Narrative Focus)</option>
+                    <option value="metric_driven">Metric-Driven (Outcome Focus)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="mt-6 pt-6 border-t border-white/10 flex items-center justify-between">
@@ -473,6 +494,18 @@ function BrandingSection({ org, mutate }: { org: any, mutate: any }) {
                     <input type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent" />
                     <span className="text-sm font-mono text-zinc-300">{primaryColor}</span>
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm text-zinc-400">Font Family</label>
+                  <select 
+                    name="font_preset"
+                    defaultValue={org?.font_preset || "sans"}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white appearance-none focus:outline-none focus:border-blue-500/50 transition-all cursor-pointer"
+                  >
+                    <option value="sans">Modern Sans (Inter)</option>
+                    <option value="serif">Premium Serif (Lora)</option>
+                    <option value="mono">Technical Mono (Roboto Mono)</option>
+                  </select>
                 </div>
                 <div className="flex justify-end"><SaveButton pending={isPendingColor} /></div>
               </div>
@@ -707,9 +740,13 @@ function TeamSection({ team, limit, mutate }: { team: any[], limit: number, muta
             <span className="text-white font-semibold">{activeSeats}</span> of{" "}
             <span className="text-white font-semibold">{limit > 1000 ? 'Unlimited' : limit}</span> seats used
           </p>
-          <form className="flex gap-2 w-full sm:w-auto" onSubmit={handleInvite}>
+          <form className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto" onSubmit={handleInvite}>
             <input name="email" type="email" placeholder="colleague@acme.com" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white" required />
-            <button type="submit" disabled={isPending || activeSeats >= limit} className="inline-flex items-center gap-2 bg-white/10 text-white px-4 py-2 rounded-lg text-sm transition-all hover:bg-white/20 disabled:opacity-50">
+            <select name="role" className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
+              <option value="editor">Editor</option>
+              <option value="admin">Admin</option>
+            </select>
+            <button type="submit" disabled={isPending || activeSeats >= limit} className="inline-flex items-center justify-center gap-2 bg-white/10 text-white px-4 py-2 rounded-lg text-sm transition-all hover:bg-white/20 disabled:opacity-50">
               {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Invite
             </button>
           </form>
@@ -751,8 +788,29 @@ function TeamSection({ team, limit, mutate }: { team: any[], limit: number, muta
 }
 
 function BillingSection() {
-  const { planType, paymentStatus, currentPeriodEnd, nextPlan } = useSubscription();
+  const { planType, paymentStatus, currentPeriodEnd, nextPlan, billingCycle, refreshWithRetry } = useSubscription();
   const [upgrading, setUpgrading] = useState(false);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  // ─── Payment Confirmation Logic ───────────────────────────
+  useEffect(() => {
+    if (searchParams.get("checkout") === "success") {
+      setShowSuccess(true);
+      toast.success("Your plan is now active!", { id: "checkout-success" });
+      
+      // Clear the query param without full reload
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("checkout");
+      router.replace(`${pathname}?${params.toString()}`);
+
+      // Sync data immediately
+      refreshWithRetry();
+    }
+  }, [searchParams, router, pathname, refreshWithRetry, planType]);
+
   const planName = planType;
   const status = paymentStatus;
 
@@ -800,6 +858,22 @@ function BillingSection() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <SectionTitle title="Billing & Subscription" description="Manage your plan, payment method, and invoices." />
+      
+      {showSuccess && (
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 flex items-center gap-3 text-green-400 mb-6"
+        >
+          <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+            <CheckCircle2 className="w-4 h-4" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white">Payment Successful</p>
+            <p className="text-xs">Your workspace limits have been updated. Welcome to CaseFlow {planType.charAt(0).toUpperCase() + planType.slice(1)}!</p>
+          </div>
+        </motion.div>
+      )}
       <SettingsCard>
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -808,7 +882,9 @@ function BillingSection() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="text-base font-bold text-white capitalize">{planName} Plan</h4>
+                <h4 className="text-base font-bold text-white capitalize">
+                  {planName} {billingCycle ? `— ${billingCycle.charAt(0).toUpperCase() + billingCycle.slice(1)}` : "Plan"}
+                </h4>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${status === 'active' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
                   {status}
                 </span>
@@ -897,16 +973,18 @@ function UsageSection() {
           </div>
           <div className="flex items-baseline gap-1">
             <span className="text-xl font-bold text-white">{used}</span>
-            <span className="text-sm text-zinc-500">/ {isUnlimited ? "∞" : limit}</span>
+            <span className="text-sm text-zinc-500">
+              / {limit >= 1000 ? "Unlimited" : (isUnlimited ? "∞" : limit)}
+            </span>
           </div>
         </div>
 
         <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
           <motion.div
             initial={{ width: 0 }}
-            animate={{ width: `${p}%` }}
+            animate={{ width: `${limit >= 1000 ? 0 : p}%` }}
             transition={{ duration: 1, ease: "easeOut" }}
-            className={`h-full rounded-full transition-colors duration-500 ${getColor(p)}`}
+            className={`h-full rounded-full transition-colors duration-500 ${limit >= 1000 ? "bg-blue-500/20" : getColor(p)}`}
           />
         </div>
 
@@ -1032,6 +1110,33 @@ function LegalSection() {
         <a href="mailto:privacy@auricai.tech" className="text-xs font-bold text-white hover:text-blue-400 transition-colors">
           Contact Privacy Team →
         </a>
+      </div>
+
+      {/* DATA EXPORT */}
+      <div className="pt-8 border-t border-white/5 space-y-6">
+        <SectionTitle title="Data Export & Portability" description="Download your workspace data in standard formats." />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <SettingsCard className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-white">Case Studies</p>
+              <p className="text-xs text-zinc-500 mt-1">Export all published and draft stories.</p>
+            </div>
+            <div className="flex gap-2">
+              <a href="/api/settings/export?type=case-studies&format=json" className="text-[10px] font-bold bg-white/5 hover:bg-white/10 px-2.5 py-1.5 rounded text-zinc-300">JSON</a>
+              <a href="/api/settings/export?type=case-studies&format=csv" className="text-[10px] font-bold bg-white/5 hover:bg-white/10 px-2.5 py-1.5 rounded text-zinc-300">CSV</a>
+            </div>
+          </SettingsCard>
+          <SettingsCard className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-white">Interviews</p>
+              <p className="text-xs text-zinc-500 mt-1">Export all raw client responses.</p>
+            </div>
+            <div className="flex gap-2">
+              <a href="/api/settings/export?type=interviews&format=json" className="text-[10px] font-bold bg-white/5 hover:bg-white/10 px-2.5 py-1.5 rounded text-zinc-300">JSON</a>
+              <a href="/api/settings/export?type=interviews&format=csv" className="text-[10px] font-bold bg-white/5 hover:bg-white/10 px-2.5 py-1.5 rounded text-zinc-300">CSV</a>
+            </div>
+          </SettingsCard>
+        </div>
       </div>
     </motion.div>
   );

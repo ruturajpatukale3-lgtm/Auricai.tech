@@ -90,6 +90,8 @@ export const CaseStudyRepository = {
       delta_percent?: number;
       timeframe?: string;
       slug?: string;
+      summary?: string;
+      status?: CaseStudyStatus;
     }
   ): Promise<CaseStudy> {
     const { data, error } = await supabaseAdmin
@@ -97,7 +99,7 @@ export const CaseStudyRepository = {
       .insert({
         org_id: orgId,
         ...input,
-        status: "draft",
+        status: input.status || "draft",
       })
       .select()
       .single();
@@ -113,6 +115,7 @@ export const CaseStudyRepository = {
         CaseStudy,
         | "company_name"
         | "headline"
+        | "summary"
         | "metric_type"
         | "before_value"
         | "after_value"

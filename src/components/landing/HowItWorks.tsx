@@ -25,7 +25,7 @@ const steps = [
     number: "02",
     title: "The Extraction",
     headline: "AI extracts the metrics that close deals.",
-    body: "Our AI doesn't accept vague answers. It follows up automatically: 'You mentioned engagement improvement — what was the exact percentage?' The result is a case study with real proof, not fluff.",
+    body: "Our AI extracts and validates metrics (exact or estimated). It follows up automatically to gather maximum detail, ensuring your case study relies on real proof and strong, believable outcomes.",
     pills: ["Auto follow-ups", "Metric validation", "Hallucination detection"],
     icon: MessageSquare,
   },

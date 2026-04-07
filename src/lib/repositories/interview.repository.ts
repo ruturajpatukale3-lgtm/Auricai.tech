@@ -105,6 +105,9 @@ export const InterviewRepository = {
     extra?: Partial<Interview>
   ): Promise<Interview> {
     const updates: Record<string, unknown> = { status, ...extra };
+    if (status === "opened" && !extra?.opened_at) {
+      updates.opened_at = new Date().toISOString();
+    }
     if (status === "in_progress" && !extra?.started_at) {
       updates.started_at = new Date().toISOString();
     }
@@ -239,7 +242,7 @@ export const InterviewRepository = {
    * Get all status counts in a single query (replaces 5 separate countByStatus calls)
    */
   async getFullStatusCounts(orgId: string): Promise<Record<InterviewStatus, number>> {
-    const statuses: InterviewStatus[] = ["sent", "in_progress", "completed", "review_ready", "approved", "published"];
+    const statuses: InterviewStatus[] = ["sent", "opened", "in_progress", "completed", "review_ready", "approved", "published"];
     const results: Record<string, number> = {};
 
     // Parallel count queries (batched, not 5 separate round-trips for complex aggregation)
@@ -260,6 +263,62 @@ export const InterviewRepository = {
     }
 
     return results as Record<InterviewStatus, number>;
+  },
+
+  /**
+   * Get drop-off distribution per question index.
+   * Analyzes 'interview_progress' for non-terminal interviews.
+   */
+  async getDropoffStats(orgId: string): Promise<{ questionIndex: number; count: number }[]> {
+    const { data, error } = await supabaseAdmin
+      .from("interview_progress")
+      .select("last_question_index")
+      .in("interview_id", (
+        await supabaseAdmin
+          .from(TABLE)
+          .select("id")
+          .eq("org_id", orgId)
+          .in("status", ["sent", "opened", "in_progress"])
+      ).data?.map(i => i.id) || []);
+
+    if (error) throw new Error(`Failed to fetch drop-off stats: ${error.message}`);
+    
+    const counts: Record<number, number> = {};
+    (data || []).forEach((p) => {
+      const idx = p.last_question_index || 0;
+      counts[idx] = (counts[idx] || 0) + 1;
+    });
+
+    return Object.entries(counts)
+      .map(([idx, count]) => ({ questionIndex: parseInt(idx, 10), count }))
+      .sort((a, b) => a.questionIndex - b.questionIndex);
+  },
+
+  /**
+   * Efficiently counts multiple status groups in a single batch.
+   */
+  async countByStatusGroup(orgId: string): Promise<{
+    active: number;    // sent, opened, in_progress
+    completed: number; // completed, review_ready, approved, published
+    total: number;
+  }> {
+    const { data, error } = await supabaseAdmin
+      .from(TABLE)
+      .select("status")
+      .eq("org_id", orgId);
+
+    if (error) throw new Error(`Failed to count status group: ${error.message}`);
+
+    let active = 0;
+    let completed = 0;
+
+    (data || []).forEach((row) => {
+      const s = row.status;
+      if (["sent", "opened", "in_progress"].includes(s)) active++;
+      if (["completed", "review_ready", "approved", "published"].includes(s)) completed++;
+    });
+
+    return { active, completed, total: (data || []).length };
   },
 
   /**

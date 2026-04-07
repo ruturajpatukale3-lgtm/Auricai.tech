@@ -88,6 +88,7 @@ export async function GET() {
       payment_status: sub.payment_status,
       next_plan: sub.next_plan,
       period_end: sub.current_period_end,
+      billing_cycle: sub.billing_cycle,
     });
   } catch (error) {
     return handleApiError(error);

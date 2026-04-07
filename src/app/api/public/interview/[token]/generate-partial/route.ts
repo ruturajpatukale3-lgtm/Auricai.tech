@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { InterviewRepository } from "@/lib/repositories/interview.repository";
-import { CaseStudyRepository } from "@/lib/repositories/case-study.repository";
+import { CaseStudyService } from "@/lib/services/case-study.service";
 
-export async function GET(
+export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
@@ -15,26 +15,26 @@ export async function GET(
       return NextResponse.json({ success: false, error: "Interview not found" }, { status: 404 });
     }
 
-    // 2. Load associated case study if it exists
-    const caseStudy = await CaseStudyRepository.findByInterviewId(interview.id);
+    // 2. Generate partial preview in background
+    // Note: We don't await this if we want it to be super fast for the caller,
+    // but for reliability in this small app, we'll await it for now.
+    const result = await CaseStudyService.generatePartialPreview(
+      interview.org_id,
+      interview.id
+    );
+
+    if (!result.success) {
+       return NextResponse.json({ success: false, error: result.error }, { status: 400 });
+    }
 
     return NextResponse.json({
       success: true,
       data: {
-        status: interview.status,
-        caseStudy: caseStudy ? {
-          id: caseStudy.id,
-          headline: caseStudy.headline,
-          metricType: caseStudy.metric_type,
-          before: caseStudy.before_value,
-          after: caseStudy.after_value,
-          deltaPercent: caseStudy.delta_percent,
-          timeframe: caseStudy.timeframe,
-        } : null
+        caseStudyId: result.data!.id
       }
     });
   } catch (error) {
-    console.error("[GET interview status] Error:", error);
+    console.error("[POST generate-partial] Error:", error);
     return NextResponse.json({ success: false, error: "Something went wrong" }, { status: 500 });
   }
 }

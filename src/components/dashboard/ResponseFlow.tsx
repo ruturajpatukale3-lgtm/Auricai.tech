@@ -24,8 +24,9 @@ interface ResponseFlowProps {
 }
 
 const STATE_CONFIG = [
-  { key: "notStarted" as const, label: "Not Started", icon: "○", color: "bg-zinc-500", textColor: "text-zinc-400", barGlow: "shadow-zinc-500/20" },
-  { key: "inProgress" as const, label: "In Progress", icon: "◐", color: "bg-amber-500", textColor: "text-amber-400", barGlow: "shadow-amber-500/20" },
+  { key: "notStarted" as const, label: "Sent", icon: "○", color: "bg-zinc-500", textColor: "text-zinc-400", barGlow: "shadow-zinc-500/20" },
+  { key: "opened" as const, label: "Opened", icon: "◉", color: "bg-amber-400/60", textColor: "text-amber-400", barGlow: "shadow-amber-400/20" },
+  { key: "inProgress" as const, label: "In Progress", icon: "◐", color: "bg-amber-500", textColor: "text-amber-500", barGlow: "shadow-amber-500/20" },
   { key: "completed" as const, label: "Completed", icon: "●", color: "bg-blue-500", textColor: "text-blue-400", barGlow: "shadow-blue-500/20" },
   { key: "approved" as const, label: "Approved", icon: "✓", color: "bg-green-500", textColor: "text-green-400", barGlow: "shadow-green-500/20" },
   { key: "published" as const, label: "Published", icon: "★", color: "bg-purple-500", textColor: "text-purple-400", barGlow: "shadow-purple-500/20" },
@@ -41,7 +42,7 @@ function formatDuration(ms: number): string {
 }
 
 export function ResponseFlow({ breakdown, duplicates, meta }: ResponseFlowProps) {
-  const total = breakdown.notStarted + breakdown.inProgress + breakdown.completed + breakdown.approved + breakdown.published;
+  const total = breakdown.notStarted + breakdown.opened + breakdown.inProgress + breakdown.completed + breakdown.approved + breakdown.published;
   
   if (total === 0) return null;
 

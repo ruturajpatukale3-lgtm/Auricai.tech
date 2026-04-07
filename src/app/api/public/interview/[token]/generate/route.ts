@@ -45,15 +45,8 @@ export async function POST(
     const state = StateEngine.calculateState(rawAnswers);
 
     // ─── Layer 8 Validation ──────────────────────────
-    if (!CaseStudyGenerator.canGenerate(state)) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: "Not enough strong data (metrics, before/after) to generate a premium case study." 
-        },
-        { status: 422 }
-      );
-    }
+    // Hard bounce removed to handle edge cases where users skip all metric questions.
+    // The CaseStudyGenerator handles missing data via strict AI output rules.
 
     // ─── Generate ─────────────────────────────────────
     console.log("[generate] Generating Case Study for interview:", interview.id);

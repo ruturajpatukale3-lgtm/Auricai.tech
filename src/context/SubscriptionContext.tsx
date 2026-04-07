@@ -21,6 +21,7 @@ interface SubscriptionContextType {
   trialEnd: string | null;
   trialConsumed: boolean;
   accessBlocked: boolean;
+  billingCycle: "monthly" | "yearly" | null;
   isLoading: boolean;
   isNearLimit: boolean;
   isAtLimit: boolean;
@@ -152,6 +153,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         trialEnd: usage?.trial_end || null,
         trialConsumed: !!usage?.trial_consumed,
         accessBlocked: !!usage?.access_blocked,
+        billingCycle: usage?.billing_cycle || null,
         isLoading,
         isNearLimit: limit > 0 ? (used / limit) >= 0.8 : true,
         isAtLimit,

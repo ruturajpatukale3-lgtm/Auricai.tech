@@ -1,8 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// Auricai — AI Question Engine (Layer 3)
-// Enforces "High-Value Only" data extraction logic.
-// ═══════════════════════════════════════════════════════════
-
 import { GeminiService } from "./gemini";
 import type {
   AIQuestionResponse,
@@ -11,38 +6,115 @@ import type {
 } from "@/types";
 import { BusinessContext, DynamicPolicy, ContextEngine } from "./context-engine";
 import { StateEngine } from "./state-engine";
-import { MemorySystem } from "./memory-system";
+
+// ─── Step 6: Locked Question Bank ──────────────────────────
+const QUESTION_BANK: Record<string, string[]> = {
+  problem: [
+    "What was the main issue you were facing before using this solution?",
+    "What was the biggest hurdle for your team before we started?",
+    "Could you describe the main challenge that led you to look for a solution?",
+  ],
+  result: [
+    "What was the most significant change you noticed after implementation?",
+    "In terms of outcomes, what shifted the most for your business?",
+    "What was the immediate result after you started using the service?",
+  ],
+  metrics: [
+    "Do you have any specific numbers or % improvements you can share?",
+    "Any data or ROI metrics that highlight the success of this project?",
+    "Roughly how much did that improve your key performance indicators?",
+  ],
+  timeframe: [
+    "How long did it take for you to start seeing these results?",
+    "What was the timeframe between starting and seeing the first major impact?",
+    "In about how many weeks or months did you start to notice the shift?",
+  ],
+  testimonial: [
+    "Would you recommend this to a colleague? If so, why?",
+    "What would you tell someone else who is considering this solution?",
+    "Why do you think this was the right choice for your organization?",
+  ],
+  business_context: [
+    "What made you choose this solution over other options in the market?",
+  ],
+};
+
+// ─── Step 7: Hard Output Filter (Step 13) ──────────────────
+const BANNED_PATTERNS = [
+  /your company/i,
+  /your business/i,
+  /your product/i,
+  /what do you do/i,
+  /target market/i,
+  /what does your/i,
+  /who are your users/i,
+  /describe your saas/i,
+];
+
+const PROOF_PATTERNS = /problem|before|result|change|improve|increase|reduce|time|recommend|challenge|hurdle|outcome|churn|retention|roas|leads|revenue/i;
+
+// ─── Step 14: Production System Prompt ─────────────────────
+const PRODUCTION_SYSTEM_PROMPT = `
+ROLE:
+You are a Proof Extraction AI.
+You are interviewing a CLIENT who used the product.
+You are NOT allowed to ask about the business, SaaS, or product itself.
+
+MISSION:
+Extract structured proof for:
+* case studies
+* testimonials
+* marketing assets
+
+LOCKED CONTEXT:
+* Industry, Service, Target Customer are already known
+* NEVER ask about them
+* Use them only to shape questions
+
+STRICT RULES (NON-NEGOTIABLE):
+NEVER ask:
+* what the product does
+* what the company does
+* who the users are
+* target market
+* service description
+* "describe your SaaS"
+
+INTERVIEW STATES (FOLLOW ORDER):
+1. problem
+2. result
+3. metrics
+4. timeframe
+5. testimonial
+
+QUESTION STYLE:
+* One question only
+* Simple, conversational, low effort
+
+DYNAMIC SHAPING (IMPORTANT):
+SaaS: focus on churn, activation, retention
+Agency: focus on leads, calls, ROAS
+Ecom: focus on AOV, conversion rate, revenue
+
+FAILSAFE:
+If confused, ask next missing state question. Do NOT ask generic discovery questions.
+`;
 
 export const QuestionEngine = {
   /**
-   * Generate the next interview question using the candidate generation & scoring engine.
+   * Step 8: Safe Generation (Deterministic)
+   * Picks from bank and validates patterns.
    */
   async generateNextQuestion(
     context: BusinessContext,
     policy: DynamicPolicy,
     state: InterviewState
   ): Promise<AIQuestionResponse> {
-    
-    // Default complete condition with FINAL QUALITY SCAN
-    if (state.stage === "testimonial" && state.answers.find(a => a.stage === "testimonial")) {
-       // FINAL QUALITY SCAN: If we are 'done' but missing critical bits, force one last targeted question.
-       const hasTimeframe = state.answers.some(a => a.stage === "timeframe");
-       const hasImpact = state.answers.some(a => a.stage === "testimonial");
-       const hasLockedMetric = state.metrics.some(m => m.isLocked);
+    const { stage: targetStage } = state;
 
-       // Absolute Hard Limit: 7 questions
-       if (state.qualityScore < 70 && state.answers.length < 7) {
-          if (!hasLockedMetric) {
-             return { question: "Help me ballpark this—would you say the improvement was closer to 10%, 25%, 50%, or something else?", intent: "metrics", stage: "metrics", isFollowUp: true, isComplete: false };
-          }
-          if (!hasTimeframe) {
-             return { question: "Quickly, did it take about 2 weeks, 2 months, or something else to start seeing those results?", intent: "timeframe", stage: "timeframe", isFollowUp: true, isComplete: false };
-          }
-          if (!hasImpact) {
-             return { question: "Mainly—how would you describe the biggest benefit? Did it mostly save time, reduce costs, or something else?", intent: "result", stage: "testimonial", isFollowUp: true, isComplete: false };
-          }
-       }
-
+    // Check completion condition
+    const signals = StateEngine.extractSignals(state.answers as any);
+    if (targetStage === "testimonial" && signals.testimonial) {
        return {
         question: "",
         intent: "testimonial",
@@ -52,133 +124,83 @@ export const QuestionEngine = {
       };
     }
 
-    const { stage: targetStage } = state;
-    const isForcedMetric = targetStage === "metrics" && state.answers.length >= 4 && !state.metrics.some(m => m.isLocked);
+    const metricAttempts = state.answers.filter(a => a.stage === "metrics").length;
+    let question = this.getFallbackQuestion(targetStage); // Default to bank
+    let isAIProduced = false;
 
-    const recoveryRules = isForcedMetric ? `
-[URGENT: METRIC RECOVERY MODE]
-The user hasn't provided a hard metric yet. 
-1. Suggest 2-3 specific ranges or options (GUIDED CHOICES) to reduce cognitive load.
-2. Example: "Was the improvement closer to 15% or 40%?" or "Did you save closer to 5 hours or 20 hours a week?"
-3. Avoid open-ended "how much" questions.` : "";
-
-    const previousQuestions = state.answers.map(a => a.answer).join("\n");
-    const bestQuestionsFromMemory = await MemorySystem.getBestQuestions(context.industry, targetStage, context.plan);
-
-    const systemPrompt = `You are the Auricai Production-Grade Interview Engine. Your goal is high-value DATA EXTRACTION for a B2B case study.
-You act as a deterministic strategist, NOT a creative chatbot.
-
-${ContextEngine.serializeContext(context, policy)}
-${StateEngine.serializeState(state)}
-${recoveryRules}
-
-[NON-NEGOTIABLE RULES]
-1. The "stage" field in your JSON MUST ALWAYS be one of:
-   - "business_context" (Company background, industry, service type)
-   - "problem" (The pain, challenge, or situation before using our service)
-   - "result" (The outcome, improvement, or broad success achieved)
-   - "metrics" (Hard numbers, percentages, ROI, conversions)
-   - "timeframe" (How long it took to see results, duration)
-   - "testimonial" (Direct feedback, impact on day-to-day, or colleague recommendation)
-
-2. ZERO-CRASH GUARANTEE: You must NEVER return an invalid, undefined, or null stage.
-3. If the stage is unclear, DEFAULT TO: "result".
-4. Each question must target NEW information and move the flow forward. DO NOT repeat topics from [PREVIOUS ANSWERS] or [LOCKED METRICS].
-
-[METRIC LOCKING & PRIORITY]
-- If a metric type is LOCKED in the state, DO NOT ask for it again.
-- PRIORITY: revenue > pipeline > conversion_rate > leads. 
-- If a high-priority metric isn't locked, your question MUST target it specifically.
-
-[STAGE MAPPING ENGINE (INTERNAL BRAIN)]
-If you internally think:
-- background/experience → business_context
-- pain/challenge → problem
-- outcome/improvement → result
-- numbers/conversion → metrics
-- duration → timeframe
-- feedback/impact/recommendation → testimonial
-
-Respond with ONLY valid JSON containing an array of 3 candidates exactly matching this schema:
-{
-  "candidates": [
-    {
-      "question": "string (the specific, Proof-extraction question)",
-      "informationGainScore": number (1-10),
-      "relevanceScore": number (1-10),
-      "answerProbabilityScore": number (1-10)
-    }
-  ]
-}`;
-
-    let bestQuestion = this.getFallbackQuestion(targetStage);
-    
+    // ─── AI Generation Attempt (Step 8) ────────────────────
     try {
-      const parsed = await GeminiService.generateJSON<{
-        candidates: {
-          question: string;
-          informationGainScore: number;
-          relevanceScore: number;
-          answerProbabilityScore: number;
-        }[];
-      }>({
-        systemPrompt,
-        userPrompt: "Generate the 3 candidates and their raw scores. Ensure they are HIGH-VALUE data extractors.",
-        temperature: 0.7, 
+      const industryShaping = `
+[INDUSTRY CONTEXT]
+Industry: ${context.industry}
+Service: ${context.serviceCategory}
+Target ICP: ${context.targetCustomer}
+Target Stage: ${targetStage.toUpperCase()}
+
+[DYNAMIC SHAPING INSTRUCTIONS]
+If SaaS, focus on churn/retention. If Agency, focus on ROAS/leads.
+      `;
+
+      const aiQuestion = await GeminiService.generateText({
+        systemPrompt: PRODUCTION_SYSTEM_PROMPT,
+        userPrompt: `${industryShaping}\n\n${ContextEngine.serializeContext(context, policy)}\n${StateEngine.serializeState(state)}\n\nGenerate the next question for the ${targetStage.toUpperCase()} stage. RESPONSE MUST BE ONE QUESTION ONLY.`,
+        temperature: 0.5,
       });
 
-      if (parsed?.candidates?.length > 0) {
-        let highestScore = -Infinity;
-        
-        for (const candidate of parsed.candidates) {
-          let repetition_penalty = 0;
-          let vagueness_penalty = 0;
-          
-          const qLower = candidate.question.toLowerCase();
-          
-          if (qLower.includes("tell me about") || qLower.includes("elaborate") || qLower.includes("how was it")) {
-            vagueness_penalty += 100; // Instantly kill weak formulations
-          }
-          
-          if (previousQuestions.toLowerCase().includes(qLower.slice(0, 15))) {
-            repetition_penalty += 50;
-          }
-
-          const rawScore = (candidate.informationGainScore * candidate.relevanceScore * candidate.answerProbabilityScore);
-          const finalScore = rawScore - repetition_penalty - vagueness_penalty;
-          
-          if (finalScore > highestScore) {
-            highestScore = finalScore;
-            bestQuestion = candidate.question;
-          }
-        }
+      if (aiQuestion && this.validateQuestion(aiQuestion)) {
+        question = aiQuestion.trim();
+        isAIProduced = true;
+      } else {
+        console.warn("[QuestionEngine] AI output REJECTED or INVALID, falling back to bank.");
       }
     } catch (err) {
-      console.error("[QuestionEngine] Gemini generation failed, using fallback:", err);
+      console.error("[QuestionEngine] AI Generation failed, using state template fallback.");
     }
 
+    // Basic options mapping based on stage
+    const optionsMap: Record<string, string[]> = {
+      metrics: ["10-25%", "25-50%", "Over 50%", "Not sure"],
+      timeframe: ["Under 2 weeks", "About 1 month", "2-3 months", "Not sure"],
+      testimonial: ["Life-changing", "Very helpful", "Great ROI", "Other"],
+    };
+
     return {
-      question: bestQuestion,
-      intent: StateEngine.mapIntentToStage(targetStage) as any, // backwards compat
+      question,
+      options: optionsMap[targetStage] || [],
+      intent: StateEngine.mapIntentToStage(targetStage) as any,
       stage: targetStage,
-      isFollowUp: false,
+      isFollowUp: metricAttempts > 0,
       isComplete: false,
-      fallbackQuestion: this.getFallbackQuestion(targetStage),
     };
   },
 
+  getValidQuestion(stage: InterviewStage): string {
+    const questions = QUESTION_BANK[stage] || QUESTION_BANK["result"];
+    
+    for (let i = 0; i < questions.length; i++) {
+       const q = questions[i];
+       if (this.validateQuestion(q)) {
+         return q;
+       }
+    }
+    
+    return questions[0];
+  },
+
+  validateQuestion(q: string): boolean {
+    // 1. Check banned patterns (SaaS Discovery)
+    if (BANNED_PATTERNS.some(p => p.test(q))) {
+      return false;
+    }
+
+    // 2. Check proof patterns
+    return PROOF_PATTERNS.test(q);
+  },
+
   /**
-   * Fallback questions optimized for high-value data.
+   * Step 9: Safe Fallback
    */
   getFallbackQuestion(stage: InterviewStage): string {
-    const fallbacks: Record<InterviewStage, string> = {
-      result: "What specific result or metric improved the most?",
-      metrics: "Roughly how much did that improve? Can you give me a percentage or number?",
-      problem: "What was it like before vs what is it now?",
-      timeframe: "How long did it take to see those results?",
-      testimonial: "If a colleague asked you about your results, what would you tell them?",
-      business_context: "Why did you choose us over the alternatives?", 
-    };
-    return fallbacks[stage] || "What improved the most?";
+    return QUESTION_BANK[stage]?.[0] || QUESTION_BANK["result"][0];
   },
 };

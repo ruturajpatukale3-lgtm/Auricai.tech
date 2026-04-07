@@ -30,21 +30,85 @@ const INDUSTRY_OPTIONS = [
 
 /* GOAL_OPTIONS removed */
 
-// Industry-based placeholder suggestions
+// Industry-based placeholder suggestions (Outcome-based)
 const SERVICE_SUGGESTIONS: Record<string, string> = {
-  marketing_agency: "Make it specific: We run Facebook ads for local dentists to generate qualified leads",
-  saas: "Make it specific: We build predictive CRM software for real estate teams",
-  ecommerce: "Make it specific: We sell premium, sustainably sourced skincare products DTC",
-  consulting: "Make it specific: We help Series A SaaS startups optimize their outbound sales pipelines",
-  other: "Make it specific: We provide data analytics dashboards for regional healthcare providers",
+  marketing_agency: "e.g. We generate $50k+ in extra pipeline for dentists via Facebook Ads",
+  saas: "e.g. We reduce churn by 25% for real estate teams with our predictive CRM",
+  ecommerce: "e.g. We scale sustainably sourced skincare brands to $100k/mo via Meta",
+  consulting: "e.g. We help SaaS founders close 20% more deals via sales pipeline audits",
+  other: "e.g. We provide real-time data dashboards for healthcare providers",
 };
 
 const ICP_SUGGESTIONS: Record<string, string> = {
-  marketing_agency: "Make it specific: US-based dentists and chiropractors with $1M+ revenue",
-  saas: "Make it specific: Mid-market real estate teams (10-50 agents)",
-  ecommerce: "Make it specific: Women aged 25-45 interested in clean beauty and sustainability",
-  consulting: "Make it specific: Series A–B SaaS founders and VPs of Sales",
-  other: "Make it specific: Operations managers at US-based healthcare clinics",
+  marketing_agency: "e.g. US-based dentists and chiropractors with $1M+ revenue",
+  saas: "e.g. Mid-market real estate teams (10-50 agents) in North America",
+  ecommerce: "e.g. Women-owned skincare brands doing $10k-$50k monthly revenue",
+  consulting: "e.g. Series A SaaS founders and VPs of Sales at tech startups",
+  other: "e.g. Operations managers at regional healthcare clinics",
+};
+
+// Elite suggestions for "Generate for me" and Chips
+const QUICK_SUGGESTIONS: Record<string, { services: string[]; icps: string[] }> = {
+  marketing_agency: {
+    services: [
+      "Facebook Ads for Dentistry",
+      "SEO for E-commerce Brands",
+      "Lead Gen for SaaS Companies",
+    ],
+    icps: [
+      "Local Dentists ($1M+ Revenue)",
+      "Shopify Plus Store Owners",
+      "Series A SaaS Founders",
+    ],
+  },
+  saas: {
+    services: [
+      "Predictive CRM for Real Estate",
+      "Automated Payroll for SMBs",
+      "AI Inventory for Retailers",
+    ],
+    icps: [
+      "Real Estate Team Leads",
+      "HR Managers at 50+ person SMBs",
+      "Fortune 500 Retail Ops Managers",
+    ],
+  },
+  ecommerce: {
+    services: [
+      "Sustainably Sourced Skincare",
+      "DTC Home Office Furniture",
+      "Subscription Coffee Roastery",
+    ],
+    icps: [
+      "Eco-conscious Skincare Buyers",
+      "Remote Tech Professionals",
+      "Daily Coffee Enthusiasts (West Coast)",
+    ],
+  },
+  consulting: {
+    services: [
+      "Sales Pipeline Optimization",
+      "Fractional CTO for Startups",
+      "HR Compliance for Remote Teams",
+    ],
+    icps: [
+      "B2B Tech Founders (Series A)",
+      "Non-technical Solo Founders",
+      "US-based Remote Companies",
+    ],
+  },
+  other: {
+    services: [
+      "Data Analytics for Healthcare",
+      "Event Management for Tech",
+      "Subscription Legal Services",
+    ],
+    icps: [
+      "Healthcare Operations Managers",
+      "Tech Conference Organizers",
+      "Small Business Owners (US)",
+    ],
+  },
 };
 
 // ─── Validation Helpers ────────────────────────────────────
@@ -101,6 +165,68 @@ function validateStep2(fields: {
   }
 
   return { errors, warnings };
+}
+
+// ─── Elite UI Components ───────────────────────────────────
+
+function QualityScoreBadge({ value }: { value: string }) {
+  if (!value.trim()) return null;
+
+  const v = value.trim();
+  let score: "weak" | "good" | "strong" = "weak";
+  let label = "Weak";
+  let color = "text-red-400 bg-red-400/10 border-red-400/20";
+
+  const hasOutcome = /%|\$|ROI|increase|revenue|growth|days|hours|months/i.test(v);
+  const isGeneric = ["marketing", "business", "services", "agency", "software", "tech", "sales"].some(
+    (word) => v.toLowerCase() === word
+  );
+
+  if (!isGeneric && v.length >= 15) {
+    score = "good";
+    label = "Good";
+    color = "text-blue-400 bg-blue-400/10 border-blue-400/20";
+  }
+
+  if (!isGeneric && v.length >= 30 && hasOutcome) {
+    score = "strong";
+    label = "Strong";
+    color = "text-emerald-400 bg-emerald-400/10 border-emerald-400/20";
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${color} flex items-center gap-1`}
+    >
+      <div className={`w-1 h-1 rounded-full ${color.split(" ")[0].replace("text", "bg")}`} />
+      {label}
+    </motion.div>
+  );
+}
+
+function SuggestionChips({
+  suggestions,
+  onSelect,
+}: {
+  suggestions: string[];
+  onSelect: (val: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 mt-2">
+      {suggestions.map((s) => (
+        <button
+          key={s}
+          type="button"
+          onClick={() => onSelect(s)}
+          className="text-xs py-1.5 px-3 rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all cursor-pointer whitespace-nowrap"
+        >
+          {s}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 // ─── Component ─────────────────────────────────────────────
@@ -250,6 +376,56 @@ function OnboardingContent() {
       setStep(1);
       setApiError(null);
     }
+  };
+
+  const handleSkip = async () => {
+    if (
+      confirm(
+        "AI output will be generic until you complete your business profile. Are you sure you want to skip for now?"
+      )
+    ) {
+      setIsSubmitting(true);
+      try {
+        const res = await fetch("/api/onboard", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: orgName || "My Workspace" }),
+        });
+        if (res.ok) {
+          window.location.href = "/dashboard/command-center";
+        } else {
+          const data = await res.json();
+          setApiError(data.error || "Skip failed. Please try again.");
+        }
+      } catch {
+        setApiError("An unexpected error occurred.");
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
+
+  const handleAutoGenerate = () => {
+    if (!industry) {
+      setFieldErrors((prev) => ({ ...prev, industry: "Select an industry first" }));
+      return;
+    }
+
+    const suggestions = QUICK_SUGGESTIONS[industry] || QUICK_SUGGESTIONS.other;
+    const randomIdx = Math.floor(Math.random() * suggestions.services.length);
+
+    setServiceCategory(suggestions.services[randomIdx]);
+    setTargetCustomer(suggestions.icps[randomIdx]);
+
+    // Clear errors and mark touched
+    clearFieldError("serviceCategory");
+    clearFieldError("targetCustomer");
+    setTouchedFields((prev) => {
+      const next = new Set(prev);
+      next.add("serviceCategory");
+      next.add("targetCustomer");
+      return next;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -511,8 +687,16 @@ function OnboardingContent() {
                 >
                   {/* Step 2 Header */}
                   <div className="text-center mb-6">
-                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/5 border border-white/10 mb-4">
+                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/5 border border-white/10 mb-4 relative group">
                       <Briefcase className="w-7 h-7 text-white" />
+                      <button
+                        type="button"
+                        onClick={handleAutoGenerate}
+                        className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/20 hover:bg-blue-500 transition-colors cursor-pointer group-hover:scale-110 duration-200"
+                        title="Generate for me"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                      </button>
                     </div>
                     <h1 className="text-2xl font-bold tracking-tight mb-1">
                       Tell us about your business
@@ -520,12 +704,9 @@ function OnboardingContent() {
                     <p className="text-sm text-zinc-400">
                       This powers your AI-generated case studies.
                     </p>
-                    <p className="text-xs text-blue-400/80 mt-2 font-medium">
-                      Be specific — better input = better AI results
-                    </p>
                   </div>
 
-                  <div className="space-y-5">
+                  <div className="space-y-6">
                     {/* Industry Dropdown */}
                     <div className="space-y-1.5">
                       <label
@@ -561,9 +742,7 @@ function OnboardingContent() {
                         <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 rotate-90 pointer-events-none" />
                         <FieldStatus field="industry" />
                       </div>
-                      <AnimatePresence>
-                        <ErrorMessage field="industry" />
-                      </AnimatePresence>
+                      <ErrorMessage field="industry" />
                     </div>
 
                     {/* Conditional: Custom Industry */}
@@ -581,7 +760,7 @@ function OnboardingContent() {
                               htmlFor="customIndustry"
                               className="text-sm font-medium text-zinc-300 ml-0.5"
                             >
-                              Describe your industry (be specific)
+                              Describe your industry
                             </label>
                             <div className="relative">
                               <input
@@ -593,19 +772,14 @@ function OnboardingContent() {
                                   clearFieldError("customIndustry");
                                 }}
                                 onBlur={() =>
-                                  normalizeOnBlur(
-                                    "customIndustry",
-                                    customIndustry
-                                  )
+                                  normalizeOnBlur("customIndustry", customIndustry)
                                 }
-                                placeholder="e.g., Facebook Ads for dentists"
+                                placeholder="e.g. Facebook Ads for dentists"
                                 className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20 transition-all font-medium"
                               />
                               <FieldStatus field="customIndustry" />
                             </div>
-                            <AnimatePresence>
-                              <ErrorMessage field="customIndustry" />
-                            </AnimatePresence>
+                            <ErrorMessage field="customIndustry" />
                           </div>
                         </motion.div>
                       )}
@@ -613,12 +787,15 @@ function OnboardingContent() {
 
                     {/* Service Category */}
                     <div className="space-y-1.5">
-                      <label
-                        htmlFor="serviceCategory"
-                        className="text-sm font-medium text-zinc-300 ml-0.5"
-                      >
-                        Service Category
-                      </label>
+                      <div className="flex items-center justify-between ml-0.5">
+                        <label
+                          htmlFor="serviceCategory"
+                          className="text-sm font-medium text-zinc-300"
+                        >
+                          Service Category
+                        </label>
+                        <QualityScoreBadge value={serviceCategory} />
+                      </div>
                       <div className="relative">
                         <input
                           id="serviceCategory"
@@ -631,24 +808,38 @@ function OnboardingContent() {
                           onBlur={() =>
                             normalizeOnBlur("serviceCategory", serviceCategory)
                           }
-                          placeholder="e.g. B2B SaaS, Dental Marketing, Financial Consulting"
+                          placeholder={servicePlaceholder}
                           className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20 transition-all font-medium"
                         />
                         <FieldStatus field="serviceCategory" />
                       </div>
-                      <AnimatePresence>
-                        <ErrorMessage field="serviceCategory" />
-                      </AnimatePresence>
+                      <SuggestionChips
+                        suggestions={
+                          industry
+                            ? (QUICK_SUGGESTIONS[industry] || QUICK_SUGGESTIONS.other)
+                                .services
+                            : []
+                        }
+                        onSelect={(val) => {
+                          setServiceCategory(val);
+                          clearFieldError("serviceCategory");
+                          validateField("serviceCategory", val);
+                        }}
+                      />
+                      <ErrorMessage field="serviceCategory" />
                     </div>
 
                     {/* Target Customer */}
                     <div className="space-y-1.5">
-                      <label
-                        htmlFor="targetCustomer"
-                        className="text-sm font-medium text-zinc-300 ml-0.5"
-                      >
-                        Who do you serve?
-                      </label>
+                      <div className="flex items-center justify-between ml-0.5">
+                        <label
+                          htmlFor="targetCustomer"
+                          className="text-sm font-medium text-zinc-300"
+                        >
+                          Who do you serve?
+                        </label>
+                        <QualityScoreBadge value={targetCustomer} />
+                      </div>
                       <div className="relative">
                         <input
                           id="targetCustomer"
@@ -666,9 +857,19 @@ function OnboardingContent() {
                         />
                         <FieldStatus field="targetCustomer" />
                       </div>
-                      <AnimatePresence>
-                        <ErrorMessage field="targetCustomer" />
-                      </AnimatePresence>
+                      <SuggestionChips
+                        suggestions={
+                          industry
+                            ? (QUICK_SUGGESTIONS[industry] || QUICK_SUGGESTIONS.other).icps
+                            : []
+                        }
+                        onSelect={(val) => {
+                          setTargetCustomer(val);
+                          clearFieldError("targetCustomer");
+                          validateField("targetCustomer", val);
+                        }}
+                      />
+                      <ErrorMessage field="targetCustomer" />
                     </div>
                   </div>
                 </motion.div>
@@ -703,6 +904,17 @@ function OnboardingContent() {
                 >
                   <ChevronLeft className="w-4 h-4" />
                   Back
+                </button>
+              )}
+
+              {step === 2 && (
+                <button
+                  type="button"
+                  onClick={handleSkip}
+                  disabled={isSubmitting}
+                  className="px-5 py-3 rounded-xl border border-white/[0.06] text-xs font-medium text-zinc-500 hover:text-zinc-300 transition-all disabled:opacity-40 cursor-pointer"
+                >
+                  Skip for now
                 </button>
               )}
 

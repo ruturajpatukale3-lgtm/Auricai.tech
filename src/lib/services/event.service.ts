@@ -62,10 +62,14 @@ export const EventService = {
       
       // 6. Cache Invalidation (Real-time architecture enforcement)
       // Every event tracked should potentially update the dashboard.
-      // @ts-ignore - Next.js 15 cache typings regression
-      revalidateTag(`analytics-${orgId}`);
-      // @ts-ignore - Next.js 15 cache typings regression
-      revalidateTag("dashboard");
+      try {
+        // @ts-ignore - Next.js 15 cache typings regression
+        revalidateTag(`analytics-${orgId}`);
+        // @ts-ignore - Next.js 15 cache typings regression
+        revalidateTag("dashboard");
+      } catch (e) {
+        // Ignore cache invalidation errors in non-standard environments
+      }
       
     } catch (error: any) {
       // Catch idempotency block gracefully

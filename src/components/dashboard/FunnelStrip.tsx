@@ -23,6 +23,7 @@ export function FunnelStrip({ metrics }: { metrics: FunnelStageMetrics }) {
 
   const total = metrics?.total || 0;
   const opened = metrics?.opened || 0;
+  const inProgress = metrics?.inProgress || 0;
   const completed = metrics?.completed || 0;
   const published = metrics?.published || 0;
   const rates = metrics?.conversionRates;
@@ -30,7 +31,7 @@ export function FunnelStrip({ metrics }: { metrics: FunnelStageMetrics }) {
   const isEmpty = total === 0;
 
   // Inconsistency Detection
-  const isInconsistent = (opened > total) || (completed > opened) || (published > completed);
+  const isInconsistent = (opened > total) || (inProgress > opened) || (completed > inProgress) || (published > completed);
 
   // Drop-off between adjacent stages (only show when both stages have data)
   const getDrop = (prev: number, curr: number) => {
@@ -77,9 +78,15 @@ export function FunnelStrip({ metrics }: { metrics: FunnelStageMetrics }) {
       color: "text-amber-400",
     },
     {
+      label: "In Progress",
+      ...getStageDisplay(inProgress, true, rates?.openedToInProgress),
+      drop: !isEmpty && inProgress > 0 ? getDrop(opened, inProgress) : null,
+      color: "text-amber-500",
+    },
+    {
       label: "Completed",
-      ...getStageDisplay(completed, true, rates?.openedToCompleted),
-      drop: !isEmpty && completed > 0 ? getDrop(opened, completed) : null,
+      ...getStageDisplay(completed, true, rates?.inProgressToCompleted),
+      drop: !isEmpty && completed > 0 ? getDrop(inProgress, completed) : null,
       color: "text-blue-400",
     },
     {

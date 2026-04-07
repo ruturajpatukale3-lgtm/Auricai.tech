@@ -283,6 +283,11 @@ body {
   animation: pulse-glow 4s ease-in-out infinite;
 }
 
+/* ═══ SHIMMER ═══ */
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
 /* ═══ GREEN DOT PULSE ═══ */
 @keyframes dot-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }

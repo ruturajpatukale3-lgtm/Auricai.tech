@@ -97,6 +97,24 @@ export const TeamRepository = {
     return data as TeamMember;
   },
 
+  async deactivate(orgId: string, memberId: string): Promise<void> {
+    const { error } = await supabaseAdmin
+      .from(TABLE)
+      .update({ disabled_at: new Date().toISOString() })
+      .eq("id", memberId)
+      .eq("org_id", orgId);
+    if (error) throw new Error(`Failed to deactivate member: ${error.message}`);
+  },
+
+  async reactivate(orgId: string, memberId: string): Promise<void> {
+    const { error } = await supabaseAdmin
+      .from(TABLE)
+      .update({ disabled_at: null })
+      .eq("id", memberId)
+      .eq("org_id", orgId);
+    if (error) throw new Error(`Failed to reactivate member: ${error.message}`);
+  },
+
   async remove(orgId: string, memberId: string): Promise<void> {
     const { error } = await supabaseAdmin
       .from(TABLE)
@@ -111,6 +129,7 @@ export const TeamRepository = {
       .from(TABLE)
       .select("*", { count: "exact", head: true })
       .eq("org_id", orgId)
+      .is("disabled_at", null)
       .in("status", ["active", "invited"]);
     if (error) throw new Error(`Failed to count members: ${error.message}`);
     return count || 0;

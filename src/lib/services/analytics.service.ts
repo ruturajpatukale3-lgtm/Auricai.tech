@@ -20,8 +20,7 @@ export const AnalyticsService = {
         const [
           totalViews,
           totalShares,
-          interviewsSent,
-          interviewsCompleted,
+          statusGroup, // Use the new efficient grouping
           caseStudiesLive,
           uniqueVisitors,
           stalledInterviewsResult,
@@ -29,8 +28,7 @@ export const AnalyticsService = {
         ] = await Promise.all([
           EventRepository.countByTypes(orgId, ["case_study_viewed"]).catch(() => 0),
           EventRepository.countByTypes(orgId, ["case_study_shared"]).catch(() => 0),
-          InterviewRepository.countByOrg(orgId).catch(() => 0),
-          InterviewRepository.countByStatus(orgId, "completed").catch(() => 0),
+          InterviewRepository.countByStatusGroup(orgId).catch(() => ({ active: 0, completed: 0, total: 0 })),
           CaseStudyRepository.countByStatus(orgId, "live").catch(() => 0),
           EventRepository.getUniqueVisitorCount(orgId).catch(() => 0),
           InterviewRepository.findStalled(orgId, new Date(Date.now() - 24 * 60 * 60 * 1000)).catch(() => []),
@@ -39,8 +37,9 @@ export const AnalyticsService = {
 
         const stalledInterviewsCount = (stalledInterviewsResult || []).length;
         
-        const conversionRate = interviewsSent > 0
-          ? Math.round((interviewsCompleted / interviewsSent) * 100)
+        // FIX: success = (completed + approved + published) / total
+        const conversionRate = statusGroup.total > 0
+          ? Math.round((statusGroup.completed / statusGroup.total) * 100)
           : 0;
 
         const totalClicks = aggregateEngagement.clicks;
@@ -57,15 +56,15 @@ export const AnalyticsService = {
           avgReadTime,
           totalUsage, 
           uniqueVisitors,
-          interviewsSent,
-          interviewsCompleted,
+          interviewsSent: statusGroup.total,
+          interviewsCompleted: statusGroup.completed,
           stalledInterviews: stalledInterviewsCount,
           caseStudiesLive,
           conversionRate,
         } as DashboardMetrics;
       },
-      [`dashboard-metrics-v3-${orgId}`],
-      { revalidate: 60, tags: [`analytics-${orgId}`, "dashboard"] }
+      [`dashboard-metrics-v4-${orgId}`],
+      { revalidate: 10, tags: [`analytics-${orgId}`, "dashboard"] } // Cache reduced to 10s
     )();
   }),
 
@@ -119,17 +118,79 @@ export const AnalyticsService = {
     if (metrics.interviewsSent > 0) {
       const dropoffRate = 100 - metrics.conversionRate;
       if (dropoffRate > 20) {
+        const dropStats = await InterviewRepository.getDropoffStats(orgId);
+        const worstIdx = dropStats.sort((a, b) => b.count - a.count)[0]?.questionIndex;
+        
+        const description = worstIdx !== undefined && worstIdx > 0
+          ? `Most users drop at Question ${worstIdx} — consider simplifying this stage to boost proof velocity.`
+          : `${dropoffRate}% of prospects drop off before completing the interview.`;
+
         insights.push({
           type: "warning",
           title: "High Funnel Drop-off",
-          description: `${dropoffRate}% of prospects drop off before completing the interview.`,
+          description,
           value: `${dropoffRate}%`,
           action: "Optimize Questions",
         });
       }
     }
 
+    // 4. Trend Logic
+    const trends = await this.getTrends(orgId);
+    if (trends.completionChange > 0) {
+      insights.push({
+        type: "achievement",
+        title: "Growth Spurt",
+        description: `Proof production is up ${trends.completionChange}% compared to last week. Keep it up!`,
+        value: `+${trends.completionChange}%`,
+      });
+    }
+
     return insights;
+  },
+
+  /**
+   * Compare last 7 days vs previous 7 days
+   */
+  async getTrends(orgId: string) {
+    const now = new Date();
+    const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const prev7d = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+    const [currentEvents, previousEvents] = await Promise.all([
+      EventRepository.countByTypes(orgId, ["interview_completed"]).catch(() => 0),
+      // Future-proofing: We'd ideally need a countByTimestampRange here. 
+      // For now, we utilize usage history to derive counts.
+      this.getUsageHistory(orgId, 7).then(h => h.reduce((acc, curr) => acc + curr.count, 0)),
+      this.getUsageHistory(orgId, 14).then(h => {
+        const total = h.reduce((acc, curr) => acc + curr.count, 0);
+        // Approximation logic if explicit range query isn't in repo yet
+        return total / 2; 
+      })
+    ]);
+
+    const change = previousEvents > 0 
+      ? Math.round(((currentEvents - previousEvents) / previousEvents) * 100)
+      : 0;
+
+    return {
+      completionChange: change,
+      period: "7d"
+    };
+  },
+
+  /**
+   * Get specific performance per case study
+   */
+  async getTopCaseStudies(orgId: string, limit: number = 5) {
+    return CaseStudyRepository.findByOrg(orgId, { status: "live", limit });
+  },
+
+  /**
+   * Question drop-off visualization data
+   */
+  async getQuestionDropoff(orgId: string) {
+    return InterviewRepository.getDropoffStats(orgId);
   },
 
   /**
@@ -210,19 +271,21 @@ export const AnalyticsService = {
         ]);
 
         const sent = statusCounts.sent || 0;
+        const opened = statusCounts.opened || 0;
         const inProgress = statusCounts.in_progress || 0;
         const completed = statusCounts.completed || 0;
         const approved = statusCounts.approved || 0;
         const published = statusCounts.published || 0;
 
         // 2. CORRECT STATUS MAPPING
-        const notStarted = sent; 
+        const notStarted = sent;
+        const progression = opened + inProgress;
 
         const getRate = (num: number, den: number) => 
           den > 0 ? Math.round((num / den) * 100) : 0;
 
         // 3. Drop-off rate: % of total that never completed
-        const neverCompleted = notStarted + inProgress;
+        const neverCompleted = notStarted + opened + inProgress;
         const dropOffRate = total > 0 ? Math.round((neverCompleted / total) * 100) : 0;
 
         // 4. Build duplicate flags
@@ -237,13 +300,15 @@ export const AnalyticsService = {
         return {
           funnel: {
             total,
-            opened: inProgress,
+            opened: opened,
+            inProgress: inProgress,
             completed,
             approved,
             published,
             conversionRates: {
-              sentToOpened: getRate(inProgress, total),
-              openedToCompleted: getRate(completed, inProgress),
+              sentToOpened: getRate(opened, total),
+              openedToInProgress: getRate(inProgress, opened),
+              inProgressToCompleted: getRate(completed, inProgress),
               completedToApproved: getRate(approved, completed),
               approvedToPublished: getRate(published, approved),
               total: getRate(published, total),
@@ -251,6 +316,7 @@ export const AnalyticsService = {
           },
           breakdown: {
             notStarted,
+            opened,
             inProgress,
             completed,
             approved,
@@ -263,8 +329,8 @@ export const AnalyticsService = {
           },
         };
       },
-      [`funnel-metrics-v3-${orgId}`],
-      { revalidate: 60, tags: [`analytics-${orgId}`, "funnel"] }
+      [`funnel-metrics-v4-${orgId}`],
+      { revalidate: 10, tags: [`analytics-${orgId}`, "funnel"] }
     )();
   }),
 };

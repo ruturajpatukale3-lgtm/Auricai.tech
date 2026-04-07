@@ -26,8 +26,8 @@ export const CaseStudyService = {
     const interview = await InterviewRepository.findById(orgId, interviewId);
     if (!interview) throw new NotFoundError("Interview");
 
-    if (interview.status !== "completed" && interview.status !== "approved") {
-      return { success: false, error: "Interview must be completed first", code: "INVALID_STATE" };
+    if (interview.status !== "completed" && interview.status !== "approved" && interview.status !== "in_progress") {
+      return { success: false, error: "Interview must be completed or in progress", code: "INVALID_STATE" };
     }
 
     // 2. Get answers
@@ -45,20 +45,94 @@ export const CaseStudyService = {
     // 5. Generate slug
     const slug = this.generateSlug(extracted.companyName || interview.client_email);
 
-    // 6. Create case study as draft
-    const caseStudy = await CaseStudyRepository.create(orgId, {
-      company_name: extracted.companyName || interview.client_name || interview.client_email.split("@")[0],
-      interview_id: interviewId,
-      headline: extracted.headline,
-      metric_type: extracted.metricType,
-      before_value: extracted.before,
-      after_value: extracted.after,
-      delta_percent: deltaPercent ?? undefined,
-      timeframe: extracted.timeframe,
-      slug,
-    });
+    // 6. Upsert case study
+    const existing = await CaseStudyRepository.findByInterviewId(interviewId);
+    let caseStudy;
 
+    if (existing) {
+      caseStudy = await CaseStudyRepository.update(orgId, existing.id, {
+        company_name: extracted.companyName || interview.client_name || interview.client_email.split("@")[0],
+        headline: extracted.headline,
+        metric_type: extracted.metricType,
+        before_value: extracted.before,
+        after_value: extracted.after,
+        delta_percent: deltaPercent ?? undefined,
+        timeframe: extracted.timeframe,
+      });
+    } else {
+      caseStudy = await CaseStudyRepository.create(orgId, {
+        company_name: extracted.companyName || interview.client_name || interview.client_email.split("@")[0],
+        interview_id: interviewId,
+        headline: extracted.headline,
+        metric_type: extracted.metricType,
+        before_value: extracted.before,
+        after_value: extracted.after,
+        delta_percent: deltaPercent ?? undefined,
+        timeframe: extracted.timeframe,
+        slug,
+      });
+    }
 
+    return { success: true, data: caseStudy };
+  },
+
+  /**
+   * Generate a partial case study for real-time preview.
+   * Does NOT transition interview status.
+   */
+  async generatePartialPreview(
+    orgId: string,
+    interviewId: string
+  ): Promise<ServiceResult<CaseStudy>> {
+    const interview = await InterviewRepository.findById(orgId, interviewId);
+    if (!interview) throw new NotFoundError("Interview");
+
+    const answers = await InterviewAnswerRepository.findByInterview(interviewId);
+    if (answers.length < 2) {
+      return { success: false, error: "Not enough data for preview", code: "NO_DATA" };
+    }
+
+    const org = await OrganizationRepository.findById(orgId);
+    if (!org) throw new NotFoundError("Organization");
+
+    // Use AI Generator for high-quality partials
+    const { CaseStudyGenerator } = await import("@/lib/ai/case-study-generator");
+    const { OrgProfileRepository } = await import("@/lib/repositories/org-profile.repository");
+    const orgProfile = await OrgProfileRepository.findByOrgId(orgId);
+    
+    // Generate AI content
+    const aiOutput = await CaseStudyGenerator.generate(answers, orgProfile!, org.plan_type);
+
+    // Upsert the case study
+    const existing = await CaseStudyRepository.findByInterviewId(interviewId);
+    let caseStudy;
+
+    if (existing) {
+       caseStudy = await CaseStudyRepository.update(orgId, existing.id, {
+         headline: aiOutput.headline,
+         summary: aiOutput.summary,
+         metric_type: aiOutput.metrics,
+         before_value: aiOutput.before,
+         after_value: aiOutput.after,
+         timeframe: aiOutput.timeframe,
+         delta_percent: this.computeDelta(aiOutput.before, aiOutput.after) ?? undefined,
+       });
+    } else {
+       const slug = this.generateSlug(interview.client_name || interview.client_email);
+       caseStudy = await CaseStudyRepository.create(orgId, {
+         company_name: interview.client_name || interview.client_email.split("@")[0],
+         interview_id: interviewId,
+         status: "draft",
+         headline: aiOutput.headline,
+         summary: aiOutput.summary,
+         metric_type: aiOutput.metrics,
+         before_value: aiOutput.before,
+         after_value: aiOutput.after,
+         timeframe: aiOutput.timeframe,
+         delta_percent: this.computeDelta(aiOutput.before, aiOutput.after) ?? undefined,
+         slug,
+       });
+    }
 
     return { success: true, data: caseStudy };
   },
@@ -219,8 +293,6 @@ export const CaseStudyService = {
     return { success: true, data: updated };
   },
 
-
-
   /**
    * Delete case study
    */
@@ -241,11 +313,10 @@ export const CaseStudyService = {
     after?: string;
     timeframe?: string;
   } {
-    const result: Record<string, unknown> = {};
+    const result: Record<string, string> = {};
 
     for (const answer of answers) {
       const lowerQ = answer.question.toLowerCase();
-      const extracted = answer.extracted as Record<string, unknown> | null;
 
       if (lowerQ.includes("company") || lowerQ.includes("name") || lowerQ.includes("organization")) {
         result.companyName = answer.answer.trim();
@@ -269,13 +340,10 @@ export const CaseStudyService = {
 
       if (lowerQ.includes("time") || lowerQ.includes("how long") || lowerQ.includes("period")) {
         result.timeframe = answer.answer.trim();
-        if (extracted?.timeframe) result.timeframe = extracted.timeframe as string;
       }
-
-
     }
 
-    return result as ReturnType<typeof CaseStudyService.extractCaseStudyData>;
+    return result as any;
   },
 
   /**

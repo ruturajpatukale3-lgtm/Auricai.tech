@@ -11,6 +11,9 @@ export interface BusinessContext {
   serviceCategory: string;
   serviceDescription: string;
   targetCustomer: string;
+  aiTone: string;
+  aiOutputStyle: string;
+  aiCaseStudyStyle: string;
   plan: PlanType;
   brandName?: string;
 }
@@ -31,6 +34,9 @@ export const ContextEngine = {
       serviceCategory: profile.service_category || "Professional Services",
       serviceDescription: profile.service_type || "Services",
       targetCustomer: profile.target_customer || "Businesses",
+      aiTone: profile.ai_tone || "professional",
+      aiOutputStyle: profile.ai_output_style || "detailed",
+      aiCaseStudyStyle: profile.ai_case_study_style || "story_driven",
       plan,
       brandName: orgName,
     };
@@ -95,6 +101,11 @@ Industry: ${context.industry}
 Service Category: ${context.serviceCategory}
 Service: ${context.serviceDescription}
 Target Customer: ${context.targetCustomer}
+
+[WRITING PREFERENCES]
+Tone: ${context.aiTone}
+Output Style: ${context.aiOutputStyle}
+Narrative Strategy: ${context.aiCaseStudyStyle}
 
 [DYNAMIC POLICY]
 Focus Areas to Probe: ${policy.focusAreas.join(", ")}

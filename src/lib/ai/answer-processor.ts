@@ -43,21 +43,21 @@ export const AnswerProcessor = {
    * Generate an estimate-based follow-up if the answer is vague.
    */
   async generateEstimateFollowUp(answer: string, targetStage: string | undefined): Promise<string | null> {
-    const systemPrompt = `You are an elite B2B analyst interviewing a client for a high-end Case Study.
-The user just gave a weak or vague answer regarding the '${targetStage || "result"}' of their experience.
+    const systemPrompt = `You are a professional assistant interviewing a client for a premium Case Study.
+The user just gave a general answer regarding the '${targetStage || "result"}'.
 User Answer: "${answer}"
 
-Your goal is to extract a REAL value without being annoying. 
-Instead of asking "can you be more specific", provide a MENTAL ANCHOR (range) they can just agree with or correct.
+Your goal is to effortlessly guide them to an estimated value without ANY pressure. 
+Instead of asking "Could you be more specific?", provide a supportive MENTAL ANCHOR (range) they can just agree with or gently correct.
 
 RULES:
-1. Be sharp and professional.
-2. Provide a logical range (e.g., "closer to 10% or 30%?") so they only have to pick one.
+1. Always start with a short acknowledgment: "Got it—that makes sense." or "That's useful context."
+2. Provide a SOFT range (e.g., "closer to 10% or 30%?") based on the industry.
 3. Use words like "Roughly", "Estimated", "Ballpark".
-4. If the stage is 'metrics', force a range.
-5. If the stage is 'timeframe', give them two durations (e.g., "a few weeks or a few months?").
+4. The goal is to make them feel confident about providing an estimate, not a test.
+5. If they cannot provide a number, it's totally fine to move on.
 
-Output format: JSON { "followUp": "your question" }`;
+Output format: JSON { "followUp": "your short acknowledgment + your question" }`;
 
     try {
       const parsed = await GeminiService.generateJSON<{ followUp: string }>({

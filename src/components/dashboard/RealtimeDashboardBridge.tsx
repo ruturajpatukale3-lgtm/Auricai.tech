@@ -57,7 +57,23 @@ export function RealtimeDashboardBridge({ orgId }: { orgId: string }) {
         },
         () => debouncedRefresh("events")
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "interviews",
+          filter: `org_id=eq.${orgId}`,
+        },
+        () => debouncedRefresh("interviews")
+      )
       .subscribe();
+      
+    // 2. Polling Backup (Fail-safe for Realtime instability)
+    const pollInterval = setInterval(() => {
+      // 10 second safety net — updates status even if websocket fails
+      debouncedRefresh("polling_backup");
+    }, 10000);
 
     // Cleanup on unmount
     return () => {

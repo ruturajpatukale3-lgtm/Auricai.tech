@@ -65,6 +65,10 @@ export const OrgProfileRepository = {
         service_category: normalizeText(input.service_category),
         service_type: normalizeText(input.service_type),
         target_customer: normalizeText(input.target_customer),
+        ai_tone: (input as any).ai_tone || 'professional',
+        ai_output_style: (input as any).ai_output_style || 'detailed',
+        ai_case_study_style: (input as any).ai_case_study_style || 'story_driven',
+        font_preset: (input as any).font_preset || 'sans',
       })
       .select()
       .single();
@@ -134,6 +138,10 @@ export const OrgProfileRepository = {
       normalized.target_customer = normalizeText(updates.target_customer);
     if (updates.target_customer !== undefined)
       normalized.target_customer = normalizeText(updates.target_customer);
+    if ((updates as any).ai_tone !== undefined) normalized.ai_tone = (updates as any).ai_tone;
+    if ((updates as any).ai_output_style !== undefined) normalized.ai_output_style = (updates as any).ai_output_style;
+    if ((updates as any).ai_case_study_style !== undefined) normalized.ai_case_study_style = (updates as any).ai_case_study_style;
+    if ((updates as any).font_preset !== undefined) normalized.font_preset = (updates as any).font_preset;
 
     const { data, error } = await supabaseAdmin
       .from(TABLE)

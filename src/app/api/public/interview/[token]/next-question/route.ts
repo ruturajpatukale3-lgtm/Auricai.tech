@@ -24,19 +24,9 @@ import { AIValidator } from "@/lib/ai/validator";
 import { MetricExtractor } from "@/lib/ai/metric-extractor";
 import type { InterviewIntent, InterviewStage } from "@/types";
 
-// ─── Fallback Questions (ALWAYS available, zero dependencies) ────
-const FALLBACK_QUESTIONS: { question: string; intent: InterviewIntent }[] = [
-  { question: "Can you tell me a bit about your company and what you were looking for?", intent: "business_context" },
-  { question: "What was your biggest challenge before using this?", intent: "problem" },
-  { question: "What changed after we started working together? What results did you see?", intent: "result" },
-  { question: "Can you share any specific numbers — like percentage improvements, revenue gains, or time saved?", intent: "metrics" },
-  { question: "How quickly did you start seeing results?", intent: "timeframe" },
-  { question: "If a colleague asked you about your experience, what would you tell them?", intent: "testimonial" },
-];
-
-function getFallbackQuestion(questionIndex: number): { question: string; intent: InterviewIntent } {
-  const idx = Math.min(questionIndex, FALLBACK_QUESTIONS.length - 1);
-  return FALLBACK_QUESTIONS[idx >= 0 ? idx : 0];
+// ─── Step 9: Safe Fallback System ──────────────────────────
+function safeFallback(state: any) {
+  return QuestionEngine.getFallbackQuestion(state.stage);
 }
 
 export async function POST(
@@ -74,10 +64,9 @@ export async function POST(
     } catch (dbErr) {
       console.error("[next-question] DB lookup failed:", dbErr);
       // Return fallback — we can't find the interview but don't crash
-      const fb = getFallbackQuestion(0);
       return NextResponse.json({
         success: true,
-        data: { question: fb.question, intent: fb.intent, isFollowUp: false, isComplete: false, questionNumber: 1, totalMax: 6 },
+        data: { question: "Could you tell me what changed after using the service?", intent: "result", options: [], isFollowUp: false, isComplete: false, questionNumber: 1, totalMax: 6 },
       });
     }
 
@@ -212,7 +201,33 @@ export async function POST(
       state = StateEngine.calculateState([]);
     }
 
+    // ─── Step 11 & 12: DETERMINISTIC EXIT LOGIC ────────────
+    
+    // LOW-INTENT EXIT: 3+ consecutive vague answers
+    let consecutiveVague = 0;
+    for (let i = existingAnswers.length - 1; i >= 0; i--) {
+      if (existingAnswers[i].extracted?.classification === "vague") consecutiveVague++;
+      else break;
+    }
+    const isLowIntent = consecutiveVague >= 3;
+
+    // QUALITY SCORE EXIT: >= 80
+    const isHighQuality = state.qualityScore >= 80;
+
+    if (isLowIntent || isHighQuality || questionCount >= 6) {
+      console.log("[next-question] DETERTMINISTIC EXIT triggered:", { isLowIntent, isHighQuality, questionCount });
+      try {
+        await InterviewService.complete(token);
+      } catch (e) {}
+      return NextResponse.json({
+        success: true,
+        data: { isComplete: true, questionNumber: questionCount, totalMax: 6 },
+      });
+    }
+
     console.log("[next-question] Context:", { hasOrgProfile: !!orgProfile, questionCount, currentStage: state.stage });
+
+    // Exit logic handled above
 
     // ─── Question Performance Tracking (Layer 7 & Outcome Loop) ────────────
     if (finalAnswerToStore && body.question) {
@@ -257,52 +272,42 @@ export async function POST(
       const context = ContextEngine.buildContext(orgProfile || defaultProfile, organization?.plan_type || "starter");
       const policy = ContextEngine.getDynamicPolicy(context.industry);
 
-      // Check if we need an immediate vague follow-up before generating new questions
-      const lastAnswerObj = existingAnswers[existingAnswers.length - 1];
-      let isVagueFollowUp = false;
-      
-      if (lastAnswerObj && lastAnswerObj.extracted?.classification === "vague") {
-         const followUpText = await AnswerProcessor.generateEstimateFollowUp(lastAnswerObj.answer, lastAnswerObj.extracted.intent);
-         if (followUpText) {
-             aiResponse = { question: followUpText, intent: lastAnswerObj.extracted.intent, isFollowUp: true, isComplete: false };
-             isVagueFollowUp = true;
+      // Step 10: Metric Retry Logic
+      // If currently in metrics state, check attempt count
+      if (state.stage === "metrics") {
+         const metricAttempts = existingAnswers.filter(a => a.extracted?.intent === "metrics").length;
+         if (metricAttempts >= 2) {
+            console.log("[next-question] Metric attempts exhausted (2), skipping state.");
+            const signals = StateEngine.extractSignals(existingAnswers);
+            signals.metrics = true; // Hard force the signal to move on
+            state.stage = StateEngine.getNextStateId(signals) as InterviewStage;
          }
       }
 
-      if (!isVagueFollowUp) {
-        aiResponse = await QuestionEngine.generateNextQuestion(
-          context,
-          policy,
-          state
-        );
-      }
+      aiResponse = await QuestionEngine.generateNextQuestion(
+        context,
+        policy,
+        state
+      );
       
       console.log("[next-question] AI response:", { isComplete: aiResponse?.isComplete, hasQuestion: !!aiResponse?.question });
     } catch (aiErr) {
       console.error("[next-question] QuestionEngine CRASHED:", aiErr);
-      // Use fallback — NEVER crash
-      const fb = getFallbackQuestion(questionCount);
-      aiResponse = { question: fb.question, intent: fb.intent, isFollowUp: false, isComplete: false };
     }
 
-    // ─── FINAL SAFETY: Guarantee a question exists ─────────
     if (!aiResponse || (!aiResponse.question && !aiResponse.isComplete)) {
       console.warn("[next-question] AI returned empty — using fallback");
-      const fb = getFallbackQuestion(questionCount);
-      aiResponse = { question: fb.question, intent: fb.intent, isFollowUp: false, isComplete: false };
+      const fbQ = QuestionEngine.getFallbackQuestion(state.stage);
+      aiResponse = { question: fbQ, intent: state.stage, options: [], isFollowUp: false, isComplete: false };
     }
 
     // ─── Handle completion ─────────────────────────────────
     if (aiResponse.isComplete) {
       console.log("[next-question] Interview complete — triggering completion");
       try {
-        const completeResult = await InterviewService.complete(token);
-        if (!completeResult.success) {
-          console.warn("[next-question] Completion failed:", completeResult.error);
-        }
+        await InterviewService.complete(token);
       } catch (completeErr) {
         console.error("[next-question] Completion crashed:", completeErr);
-        // Still return isComplete — the interview data is saved
       }
 
       return NextResponse.json({
@@ -317,14 +322,27 @@ export async function POST(
 
     // ─── Return next question (GUARANTEED to exist) ────────
     console.log("[next-question] Returning question:", aiResponse.question?.substring(0, 60));
+    
+    // ─── TRIGGER NON-BLOCKING REALTIME SYNC (BACKGROUND) ───
+    if (questionCount >= 3 && !aiResponse.isComplete) {
+      // Background promise to update the DB, which fires a Supabase Realtime broadcast
+      import("@/lib/services/case-study.service").then(({ CaseStudyService }) => {
+        console.log("[next-question] Firing background generatePartialPreview for realtime sync...");
+        CaseStudyService.generatePartialPreview(interview.org_id, interview.id).catch(e => {
+          console.error("[next-question] Background sync failed:", e);
+        });
+      }).catch(() => {});
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         question: aiResponse.question,
         intent: aiResponse.intent,
+        options: aiResponse.options || [],
         isFollowUp: aiResponse.isFollowUp || false,
         isComplete: false,
-        questionNumber: questionCount + 1,
+        questionNumber: questionCount,
         totalMax: 6,
       },
     });
@@ -337,12 +355,13 @@ export async function POST(
     console.error("[next-question] CATASTROPHIC FAILURE:", outerError?.message || outerError);
     console.error("[next-question] Stack:", outerError?.stack);
 
-    const fb = getFallbackQuestion(0);
+    const fallbackQ = QuestionEngine.getFallbackQuestion("result");
     return NextResponse.json({
       success: true,
       data: {
-        question: fb.question,
-        intent: fb.intent,
+        question: fallbackQ,
+        intent: "result",
+        options: [],
         isFollowUp: false,
         isComplete: false,
         questionNumber: 1,

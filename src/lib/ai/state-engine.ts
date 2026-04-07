@@ -1,7 +1,16 @@
 // ═══════════════════════════════════════════════════════════
 // Auricai — State Engine (Layer 2 & 6)
-// Enforces PRIORITY ORDER: result -> metric -> before_after -> timeframe -> impact -> experience
+// Enforces DETERMINISTIC FLOW per direct signals:
+// problem -> result -> metrics -> timeframe -> testimonial
 // ═══════════════════════════════════════════════════════════
+
+export interface InterviewSignals {
+  problem: boolean;
+  result: boolean;
+  metrics: boolean;
+  timeframe: boolean;
+  testimonial: boolean;
+}
 
 import { InterviewStage, InterviewState, ALL_STAGES, AnswerClassification, InterviewAnswer, InterviewMetric } from "@/types";
 import { MetricExtractor } from "./metric-extractor";
@@ -11,12 +20,11 @@ const QUALITY_THRESHOLD = 70;
 
 export const StateEngine = {
   /**
-   * Layer 6 - Interview Flow definition
-   * The ordered sequence we want to follow, rewritten for highest-value data extraction.
+   * Layer 6 - Interview Flow definition (Locked)
+   * Deterministic sequence for proof extraction.
    */
   getExpectedFlow(): InterviewStage[] {
     return [
-      "business_context",
       "problem",
       "result",
       "metrics",
@@ -26,140 +34,121 @@ export const StateEngine = {
   },
 
   /**
+   * Step 5: State Resolution (Deterministic)
+   * Hard-coded logic for the next target state.
+   */
+  getNextStateId(signals: InterviewSignals): InterviewStage | "complete" {
+    if (!signals.problem) return "problem";
+    if (!signals.result) return "result";
+    if (!signals.metrics) return "metrics";
+    if (!signals.timeframe) return "timeframe";
+    if (!signals.testimonial) return "testimonial";
+    return "complete";
+  },
+
+  /**
+   * Signal Extraction (Step 4)
+   * Scans history and metadata for boolean coverage.
+   */
+  extractSignals(answers: InterviewAnswer[]): InterviewSignals {
+    const signals: InterviewSignals = {
+      problem: false,
+      result: false,
+      metrics: false,
+      timeframe: false,
+      testimonial: false,
+    };
+
+    answers.forEach(a => {
+      const meta = a.extracted as any || {};
+      const intent = (meta.intent || "").toLowerCase();
+      const classification = meta.classification || "vague";
+      const hasMetrics = meta.metrics && Array.isArray(meta.metrics) && meta.metrics.length > 0;
+      const isSubstantive = classification !== "vague" || (a.answer.split(/\s+/).length >= 10);
+
+      if (intent === "problem" || intent === "pain" || intent === "before_after") {
+        if (isSubstantive) signals.problem = true;
+      }
+      if (intent === "result" || intent === "outcome" || intent === "improvement") {
+        if (isSubstantive) signals.result = true;
+      }
+      if (intent === "metrics" || hasMetrics) {
+        // Step 10: Metric strictness
+        // Any locked or substantive metric answer counts towards signal
+        if (hasMetrics || classification === "exact" || classification === "estimated") signals.metrics = true;
+      }
+      if (intent === "timeframe" || intent === "duration") {
+        if (isSubstantive) signals.timeframe = true;
+      }
+      if (intent === "testimonial" || intent === "impact" || intent === "recommendation") {
+        if (isSubstantive) signals.testimonial = true;
+      }
+    });
+
+    return signals;
+  },
+
+  /**
    * Determine the current state based on all raw answers gathered so far.
    */
   calculateState(rawAnswers: InterviewAnswer[]): InterviewState {
+    const signals = this.extractSignals(rawAnswers);
+    const nextStageId = this.getNextStateId(signals);
+    
     const answers = rawAnswers.map(a => {
       const meta = a.extracted as any || {};
-      const intentValue = meta.intent || "result";
-      const classificationValue = meta.classification || "qualitative";
-
-      const mappedStage = this.mapIntentToStage(intentValue);
-
       return {
-        stage: mappedStage,
+        stage: this.mapIntentToStage(meta.intent || "result"),
         answer: a.answer,
-        classification: classificationValue as AnswerClassification
+        classification: (meta.classification || "qualitative") as AnswerClassification
       };
     });
 
-    const flow = this.getExpectedFlow();
-    let nextStage: InterviewStage | "recommendation" = "recommendation";
-
-    // 1. Extract structured metrics for locking & priority
+    // Extract metrics list for UI/Generator
     const metrics: InterviewMetric[] = [];
     rawAnswers.forEach(a => {
       const meta = a.extracted as any || {};
       if (meta.metrics && Array.isArray(meta.metrics)) {
         meta.metrics.forEach((m: InterviewMetric) => {
           const normType = MetricExtractor.normalizeType(m.type);
+          const hasValue = !!m.value || !!m.before || !!m.after;
+          const isLocked = hasValue || m.status === "complete";
           
-          // LOCK CONDITION: before+after present OR complete + high confidence
-          const isHardLocked = (!!m.before && !!m.after) || (m.status === "complete" && (m.confidence || 0) > 90);
-          
-          const existing = metrics.find(em => em.type === normType);
-          if (!existing || (existing.status === "estimated" && m.status === "complete") || (!existing.isLocked && isHardLocked)) {
-            const updatedMetric = { ...m, type: normType, isLocked: isHardLocked };
-            if (existing) {
-               metrics[metrics.indexOf(existing)] = updatedMetric;
-            } else {
-               metrics.push({ ...m, type: normType, isLocked: isHardLocked });
-            }
+          if (!metrics.find(em => em.type === normType)) {
+             metrics.push({ ...m, type: normType, isLocked });
           }
         });
       }
     });
 
-    // 2. PRIORITY OVERRIDE: Check if higher priority metrics are missing/unlocked
-    const answeredStages = new Set(answers.map(a => a.stage));
-    const questionCount = rawAnswers.length;
-    const hasLockedMetric = metrics.some(m => m.isLocked);
-    
-    // Find highest priority missing or unlocked metric
-    const highestPriorityMetricNeeded = METRIC_PRIORITY.find(type => {
-      const found = metrics.find(m => m.type === type);
-      return !found || !found.isLocked;
-    });
+    // Step 11 & 12: Low Intent & Early Exit logic (moved to controller for side-effects)
+    // Here we just calculate the scores.
 
-    // 2. DETECT LOW-INTENT (NEW)
-    let consecutiveVague = 0;
-    for (let i = answers.length - 1; i >= 0; i--) {
-      if (answers[i].classification === "vague") consecutiveVague++;
-      else break;
-    }
-    const isLowIntent = consecutiveVague >= 2;
-
-    // ─── METRIC MANDATE (REFINED) ───
-    // If we've hit question 4 or 5 and STILL don't have a locked metric, FORCE it.
-    // OPT-OUT: If the user is being vague (Low-Intent), STOP pestering and skip to testimonial.
-    if (questionCount >= 4 && !hasLockedMetric && questionCount < 6 && !isLowIntent) {
-       nextStage = "metrics";
-    } 
-    // ─── FINAL GUARD (REFINED) ───
-    // If we are about to end but have NO metric, take one final "Extreme" shot (if intent is not low).
-    else if (questionCount === 5 && !hasLockedMetric && !isLowIntent) {
-       nextStage = "metrics";
-    }
-    else {
-      // Standard Flow
-      for (const stage of flow) {
-        if (!answeredStages.has(stage)) {
-          nextStage = stage;
-          break;
-        }
-      }
-    }
-
-    // 3. QUALITY SCORING (0-100)
-    let qualityScore = 0;
-    const hasTimeframe = answeredStages.has("timeframe");
-    const hasImpact = answeredStages.has("testimonial");
-    const hasBeforeAfter = answeredStages.has("problem");
-    const hasContext = answeredStages.has("business_context");
-    const hasResult = answeredStages.has("result");
-
-    if (hasLockedMetric) qualityScore += 40;
-    else if (metrics.length > 0) qualityScore += 20;
-
-    if (hasBeforeAfter) qualityScore += 20;
-    if (hasTimeframe) qualityScore += 15;
-    if (hasImpact) qualityScore += 15;
-    if (questionCount >= 5) qualityScore += 10;
-
-    // ─── COMPLETION LOGIC (REFINED) ───
-    // 1. EARLY EXIT: If we have Context + Problem + Result + Locked Metric by question 4.
-    const hasFullTransformation = hasContext && hasBeforeAfter && hasResult && hasLockedMetric;
-    const earlyExitCondition = hasFullTransformation && questionCount >= 4;
-
-    // 2. LOW-INTENT EXIT: If they are being uncooperative, end early to keep it premium.
-    const lowIntentExitCondition = isLowIntent && questionCount >= 4;
-
-    const canComplete = hasLockedMetric || questionCount >= 7 || lowIntentExitCondition || earlyExitCondition;
-
-    if (nextStage === "recommendation" && !canComplete) {
-       nextStage = hasLockedMetric ? "recommendation" : "metrics";
-    }
-
-    // High Quality Exit OR Early Exit
-    if (canComplete && (questionCount >= 4 || isLowIntent)) {
-      nextStage = "recommendation";
-    }
-
-    // Force Exit
-    if (questionCount >= 7) {
-      nextStage = "recommendation";
-    }
-
+    const qualityScore = this.computeQualityScore(signals, rawAnswers.length);
     const confidenceScore = this.computeConfidence(answers);
 
     return {
-      stage: nextStage as InterviewStage,
+      stage: (nextStageId === "complete" ? "testimonial" : nextStageId) as InterviewStage,
       answers,
       metrics,
       extractedMetrics: metrics.map(m => `${m.value} ${m.type}`),
       confidenceScore,
       qualityScore
     };
+  },
+
+  computeQualityScore(signals: InterviewSignals, count: number): number {
+    let score = 0;
+    if (signals.problem) score += 20;
+    if (signals.result) score += 20;
+    if (signals.metrics) score += 30;
+    if (signals.timeframe) score += 15;
+    if (signals.testimonial) score += 15;
+    
+    // Penalize high question count if signals are missing
+    if (count >= 5 && score < 50) score -= 10;
+    
+    return Math.max(0, Math.min(100, score));
   },
 
   /**

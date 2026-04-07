@@ -118,6 +118,10 @@ export const OrganizationRepository = {
       refunded_at,
       last_synced_at,
       plan_type, // Also exclude plan_type from base org table
+      billing_cycle, // Exclude as it does not exist in organizations table
+      subscription_id, // Exclude to avoid schema conflicts/redundancy
+      subscription_status,
+      current_period_end,
       ...orgFields 
     } = subData;
     
@@ -156,7 +160,7 @@ export const OrganizationRepository = {
       const plan = (subData.plan_type as keyof typeof PLAN_LIMITS) || "starter";
       const limits = PLAN_LIMITS[plan];
 
-      await supabaseAdmin
+      const { error: subError } = await supabaseAdmin
         .from("subscriptions")
         .upsert({
           org_id: orgId,
@@ -165,11 +169,19 @@ export const OrganizationRepository = {
           team_seat_limit: limits.teamSeats,
           ...subUpdates,
         }, { onConflict: "org_id" });
+      
+      if (subError) {
+        console.error(`[OrganizationRepository] FAILED to upsert subscription for org=${orgId}:`, subError);
+      }
     } else {
-      await supabaseAdmin
+      const { error: subError } = await supabaseAdmin
         .from("subscriptions")
         .update(subUpdates)
         .eq("org_id", orgId);
+
+      if (subError) {
+        console.error(`[OrganizationRepository] FAILED to update subscription for org=${orgId}:`, subError);
+      }
     }
 
     return data as Organization;

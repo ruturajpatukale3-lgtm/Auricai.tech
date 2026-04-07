@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams } from "next/navigation";
+import { toast, Toaster } from "react-hot-toast";
 import {
   Loader2,
   CheckCircle2,
@@ -26,18 +27,19 @@ interface APIResponse {
   data?: {
     question?: string;
     intent?: string;
+    options?: string[];
     isFollowUp?: boolean;
     isComplete?: boolean;
     questionNumber?: number;
     totalMax?: number;
-    caseStudy?: Record<string, string>;
+    caseStudy?: Record<string, any>;
   };
   error?: string;
   isComplete?: boolean;
   isValidationRejection?: boolean;
 }
 
-type Screen = "welcome" | "chat" | "review" | "complete";
+type Screen = "welcome" | "comfort" | "chat" | "review" | "complete";
 
 // ═══════════════════════════════════════
 // MAIN PAGE COMPONENT
@@ -66,6 +68,13 @@ export default function InterviewPage() {
   const [generatedCaseStudy, setGeneratedCaseStudy] = useState<any>(null);
   const [processingTimeout, setProcessingTimeout] = useState(false);
   const [processingStep, setProcessingStep] = useState(0);
+  const [hasTrackedProgress, setHasTrackedProgress] = useState(false);
+  const [currentOptions, setCurrentOptions] = useState<string[]>([]);
+  const [partialCaseStudy, setPartialCaseStudy] = useState<any>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [interviewId, setInterviewId] = useState<string | null>(null);
+  const [orgId, setOrgId] = useState<string | null>(null);
+  const [isPreviewUpdating, setIsPreviewUpdating] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -149,6 +158,12 @@ export default function InterviewPage() {
       if (response?.data?.plan_name) {
         setPlanName(response.data.plan_name);
       }
+      if (response?.data?.id) {
+        setInterviewId(response.data.id);
+      }
+      if (response?.data?.org_id) {
+        setOrgId(response.data.org_id);
+      }
 
       // ── Session Detection & Initial Screen ────────
       const cachedStr = localStorage.getItem(`auricai_session_${token}`);
@@ -174,33 +189,140 @@ export default function InterviewPage() {
   useEffect(() => {
     setIsMounted(true);
     if (token) {
-      initializeInterview();
+      initializeInterview().then(() => {
+        // Track 'open' event in background (no await)
+        trackOpen();
+      });
     }
   }, [token, initializeInterview]);
 
-  // ─── Polling Logic ────────────────────────────────────────
-  const fetchStatus = useCallback(async () => {
+  const trackOpen = async (retries = 1) => {
+    // 1. Session Guard (Multi-tab safety)
+    if (typeof window !== "undefined" && sessionStorage.getItem(`auricai_open_${token}`)) return;
+    
     try {
-      const res = await fetch(`/api/public/interview/${token}/status`);
-      const data = await res.json();
-      if (data.success && data.data.status === "review_ready") {
-        setShowSuccessMoment(true);
-        setTimeout(() => {
-          setGeneratedCaseStudy(data.data.caseStudy);
-          setScreen("review");
-          setShowSuccessMoment(false);
-          setProcessingTimeout(false);
-        }, 1200);
-        return true;
+      const res = await fetch(`/api/public/interview/${token}/open`, { method: "POST" });
+      if (res.ok) {
+        sessionStorage.setItem(`auricai_open_${token}`, "true");
       }
-      return false;
-    } catch (e) {
-      console.error("Polling error:", e);
-      setPollingError(true);
-      return false;
+    } catch (err) {
+      if (retries > 0) setTimeout(() => trackOpen(retries - 1), 2000);
     }
-  }, [token]);
+  };
 
+  const trackProgress = async (retries = 1) => {
+    // 1. Session Guard (Multi-tab safety)
+    if (typeof window !== "undefined" && sessionStorage.getItem(`auricai_progress_${token}`)) {
+      setHasTrackedProgress(true);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/public/interview/${token}/progress`, { method: "POST" });
+      if (res.ok) {
+        setHasTrackedProgress(true);
+        sessionStorage.setItem(`auricai_progress_${token}`, "true");
+      }
+    } catch (err) {
+      if (retries > 0) setTimeout(() => trackProgress(retries - 1), 2000);
+    }
+  };
+
+  const trackComplete = async (retries = 1) => {
+    try {
+      await fetch(`/api/public/interview/${token}/complete`, { method: "POST" });
+    } catch (err) {
+      if (retries > 0) setTimeout(() => trackComplete(retries - 1), 2000);
+    }
+  };
+
+  // ─── Keep-Alive Polling (30s) ───────────────────────────
+  useEffect(() => {
+    if (screen !== "chat") return;
+    
+    const interval = setInterval(() => {
+      // Small pulse to keep 'last_activity' current on backend
+      fetch(`/api/public/interview/${token}/status`, { method: "GET" }).catch(() => {});
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [screen, token]);
+
+  // ─── Realtime Preview Sync (Replaces Polling) ───────────────
+  useEffect(() => {
+    if (showPreview && interviewId) {
+      // 1. Initial catch-up fetch
+      const fetchPartial = async () => {
+        try {
+          const res = await fetch(`/api/public/interview/${token}/status`);
+          const data = await res.json();
+          if (data.success && data.data.caseStudy) {
+            setPartialCaseStudy(data.data.caseStudy);
+            setIsPreviewUpdating(false);
+            if (data.data.status === "review_ready") {
+               setGeneratedCaseStudy(data.data.caseStudy);
+            }
+          }
+        } catch (e) { /* ignore */ }
+      };
+      
+      fetchPartial();
+
+      // 2. Realtime Subscription
+      let channel: any = null;
+      import("@/lib/supabase-client").then(({ supabase }) => {
+        channel = supabase
+          .channel(`preview_${interviewId}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "case_studies",
+              filter: `interview_id=eq.${interviewId}`,
+            },
+            (payload) => {
+              console.log("[Realtime] Update received:", payload);
+              if (payload.new) {
+                const cs = payload.new as any;
+                const mapped = {
+                  id: cs.id,
+                  headline: cs.headline,
+                  metricType: cs.metric_type,
+                  before: cs.before_value,
+                  after: cs.after_value,
+                  deltaPercent: cs.delta_percent,
+                  timeframe: cs.timeframe,
+                };
+                setPartialCaseStudy(mapped);
+                setIsPreviewUpdating(false);
+                
+                if (cs.status === "review_ready") {
+                  setShowSuccessMoment(true);
+                  setTimeout(() => {
+                    setGeneratedCaseStudy(mapped);
+                    setScreen("review");
+                    setShowSuccessMoment(false);
+                    setProcessingTimeout(false);
+                  }, 1200);
+                }
+              }
+            }
+          )
+          .subscribe();
+      });
+
+      return () => {
+        if (channel) {
+          import("@/lib/supabase-client").then(({ supabase }) => {
+            supabase.removeChannel(channel);
+          });
+        }
+      };
+    }
+  }, [showPreview, token, interviewId]);
+
+  // ─── Sync Animation Step logic for final review ────────
   useEffect(() => {
     let stepInterval: NodeJS.Timeout;
     if (screen === "review" && !generatedCaseStudy) {
@@ -210,17 +332,6 @@ export default function InterviewPage() {
     }
     return () => clearInterval(stepInterval);
   }, [screen, generatedCaseStudy]);
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (screen === "review" && !generatedCaseStudy && !pollingError && !processingTimeout) {
-      interval = setInterval(async () => {
-        const finished = await fetchStatus();
-        if (finished) clearInterval(interval);
-      }, 3000);
-    }
-    return () => clearInterval(interval);
-  }, [screen, generatedCaseStudy, fetchStatus, pollingError, processingTimeout]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -280,6 +391,7 @@ export default function InterviewPage() {
 
         if (data.data?.isComplete) {
           localStorage.removeItem(`auricai_session_${token}`);
+          trackComplete(); // Explicit production hardening
           setScreen("review");
           return;
         }
@@ -297,6 +409,13 @@ export default function InterviewPage() {
           ]);
           setQuestionNumber(data.data.questionNumber || 0);
           setCurrentIntent(data.data.intent || "business_context");
+          setCurrentOptions(data.data.options || []);
+          
+          // Show preview after 2 questions
+          if ((data.data.questionNumber || 0) >= 3 && !showPreview) {
+            setShowPreview(true);
+            // Server now triggers the partial generation automatically, no need to fetch here
+          }
         }
       } catch (err: any) {
         console.error("FAILURE POINT: callNextQuestion error:", err.message);
@@ -310,6 +429,18 @@ export default function InterviewPage() {
 
   // ─── Handlers ─────────────────────────────────────────────
   function handleStart() {
+    setScreen("comfort");
+  }
+
+  function proceedToChat() {
+    // Inject pre-interview greeting (system message, NOT a question)
+    setMessages([
+      {
+        id: "greeting-system",
+        role: "ai",
+        text: "Thanks for taking a moment to share your experience — really appreciate it.\n\nThis will only take about 2–3 minutes. You don't need exact numbers — rough answers are totally fine.\n\nI'll guide you through a few simple questions.",
+      },
+    ]);
     setScreen("chat");
     callNextQuestion();
   }
@@ -325,7 +456,17 @@ export default function InterviewPage() {
       { id: `user-${Date.now()}`, role: "user", text: answer },
     ]);
     setInputValue("");
+    
+    if (showPreview) {
+      setIsPreviewUpdating(true); // Optimistic UI trigger
+    }
+    
     callNextQuestion(answer, currentIntent, lastAiMessage?.text);
+
+    // Track first progress
+    if (!hasTrackedProgress) {
+      trackProgress();
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -529,6 +670,37 @@ export default function InterviewPage() {
   }
 
   // ═══════════════════════════════════════
+  // COMFORT SCREEN
+  // ═══════════════════════════════════════
+  if (screen === "comfort") {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "#0B0B0C", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-[400px] w-full text-center"
+        >
+           <div className="w-12 h-12 rounded-full border border-[#1F1F1F] flex items-center justify-center mx-auto mb-8">
+             <ArrowRight className="w-5 h-5 text-white/60" />
+           </div>
+           <h2 className="text-xl font-medium text-white mb-4 tracking-tight">
+             Just a quick note
+           </h2>
+           <p className="text-sm text-[#A1A1AA] leading-relaxed mb-10">
+             This takes about 2 minutes. Rough answers are fine—our system will handle the rest for you.
+           </p>
+           <button
+             onClick={proceedToChat}
+             className="w-full bg-white text-black h-12 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+           >
+             Got it, let&apos;s go
+           </button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════
   // REVIEW SCREEN
   // ═══════════════════════════════════════
   if (screen === "review") {
@@ -647,7 +819,18 @@ export default function InterviewPage() {
                 {(pollingError || processingTimeout) && (
                   <div className="space-y-4">
                     <button
-                      onClick={() => { setPollingError(false); setProcessingTimeout(false); fetchStatus(); }}
+                      onClick={async () => { 
+                        setPollingError(false); 
+                        setProcessingTimeout(false); 
+                        try {
+                          const res = await fetch(`/api/public/interview/${token}/status`);
+                          const data = await res.json();
+                          if (data.success && data.data.status === "review_ready") {
+                            setGeneratedCaseStudy(data.data.caseStudy);
+                            setScreen("review");
+                          }
+                        } catch(e) {}
+                      }}
                       className="text-xs text-[#A1A1AA] underline hover:text-white transition-colors"
                     >
                       Check status again
@@ -748,62 +931,82 @@ export default function InterviewPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="text-center max-w-md relative z-10"
+          className="w-full max-w-2xl bg-[#111111] border border-[#1F1F1F] rounded-2xl overflow-hidden shadow-2xl"
         >
-          {/* Icon */}
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 180, damping: 18 }}
-            className="w-16 h-16 rounded-xl border border-[#1F1F1F] flex items-center justify-center mx-auto mb-8"
-          >
-            <CheckCircle2 className="w-8 h-8 text-white" />
-          </motion.div>
+          {/* Success Header */}
+          <div className="p-8 sm:p-10 border-b border-[#1F1F1F] bg-[#161616] text-center">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 180, damping: 18 }}
+              className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-6"
+            >
+              <CheckCircle2 className="w-8 h-8 text-white" />
+            </motion.div>
+            <h1 className="text-2xl sm:text-3xl font-semibold text-white mb-3 tracking-tight">
+              Your Case Study is Ready
+            </h1>
+            <p className="text-[#A1A1AA] text-sm max-w-sm mx-auto leading-relaxed">
+              We&apos;ve transformed your responses into a high-impact outcome narrative.
+            </p>
+          </div>
 
-          <h1 className="text-2xl font-semibold text-white mb-3 tracking-tight">
-            Submission Complete
-          </h1>
-
-          <p className="text-[#A1A1AA] text-sm mb-8 leading-relaxed">
-            Thank you for your time. Your responses have been recorded and will be used to create a structured case study.
-          </p>
-
-          {/* Status Card */}
-          <div className="bg-[#111111] border border-[#1F1F1F] rounded-xl p-6 mb-8">
+          {/* Preview Content */}
+          <div className="p-8 sm:p-10 space-y-8">
             {generatedCaseStudy ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="space-y-3"
-              >
-                <p className="text-xs text-[#A1A1AA] uppercase tracking-widest font-medium">
-                  Status
-                </p>
-                <p className="text-lg font-semibold text-white">
-                  Case study generated
-                </p>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                 <div className="space-y-2">
+                    <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Headline</p>
+                    <h3 className="text-lg font-medium text-white leading-snug">{generatedCaseStudy.headline}</h3>
+                 </div>
+                 
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="p-5 bg-white/[0.02] border border-white/5 rounded-xl">
+                       <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-3">Key Outcome</p>
+                       <p className="text-2xl font-bold text-white">
+                         {generatedCaseStudy.delta_percent ? `+${generatedCaseStudy.delta_percent}%` : "Notable Growth"}
+                       </p>
+                       <p className="text-xs text-[#A1A1AA] mt-1">{generatedCaseStudy.metric_type || "Improvement"}</p>
+                    </div>
+                    <div className="p-5 bg-white/[0.02] border border-white/5 rounded-xl">
+                       <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-3">Timeframe</p>
+                       <p className="text-xl font-bold text-white">{generatedCaseStudy.timeframe || "Ongoing impact"}</p>
+                       <p className="text-xs text-[#A1A1AA] mt-1">To see results</p>
+                    </div>
+                 </div>
+
+                 {/* Actions */}
+                 <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${generatedCaseStudy.headline}\n\nOutcome: ${generatedCaseStudy.delta_percent}% ${generatedCaseStudy.metric_type}`);
+                        toast.success("Copied to clipboard");
+                      }}
+                      className="flex-1 h-12 bg-white text-black rounded-xl text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98]"
+                    >
+                      Copy Case Study
+                    </button>
+                    <button 
+                      onClick={() => window.open(`/case-study/${generatedCaseStudy.slug}`, '_blank')}
+                      className="flex-1 h-12 bg-white/5 border border-white/10 text-white rounded-xl text-sm font-medium hover:bg-white/10 transition-all"
+                    >
+                      View Live Version
+                    </button>
+                 </div>
               </motion.div>
             ) : (
-              <div className="flex flex-col items-center gap-3 py-1">
-                <Loader2 className="w-5 h-5 text-[#A1A1AA] animate-spin" />
-                <span className="text-sm text-[#A1A1AA]">Processing your case study</span>
+              <div className="py-12 flex flex-col items-center gap-4">
+                <Loader2 className="w-8 h-8 text-white/20 animate-spin" />
+                <p className="text-sm text-[#A1A1AA]">Finalizing your documentation...</p>
               </div>
             )}
           </div>
 
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.0 }}
-            className="text-xs text-white/30 tracking-wide"
-          >
-            You may close this window.
-          </motion.p>
-
-          <div className="mt-6">
-            <PoweredByAuricai position="inline" hidden={isEnterprise} delay={1.4} />
+          <div className="p-6 bg-[#0B0B0C] text-center border-t border-[#1F1F1F]">
+             <PoweredByAuricai position="inline" hidden={isEnterprise} />
           </div>
         </motion.div>
+        <Toaster position="bottom-center" />
       </div>
     );
   }
@@ -828,9 +1031,13 @@ export default function InterviewPage() {
                 Structured response collection
               </p>
             </div>
-            <span className="text-[12px] font-medium text-[#A1A1AA] tabular-nums">
-              Step {questionNumber} of {totalMax}
-            </span>
+            <div className="flex flex-col items-end">
+              <span className="text-[12px] font-medium text-[#A1A1AA] tabular-nums">
+                Step {questionNumber} of {totalMax}
+              </span>
+              {questionNumber === 4 && <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Almost done</span>}
+              {questionNumber === 5 && <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Final step</span>}
+            </div>
           </div>
 
           {/* ── 2px Progress Bar ──────────────────────────── */}
@@ -859,16 +1066,18 @@ export default function InterviewPage() {
                   transition={{ duration: 0.3, ease: "easeOut" }}
                 >
                   {msg.role === "ai" ? (
-                    /* ── AI Question Block ──────────────────── */
+                    /* ── AI Message Block ──────────────────── */
                     <div className="max-w-[520px]">
                       <div
                         className="rounded-xl border px-5 py-5"
                         style={{ background: "#111111", borderColor: "#1F1F1F" }}
                       >
-                        <p className="text-[10px] font-medium uppercase tracking-widest mb-3" style={{ color: "#A1A1AA" }}>
-                          Question
-                        </p>
-                        <p className="text-[14px] font-medium text-white leading-relaxed">
+                        {!msg.id.startsWith("greeting-") && (
+                          <p className="text-[10px] font-medium uppercase tracking-widest mb-3" style={{ color: "#A1A1AA" }}>
+                            Question
+                          </p>
+                        )}
+                        <p className="text-[14px] font-medium text-white leading-relaxed" style={{ whiteSpace: "pre-line" }}>
                           {msg.text}
                         </p>
                       </div>
@@ -947,11 +1156,92 @@ export default function InterviewPage() {
             <div ref={chatEndRef} />
           </div>
         </div>
+
+        {/* ── LIVE PREVIEW SIDEBAR (Draft Mode) ──────────────── */}
+        <AnimatePresence>
+          {showPreview && partialCaseStudy && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="fixed right-6 top-[108px] bottom-[180px] w-[280px] hidden xl:flex flex-col bg-[#111111] border border-[#1F1F1F] rounded-xl overflow-hidden shadow-2xl relative"
+            >
+              {/* Shimmer Overlay when updating */}
+              {isPreviewUpdating && (
+                 <div className="absolute inset-0 z-10 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[shimmer_2s_infinite] -translate-x-full" style={{ backgroundSize: "200% 100%" }} />
+              )}
+              
+              <div className="px-5 py-4 border-b border-[#1F1F1F] bg-[#161616] flex items-center justify-between z-0">
+                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                  Live Preview (Draft)
+                </p>
+                {isPreviewUpdating && (
+                  <Loader2 className="w-3 h-3 text-[#A1A1AA] animate-spin" />
+                )}
+              </div>
+              <div className={`flex-1 overflow-y-auto p-5 custom-scrollbar transition-opacity duration-300 z-0 ${isPreviewUpdating ? "opacity-60" : "opacity-100"}`}>
+                <h3 className="text-sm font-semibold text-white mb-4 leading-snug">
+                  {partialCaseStudy.headline || "Generating headline..."}
+                </h3>
+                
+                {partialCaseStudy.deltaPercent && (
+                  <div className="mb-4 p-3 bg-white/5 border border-white/5 rounded-lg">
+                    <p className="text-[10px] text-white/30 uppercase tracking-widest mb-1">Impact</p>
+                    <p className="text-lg font-bold text-white">+{partialCaseStudy.deltaPercent}%</p>
+                  </div>
+                )}
+                
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-[10px] text-white/30 uppercase tracking-widest mb-1">Transformation</p>
+                    <p className="text-[13px] text-[#A1A1AA] leading-relaxed italic border-l-2 border-[#1F1F1F] pl-3">
+                      &quot;{partialCaseStudy.summary || (isPreviewUpdating ? "Drafting narrative..." : "Capturing your success story...")}&quot;
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 bg-[#0F0F0F] border-t border-[#1F1F1F] z-0">
+                <p className={`text-[11px] transition-colors ${isPreviewUpdating ? "text-white/80" : "text-[#A1A1AA]"}`}>
+                  {isPreviewUpdating ? "Syncing update..." : "Real-time sync active"}
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* ── Fixed Bottom Input Section ───────────────────── */}
       <div className="fixed bottom-0 left-0 right-0 z-20" style={{ background: "#0B0B0C" }}>
         <div className="max-w-[680px] mx-auto px-6">
+          
+          {/* ── QUICK REPLY CHIPS ──────────────────────────── */}
+          <AnimatePresence>
+            {!isLoading && currentOptions.length > 0 && screen === "chat" && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 5 }}
+                className="flex flex-wrap gap-2 mb-4"
+              >
+                {currentOptions.map((option, i) => (
+                  <button
+                    key={`${option}-${i}`}
+                    onClick={() => {
+                      setMessages((prev) => [
+                        ...prev,
+                        { id: `user-${Date.now()}`, role: "user", text: option },
+                      ]);
+                      setCurrentOptions([]);
+                      callNextQuestion(option, currentIntent, messages[messages.length - 1]?.text);
+                    }}
+                    className="px-4 py-2 rounded-full border border-[#1F1F1F] bg-[#111111] text-[13px] text-[#A1A1AA] hover:text-white hover:border-white/20 transition-all hover:bg-[#1A1A1A]"
+                  >
+                    {option}
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className="border-t py-4" style={{ borderColor: "#1F1F1F" }}>
             <form onSubmit={handleSubmit}>
               <textarea
@@ -959,7 +1249,7 @@ export default function InterviewPage() {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Provide a clear, specific answer. Include numbers if possible."
+                placeholder={currentOptions.length > 0 ? "Or type your own answer..." : "Type your answer..."}
                 disabled={isLoading}
                 rows={2}
                 className="w-full bg-transparent text-[14px] text-white placeholder-white/20 focus:outline-none resize-none disabled:opacity-40 disabled:cursor-not-allowed leading-relaxed"
@@ -974,7 +1264,7 @@ export default function InterviewPage() {
               <div className="flex items-center justify-between mt-3">
                 {/* Micro Hint */}
                 <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.25)" }}>
-                  Example: 12% → 31% in 60 days
+                  Rough estimates are fine. System will handle the rest.
                 </p>
 
                 {/* Submit Button */}

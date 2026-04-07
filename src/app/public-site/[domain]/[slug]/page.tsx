@@ -27,10 +27,19 @@ export async function generateMetadata({ params }: PublicCaseStudyPageProps): Pr
   const result = await CaseStudyService.getPublicBySlug(slug);
   if (!result.success || !result.data) return { title: "Case Study Not Found" };
 
-  return {
+  const metadata: Metadata = {
     title: `${result.data.company_name} Case Study | ${org.name}`,
     description: result.data.headline || "",
   };
+
+  if (org.logo_url) {
+    metadata.icons = { icon: org.logo_url };
+    metadata.openGraph = {
+      images: [{ url: org.logo_url }],
+    };
+  }
+
+  return metadata;
 }
 
 export default async function PublicCaseStudyPage({ params }: PublicCaseStudyPageProps) {

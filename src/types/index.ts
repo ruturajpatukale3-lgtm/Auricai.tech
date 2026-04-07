@@ -9,6 +9,7 @@ export type PlanType = "free" | "trial" | "starter" | "growth" | "enterprise";
 
 export type InterviewStatus =
   | "sent"
+  | "opened"
   | "in_progress"
   | "completed"
   | "review_ready"
@@ -16,10 +17,6 @@ export type InterviewStatus =
   | "published";
 
 export type CaseStudyStatus = "draft" | "pending" | "live" | "complete";
-
-
-
-
 
 export type TeamRole = "owner" | "admin" | "editor";
 
@@ -38,7 +35,6 @@ export type EventType =
   | "case_study_viewed"
   | "case_study_published"
   | "case_study_shared"
-
   | "ai_generation_failed"
   | "reminder_sent"
   | "team_invited"
@@ -87,7 +83,10 @@ export type IndustryOption =
   | "consulting"
   | "other";
 
-/* PrimaryGoal removed */
+export type AITone = "professional" | "conversational" | "technical";
+export type AIOutputStyle = "concise" | "detailed";
+export type AICaseStudyStyle = "story_driven" | "metric_driven";
+export type FontPreset = "sans" | "serif" | "mono";
 
 export interface OrgProfile {
   id: string;
@@ -97,6 +96,10 @@ export interface OrgProfile {
   service_category: string;
   service_type: string;
   target_customer: string;
+  ai_tone: AITone;
+  ai_output_style: AIOutputStyle;
+  ai_case_study_style: AICaseStudyStyle;
+  font_preset: FontPreset;
   created_at: string;
   updated_at: string;
 }
@@ -145,6 +148,14 @@ export const ALL_STAGES: InterviewStage[] = [
   "testimonial"
 ];
 
+export interface InterviewSignals {
+  problem: boolean;
+  result: boolean;
+  metrics: boolean;
+  timeframe: boolean;
+  testimonial: boolean;
+}
+
 
 export type AnswerClassification = "exact" | "estimated" | "vague" | "qualitative";
 
@@ -183,6 +194,8 @@ export interface AIQuestionResponse {
   stage?: InterviewStage;
   isFollowUp: boolean;
   expectedAnswerType?: AnswerClassification;
+  options?: string[]; // 2-5 suggested chips/buttons
+  suggestedType?: "choice" | "range" | "text"; // UI hint
   fallbackQuestion?: string;
   isComplete: boolean;
 }
@@ -205,6 +218,7 @@ export interface TeamMember {
   email: string;
   role: TeamRole;
   status: MemberStatus;
+  disabled_at: string | null;
   invited_at: string;
   joined_at: string | null;
 }
@@ -216,6 +230,7 @@ export interface Interview {
   client_name: string | null;
   status: InterviewStatus;
   token: string;
+  opened_at: string | null;
   started_at: string | null;
   completed_at: string | null;
   last_activity: string | null;
@@ -241,6 +256,7 @@ export interface CaseStudy {
   interview_id: string | null;
   company_name: string;
   headline: string | null;
+  summary: string | null;
   metric_type: string | null;
   before_value: string | null;
   after_value: string | null;
@@ -256,8 +272,6 @@ export interface CaseStudy {
   created_at: string;
 }
 
-
-
 export interface Usage {
   org_id: string;
   interviews_used: number;
@@ -271,23 +285,22 @@ export interface Subscription {
   plan_name: string;
   interviews_limit: number;
   interviews_used: number;
-  lifetime_interviews_used: number;  // Free plan only — NEVER resets
+  lifetime_interviews_used: number;
   team_seat_limit: number;
   current_period_start: string;
   current_period_end: string;
   next_plan: string | null;
   payment_status: "active" | "past_due" | "cancelled" | "refunded" | "inactive";
   trial_end: string | null;
-  trial_consumed: boolean;  // Prevent repeat trials
+  trial_consumed: boolean;
   access_blocked: boolean;
   refunded_at: string | null;
   last_synced_at: string | null;
   paddle_subscription_id: string | null;
   paddle_customer_id: string | null;
+  billing_cycle: "monthly" | "yearly" | null;
   updated_at: string;
 }
-
-// ─── Notifications ─────────────────────────────────────────
 
 export type NotificationType =
   | "interview_completed"
@@ -332,16 +345,12 @@ export interface Activity {
   created_at: string;
 }
 
-// ─── Service Response Types ────────────────────────────────
-
 export interface ServiceResult<T> {
   success: boolean;
   data?: T;
   error?: string;
   code?: string;
 }
-
-// ─── Plan Limits ───────────────────────────────────────────
 
 export interface PlanLimits {
   interviews: number;
@@ -352,11 +361,9 @@ export interface PlanLimits {
   isSoftUnlimited?: boolean;
 }
 
-// ─── Analytics Types ───────────────────────────────────────
-
 export interface DashboardMetrics {
   totalViews: number;
-  totalShares: number; // For backward compatibility with existing "Shared" UI
+  totalShares: number;
   totalClicks: number;
   avgReadTime: number;
   totalUsage: number;
@@ -383,34 +390,32 @@ export interface ActivityFeedItem {
   created_at: string;
 }
 
-// ─── State Intelligence Types ──────────────────────────────
-
-/** Funnel = progression clarity. Each field is an EXACT count for that stage. */
 export interface FunnelStageMetrics {
   total: number;
   opened: number;
+  inProgress: number;
   completed: number;
   approved: number;
   published: number;
   conversionRates: {
     sentToOpened: number;
-    openedToCompleted: number;
+    openedToInProgress: number;
+    inProgressToCompleted: number;
     completedToApproved: number;
     approvedToPublished: number;
     total: number;
   };
 }
 
-/** Flow = state intelligence. Multi-state view, NOT mixed into funnel. */
 export interface ResponseFlow {
   notStarted: number;
+  opened: number;
   inProgress: number;
   completed: number;
   approved: number;
   published: number;
 }
 
-/** Duplicate flag — informational only, never blocks creation. */
 export interface DuplicateFlag {
   interviewId: string;
   email: string;
@@ -419,7 +424,6 @@ export interface DuplicateFlag {
   windowDays: number;
 }
 
-/** Combined response from the refactored getFunnelMetrics */
 export interface StateIntelligenceMetrics {
   funnel: FunnelStageMetrics;
   breakdown: ResponseFlow;
@@ -429,8 +433,6 @@ export interface StateIntelligenceMetrics {
     dropOffRate: number;
   };
 }
-
-// ─── API Request Types ─────────────────────────────────────
 
 export interface CreateInterviewRequest {
   client_email: string;
@@ -460,8 +462,6 @@ export interface DangerConfirmation {
   confirmation: string;
 }
 
-
-
 export interface SubmitInterviewRequest {
   token: string;
   question: string;
@@ -469,8 +469,6 @@ export interface SubmitInterviewRequest {
   currentIndex?: number;
   totalQuestions?: number;
 }
-
-// ─── Paddle Webhook Types ──────────────────────────────────
 
 export interface PaddleWebhookEvent {
   event_id: string;
@@ -491,6 +489,6 @@ export interface PaddleWebhookEvent {
     current_billing_period?: {
       ends_at: string;
     };
-    next_billed_at?: string;  // Paddle trial end = first billing date
+    next_billed_at?: string;
   };
 }
