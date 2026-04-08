@@ -171,7 +171,7 @@ export default function Pricing() {
   };
 
   return (
-    <section id="pricing" className="section-padding bg-[#0A0A0A] relative overflow-hidden">
+    <section id="pricing" data-build-id="pricing-update-v1.0.2" className="section-padding bg-[#0A0A0A] relative overflow-hidden">
       <div className="container-max relative z-10">
         <ScrollReveal className="text-center mb-16">
           <h2 className="text-h2 text-[#FAFAFA] mb-4">

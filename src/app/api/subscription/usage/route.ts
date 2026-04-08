@@ -75,6 +75,18 @@ export async function GET() {
     const isFree = sub.plan_name === "free";
     const displayUsed = isFree ? sub.lifetime_interviews_used : sub.interviews_used;
 
+    let planLabel = sub.plan_name === "trial" ? "Trial (25 interviews)" : sub.plan_name.charAt(0).toUpperCase() + sub.plan_name.slice(1);
+    
+    if (isFree) {
+      planLabel = `Free (${sub.interviews_limit} interviews)`;
+    } else if (sub.plan_name === "starter") {
+      planLabel = `Starter (${sub.interviews_limit} interviews)`;
+    } else if (sub.plan_name === "growth") {
+      planLabel = `Growth (${sub.interviews_limit} interviews)`;
+    } else if (sub.plan_name === "enterprise") {
+      planLabel = "Enterprise (Unlimited)";
+    }
+
     // Requirement 11 Strict Contract
     return apiSuccess({
       plan: sub.plan_name,
@@ -84,7 +96,7 @@ export async function GET() {
       trial_end: sub.trial_end,
       trial_consumed: !!sub.trial_consumed,
       // Metadata for UI
-      plan_label: isFree ? "Free (2 interviews)" : sub.plan_name === "trial" ? "Trial (7 days)" : sub.plan_name.charAt(0).toUpperCase() + sub.plan_name.slice(1),
+      plan_label: planLabel,
       payment_status: sub.payment_status,
       next_plan: sub.next_plan,
       period_end: sub.current_period_end,
