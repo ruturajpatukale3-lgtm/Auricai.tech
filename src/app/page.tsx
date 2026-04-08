@@ -8,6 +8,8 @@ import dynamic from "next/dynamic";
 import Navbar from "@/components/landing/Navbar";
 import Hero from "@/components/landing/Hero";
 
+export const revalidate = 0; // Force-refresh static cache for live pricing update
+
 // Lazy load below-fold sections for performance
 const LogoMarquee = dynamic(() => import("@/components/landing/LogoMarquee"));
 const ProblemAgitation = dynamic(() => import("@/components/landing/ProblemAgitation"));

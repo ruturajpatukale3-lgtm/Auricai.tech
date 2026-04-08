@@ -158,7 +158,7 @@ export default function Hero() {
            transition={{ delay: 0.5 }}
            className="mb-8"
         >
-          <span className="text-xs text-[#52525B]">7-day free trial • Cancel anytime • Secure Paddle Checkout</span>
+          <span className="text-xs text-[#52525B]">7-day free trial • Cancel anytime • Starts at $49/mo</span>
         </motion.div>
 
         {/* Social proof */}
