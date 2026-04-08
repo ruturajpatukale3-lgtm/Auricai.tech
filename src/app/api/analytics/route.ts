@@ -6,7 +6,20 @@ import { apiSuccess, handleApiError } from "@/lib/errors";
 
 export const GET = withOrg(async (_req: NextRequest, ctx: OrgContext) => {
   try {
-    const metrics = await AnalyticsService.getDashboard(ctx.orgId);
-    return apiSuccess(metrics);
-  } catch (error) { return handleApiError(error); }
+    const data = await AnalyticsService.getDashboard(ctx.orgId);
+    
+    return apiSuccess({
+      success: true,
+      data: data || AnalyticsService.defaultAnalytics(),
+      fallback: false
+    });
+  } catch (error) {
+    console.error("[api/analytics] CRITICAL ERROR:", error);
+    
+    return apiSuccess({
+      success: true, 
+      data: AnalyticsService.defaultAnalytics(),
+      fallback: true
+    });
+  }
 });

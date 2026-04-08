@@ -12,11 +12,10 @@ export type InterviewStatus =
   | "opened"
   | "in_progress"
   | "completed"
-  | "review_ready"
   | "approved"
   | "published";
 
-export type CaseStudyStatus = "draft" | "pending" | "live" | "complete";
+export type CaseStudyStatus = "draft" | "pending" | "live";
 
 export type TeamRole = "owner" | "admin" | "editor";
 

@@ -10,6 +10,10 @@ import { SmartInsightBlock } from "@/components/dashboard/SmartInsights";
 import { RealtimeDashboardBridge } from "@/components/dashboard/RealtimeDashboardBridge";
 import { OverviewStripSkeleton } from "@/components/dashboard/SkeletonLoaders";
 import { SmartInsightActionCard } from "@/components/dashboard/SmartInsightActionCard";
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
+import { AnalyticsEmptyState } from "@/components/analytics/EmptyState";
+import { AlertTriangle, RefreshCw } from "lucide-react";
+import Link from "next/link";
 
 export const metadata = {
   title: "Analytics | Auricai",
@@ -28,15 +32,27 @@ export default async function AnalyticsPage() {
       <RealtimeDashboardBridge orgId={orgId} />
       
       {/* 1. Page Header */}
-      <div className="mb-8 mt-2">
-        <h1 className="text-2xl font-bold text-white mb-1 tracking-tight">Analytics</h1>
-        <p className="text-sm text-zinc-500">Understand how your proof is performing based on real-time engagement data.</p>
+      <div className="mb-8 mt-2 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white mb-1 tracking-tight">Analytics</h1>
+          <p className="text-sm text-zinc-500">Understand how your proof is performing based on real-time engagement data.</p>
+        </div>
+        
+        <Link 
+          href="/dashboard/analytics" 
+          className="p-2 rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all flex items-center gap-2 text-sm font-medium"
+        >
+          <RefreshCw className="w-4 h-4" />
+          <span className="hidden sm:inline">Refresh</span>
+        </Link>
       </div>
 
-      {/* 2. Main Analytics Content (Suspense Bound) */}
-      <Suspense fallback={<OverviewStripSkeleton />}>
-        <AnalyticsContent orgId={orgId} />
-      </Suspense>
+      {/* 2. Main Analytics Content (ErrorBoundary + Suspense Bound) */}
+      <ErrorBoundary fallback={<AnalyticsEmptyState />}>
+        <Suspense fallback={<OverviewStripSkeleton />}>
+          <AnalyticsContent orgId={orgId} />
+        </Suspense>
+      </ErrorBoundary>
     </div>
   );
 }
@@ -46,18 +62,52 @@ export default async function AnalyticsPage() {
 async function AnalyticsContent({ orgId }: { orgId: string }) {
   const repo = await import("@/lib/repositories/case-study.repository").then(m => m.CaseStudyRepository);
   
-  const [metrics, insights, activity, usageHistory, topEngagement] = await Promise.all([
-    AnalyticsService.getDashboard(orgId),
-    AnalyticsService.getInsights(orgId),
-    AnalyticsService.getActivityFeed(orgId, 5),
-    AnalyticsService.getUsageHistory(orgId, 7),
-    repo.getTopPerformingByEngagement(orgId, 1),
-  ]);
+  let metrics: import("@/types").DashboardMetrics;
+  let insights: import("@/types").SmartInsight[];
+  let activity: import("@/types").ActivityFeedItem[];
+  let usageHistory: { date: string; count: number }[];
+  let topEngagement: any[];
+  let isFallback = false;
+
+  try {
+    const results = await Promise.all([
+      AnalyticsService.getDashboard(orgId),
+      AnalyticsService.getInsights(orgId),
+      AnalyticsService.getActivityFeed(orgId, 5),
+      AnalyticsService.getUsageHistory(orgId, 7),
+      repo.getTopPerformingByEngagement(orgId, 1),
+    ]);
+
+    [metrics, insights, activity, usageHistory, topEngagement] = results;
+  } catch (err) {
+    console.error("[AnalyticsPage] Server-side fetch failed, using fallback:", err);
+    metrics = AnalyticsService.defaultAnalytics();
+    insights = [];
+    activity = [];
+    usageHistory = [];
+    topEngagement = [];
+    isFallback = true;
+  }
+
+  // Handle Empty State
+  if (!metrics || metrics.interviewsSent === 0) {
+    return <AnalyticsEmptyState />;
+  }
 
   const opportunity = insights.find(i => i.type === "opportunity");
 
   return (
     <>
+      {/* Fallback/Limited Data Banner */}
+      {isFallback && (
+        <div className="mb-6 flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+          <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+          <p className="text-sm text-amber-200/80 font-medium">
+            Limited data — We encountered a connection issue while fetching the latest insights. Some metrics may be temporarily unavailable.
+          </p>
+        </div>
+      )}
+
       {/* Actionable Insight Alert */}
       {opportunity && (
         <div className="mb-8 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-500/20 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden group">
@@ -89,7 +139,7 @@ async function AnalyticsContent({ orgId }: { orgId: string }) {
           <div className="mt-4">
             <h2 className="text-lg font-bold text-white mb-4">Top Performers</h2>
             <TopPerformers 
-              topEngagement={topEngagement[0]} 
+              topEngagement={topEngagement?.[0]} 
             />
           </div>
         </div>
@@ -98,17 +148,21 @@ async function AnalyticsContent({ orgId }: { orgId: string }) {
           <div className="bg-[#111111] border border-white/10 rounded-xl p-6">
             <h2 className="text-lg font-bold text-white mb-4">Activity Feed</h2>
             <div className="space-y-4">
-              {activity.map((item) => (
-                <div key={item.id} className="flex gap-3 items-start">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0" />
-                  <div>
-                    <p className="text-sm text-zinc-300">{item.message}</p>
-                    <p className="text-[10px] text-zinc-600 uppercase font-mono mt-0.5">
-                      {new Date(item.created_at).toLocaleDateString()}
-                    </p>
+              {activity.length > 0 ? (
+                activity.map((item) => (
+                  <div key={item.id} className="flex gap-3 items-start">
+                    <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+                    <div>
+                      <p className="text-sm text-zinc-300">{item.message}</p>
+                      <p className="text-[10px] text-zinc-600 uppercase font-mono mt-0.5">
+                        {new Date(item.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-sm text-zinc-500 italic">No recent activity detected.</p>
+              )}
             </div>
           </div>
         </div>

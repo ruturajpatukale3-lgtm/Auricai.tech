@@ -1,20 +1,12 @@
 import { CaseStudy } from "@/types";
 
-/**
- * Validates if a case study has enough data to be considered "Complete".
- * Threshold: Must have at least one measurable performance metric (ROI).
- */
-export const isCaseStudyComplete = (study: CaseStudy): boolean => {
-  const hasROI = (study.delta_percent !== null && study.delta_percent > 0);
-  
-  return hasROI;
-};
+
 
 /**
  * Replaces generic AI-generated "stub" headlines with a professional pending placeholder.
  */
 export const getValidHeadline = (headline: string | null): string => {
-  if (!headline) return "Case study pending — awaiting data";
+  if (!headline) return "Draft — Ready for Review";
 
   const genericPhrases = [
     "help results",
@@ -29,7 +21,7 @@ export const getValidHeadline = (headline: string | null): string => {
   const isGeneric = genericPhrases.some(phrase => lowcaseHeadline.includes(phrase));
 
   if (isGeneric) {
-    return "Case study pending — awaiting data";
+    return "Draft — Ready for Review";
   }
 
   return headline;

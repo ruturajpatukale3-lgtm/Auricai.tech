@@ -13,7 +13,9 @@ import {
   Sparkles,
   Activity,
   Users,
-  X
+  X,
+  Terminal,
+  RefreshCw
 } from "lucide-react";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { getPlanLimits } from "@/lib/plans";
@@ -76,6 +78,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* Real-time Usage Progress */}
         <SidebarUsage />
 
+        {/* Dev Mode Control (Only for dev users) */}
+        <DevTestModeControl />
+
         <Link
           href="/dashboard/settings"
           className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${pathname.startsWith("/dashboard/settings")
@@ -128,3 +133,46 @@ function SidebarUsage() {
     </div>
   );
 }
+
+function DevTestModeControl() {
+  const { isDevMode, setDevPlan, planType } = useSubscription();
+
+  if (!isDevMode) return null;
+
+  return (
+    <div className="mx-3 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 space-y-3">
+      <div className="flex items-center gap-2 text-[10px] font-bold text-blue-400 uppercase tracking-widest">
+        <Terminal className="w-3 h-3" />
+        DEV TEST MODE ACTIVE
+      </div>
+      
+      <div className="flex flex-wrap gap-1.5">
+        {(["starter", "growth", "enterprise"] as const).map((p) => (
+          <button
+            key={p}
+            onClick={() => setDevPlan(p)}
+            className={`px-2 py-1 rounded text-[9px] font-bold uppercase transition-all ${
+              planType === p 
+                ? "bg-blue-500 text-white" 
+                : "bg-white/5 text-zinc-500 hover:text-white hover:bg-white/10"
+            }`}
+          >
+            {p.charAt(0).toUpperCase() + p.slice(1)}
+          </button>
+        ))}
+      </div>
+      
+      <button 
+        onClick={() => {
+          document.cookie = "cf_dev_plan=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+          window.location.reload();
+        }}
+        className="flex items-center gap-1.5 text-[9px] text-zinc-600 hover:text-zinc-400 transition-colors"
+      >
+        <RefreshCw className="w-2.5 h-2.5" />
+        Reset to Real
+      </button>
+    </div>
+  );
+}
+

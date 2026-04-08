@@ -8,12 +8,40 @@ import { SubscriptionService } from "@/lib/services/subscription.service";
 import { AuthService } from "@/lib/services/auth.service";
 import { handleApiError, apiSuccess, AuthRequiredError } from "@/lib/errors";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { currentUser } from "@clerk/nextjs/server";
+import { isDevOverrideActive, MOCKED_PLANS, TestPlanType } from "@/lib/config/dev-overrides";
+import { cookies } from "next/headers";
 import type { Subscription } from "@/types";
 
 export async function GET() {
   try {
     const { userId } = await auth();
     if (!userId) throw new AuthRequiredError();
+
+    const user = await currentUser();
+    const userEmail = user?.emailAddresses[0]?.emailAddress;
+    const cookieStore = await cookies();
+    const devPlanOverride = cookieStore.get("cf_dev_plan")?.value as TestPlanType | undefined;
+
+    // ─── DEV OVERRIDE BYPASS ───────────────────────────────────
+    if (isDevOverrideActive(userEmail)) {
+      const selectedPlan = devPlanOverride || "starter";
+      const mock = MOCKED_PLANS[selectedPlan] || MOCKED_PLANS.starter;
+
+      return apiSuccess({
+        plan: mock.plan_name,
+        subscriptionStatus: "active",
+        interviews_used: 0,
+        interviews_limit: mock.interviews_limit,
+        interviewsRemaining: mock.interviews_limit, // As requested in directive
+        team_seat_limit: mock.team_seat_limit,
+        is_lifetime: false,
+        trial_end: null,
+        plan_label: mock.plan_label,
+        payment_status: "active",
+        is_dev_mode: true,
+      });
+    }
 
     const orgId = await AuthService.getOrgIdForUser(userId);
     if (!orgId) throw new AuthRequiredError("No workspace found.");

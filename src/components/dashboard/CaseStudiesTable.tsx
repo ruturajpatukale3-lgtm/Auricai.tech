@@ -13,7 +13,7 @@ import { apiPatch } from "@/lib/hooks/useSWR";
 import toast from "react-hot-toast";
 
 import { CaseStudy } from "@/types";
-import { isCaseStudyComplete, getValidHeadline } from "@/lib/utils/case-study-validation";
+import { getValidHeadline } from "@/lib/utils/case-study-validation";
 
 export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
   const router = useRouter();
@@ -88,7 +88,6 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
     <>
       <div className="flex flex-col gap-4 w-full mt-4">
         {data.map((study, i) => {
-          const isComplete = isCaseStudyComplete(study);
           const headline = getValidHeadline(study.headline);
           
           return (
@@ -110,48 +109,38 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
                       title={
                         study.status === 'live' ? 'Public case study' : 
                         study.status === 'pending' ? 'Ready to publish' : 
-                        isComplete ? 'Ready for review' : 'Draft — awaiting data'
+                        'Draft Ready for Review'
                       }
                       className={`text-[10px] cursor-help uppercase tracking-wider px-2.5 py-1 rounded-full border font-bold transition-all hover:scale-105 ${
                         study.status === 'live' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
                         study.status === 'pending' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                        isComplete ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
-                        'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
+                        'bg-orange-500/10 text-orange-400 border-orange-500/20'
                       }`}
                     >
                       {study.status === 'live' ? 'Live' : 
                        study.status === 'pending' ? 'Approved' : 
-                       isComplete ? 'Review Needed' : 'Draft'}
+                       'Draft'}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <p className={`text-sm line-clamp-1 ${isComplete ? 'text-zinc-500' : 'text-zinc-600 italic'}`}>
+                    <p className={`text-sm line-clamp-1 text-zinc-500`}>
                       {headline}
                     </p>
-                    <span className="text-[10px] text-zinc-600 font-mono">• Generated in under 24h</span>
+                    <span className="text-[10px] text-zinc-600 font-mono">• Generated Successfully</span>
                   </div>
                 </div>
 
                 {/* Middle Box: The Money Metrics (Largest Text) */}
                 <div className="flex-1 flex flex-col items-start md:items-center">
-                  {!isComplete ? (
-                    <div className="flex flex-col items-start md:items-center gap-1 opacity-50">
-                      <span className="text-lg font-bold text-zinc-600 font-mono italic">Awaiting Results...</span>
-                      <span className="text-[10px] text-zinc-700 uppercase font-bold tracking-widest">Collecting hard engagement proof</span>
-                    </div>
-                  ) : (
-                    <>
-                      <span className="text-2xl md:text-3xl font-extrabold text-white font-mono tracking-tight drop-shadow-md">
-                        {study.delta_percent ? `+${study.delta_percent}%` : study.metric_type || "N/A"}
-                      </span>
-                      <div className="flex items-center gap-2 mt-1.5 transition-all group-hover:scale-105">
-                        <span className="flex items-center gap-1.5 text-xs font-bold text-blue-400 font-mono tracking-tight bg-blue-400/10 px-2.5 py-1 rounded-full border border-blue-400/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
-                          <TrendingUp className="w-3 h-3" />
-                          {study.views || 0} Organic Views
-                        </span>
-                      </div>
-                    </>
-                  )}
+                  <span className="text-2xl md:text-3xl font-extrabold text-white font-mono tracking-tight drop-shadow-md">
+                    {study.delta_percent ? `+${study.delta_percent}%` : study.metric_type || "N/A"}
+                  </span>
+                  <div className="flex items-center gap-2 mt-1.5 transition-all group-hover:scale-105">
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-blue-400 font-mono tracking-tight bg-blue-400/10 px-2.5 py-1 rounded-full border border-blue-400/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                      <TrendingUp className="w-3 h-3" />
+                      {study.views || 0} Organic Views
+                    </span>
+                  </div>
                 </div>
 
                 {/* Right Box: Usage & Actions */}
@@ -165,16 +154,11 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
                     {/* Status Actions */}
                     {study.status === 'draft' && (
                       <button
-                        onClick={() => isComplete && handleApprove(study.id)}
-                        disabled={!isComplete}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${
-                          isComplete 
-                            ? "bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400"
-                            : "bg-zinc-800 border border-white/5 text-zinc-500 cursor-not-allowed opacity-50"
-                        }`}
+                        onClick={() => handleApprove(study.id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400`}
                       >
                         <CheckCircle className="w-3.5 h-3.5" /> 
-                        {isComplete ? "Approve" : "Waiting for Results"}
+                        Approve
                       </button>
                     )}
                     {study.status === 'pending' && (
@@ -195,17 +179,15 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
 
                     <button 
                       onClick={() => handleCopyLink(study.slug || "")}
-                      disabled={study.status !== 'live'}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-white transition-all disabled:opacity-30`}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-white transition-all`}
                     >
                       <Copy className="w-3.5 h-3.5" /> Copy Link
                     </button>
 
                     <button 
                       onClick={() => { setTargetStudy(study); setIsEditOpen(true); }}
-                      disabled={study.status === 'draft' && !isComplete}
-                      title={study.status === 'draft' && !isComplete ? "Awaiting measurable results before edit." : "Edit Case Study"}
-                      className="flex items-center justify-center w-8 h-8 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Edit Case Study"
+                      className="flex items-center justify-center w-8 h-8 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-400 hover:text-white transition-colors"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>

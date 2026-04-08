@@ -97,25 +97,12 @@ export const generateCaseStudyJob = inngest.createFunction(
       });
     });
 
-    // Mark interview as ready for client review
-    await step.run("mark-review-ready", async () => {
-      await InterviewRepository.updateStatus(orgId, interviewId, "review_ready");
+    // Mark interview as fully completed
+    await step.run("mark-interview-completed", async () => {
+      await InterviewRepository.updateStatus(orgId, interviewId, "completed");
     });
 
-    // Notify client that case study is ready for review
-    await step.run("notify-client-ready", async () => {
-      const org = await OrganizationRepository.findById(orgId);
-      if (org) {
-        await EmailService.sendCaseStudyReadyEmail(
-          interview.client_email,
-          org.name,
-          interview.token,
-          interview.client_name || undefined
-        );
-      }
-    });
-
-    // Notify org that case study is ready
+    // 6. Notify org that case study is ready for their final approval
     await step.run("notify-case-study-ready", async () => {
       try {
         await NotificationService.notifyCaseStudyReady(

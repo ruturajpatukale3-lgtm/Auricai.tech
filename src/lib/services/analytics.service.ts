@@ -333,4 +333,22 @@ export const AnalyticsService = {
       { revalidate: 10, tags: [`analytics-${orgId}`, "funnel"] }
     )();
   }),
+  /**
+   * Default stats for fallbacks/empty states
+   */
+  defaultAnalytics(): DashboardMetrics {
+    return {
+      totalViews: 0,
+      totalShares: 0,
+      totalClicks: 0,
+      avgReadTime: 0,
+      totalUsage: 0,
+      uniqueVisitors: 0,
+      interviewsSent: 0,
+      interviewsCompleted: 0,
+      stalledInterviews: 0,
+      caseStudiesLive: 0,
+      conversionRate: 0,
+    };
+  },
 };

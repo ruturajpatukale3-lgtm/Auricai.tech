@@ -3,7 +3,7 @@
 import { X, Eye, FileText, CheckCircle2, Copy, UploadCloud, ExternalLink, MessageSquare, TrendingUp, Layout, AlertCircle } from "lucide-react";
 import type { CaseStudy } from "@/types";
 import toast from "react-hot-toast";
-import { isCaseStudyComplete, getValidHeadline, formatMetricValue } from "@/lib/utils/case-study-validation";
+import { getValidHeadline, formatMetricValue } from "@/lib/utils/case-study-validation";
 
 interface CaseStudyPreviewModalProps {
   isOpen: boolean;
@@ -14,7 +14,6 @@ interface CaseStudyPreviewModalProps {
 export function CaseStudyPreviewModal({ isOpen, onClose, caseStudy }: CaseStudyPreviewModalProps) {
   if (!isOpen || !caseStudy) return null;
 
-  const isComplete = isCaseStudyComplete(caseStudy);
   const headline = getValidHeadline(caseStudy.headline);
 
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -52,7 +51,7 @@ export function CaseStudyPreviewModal({ isOpen, onClose, caseStudy }: CaseStudyP
             <div>
               <h2 className="text-base font-bold text-white">Preview Case Study</h2>
               <p className="text-xs text-zinc-500">
-                {isComplete ? "View public-facing data" : "Draft — Awaiting more data"}
+                View public-facing data
               </p>
             </div>
           </div>
@@ -77,35 +76,22 @@ export function CaseStudyPreviewModal({ isOpen, onClose, caseStudy }: CaseStudyP
               </span>
             </div>
 
-            <h1 className={`text-3xl md:text-4xl font-extrabold tracking-tight px-4 leading-tight ${isComplete ? 'text-white' : 'text-zinc-500 italic'}`}>
+            <h1 className={`text-3xl md:text-4xl font-extrabold tracking-tight px-4 leading-tight text-white`}>
               {headline}
             </h1>
 
             <div className="flex items-center justify-center gap-2">
               <span className={`px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded border ${caseStudy.status === 'live' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
                   caseStudy.status === 'pending' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                    isComplete ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
-                      'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
+                  'bg-orange-500/10 text-orange-400 border-orange-500/20'
                 }`}>
                 {caseStudy.status === 'live' ? 'Live' :
                   caseStudy.status === 'pending' ? 'Approved' :
-                    isComplete ? 'Review Ready' : 'Draft Generated'}
+                  'Draft Ready'}
               </span>
             </div>
           </div>
 
-          {!isComplete ? (
-            /* Draft State View */
-            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-10 flex flex-col items-center text-center space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-orange-500/10 flex items-center justify-center mb-2">
-                <TrendingUp className="w-8 h-8 text-orange-400" />
-              </div>
-              <h3 className="text-xl font-bold text-white tracking-tight">Waiting for measurable results</h3>
-              <p className="text-sm text-zinc-500 max-w-sm leading-relaxed">
-                The AI is currently analyzing your client&apos;s story to extract hard engagement proof. Once specific outcomes are identified, this case study will be ready for review.
-              </p>
-            </div>
-          ) : (
             <>
               {/* Metrics Grid Representation */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -177,7 +163,6 @@ export function CaseStudyPreviewModal({ isOpen, onClose, caseStudy }: CaseStudyP
                 </div>
               </div>
             </>
-          )}
         </div>
 
         {/* Footer Actions */}
@@ -194,7 +179,7 @@ export function CaseStudyPreviewModal({ isOpen, onClose, caseStudy }: CaseStudyP
             </button>
             <button
               onClick={copyLink}
-              disabled={caseStudy.status !== 'live' || !isComplete}
+              disabled={caseStudy.status !== 'live'}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-white text-black hover:bg-zinc-200 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Copy className="w-4 h-4" /> Share Link
