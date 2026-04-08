@@ -65,6 +65,8 @@ export default function InterviewPage() {
   const [errorType, setErrorType] = useState<"INVALID" | "SERVER_ERROR" | null>(null);
   const [interviewId, setInterviewId] = useState<string | null>(null);
   const [orgId, setOrgId] = useState<string | null>(null);
+  const [hasTrackedProgress, setHasTrackedProgress] = useState(false);
+  const [currentOptions, setCurrentOptions] = useState<string[]>([]);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
