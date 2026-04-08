@@ -26,10 +26,8 @@ interface SubscriptionContextType {
   isNearLimit: boolean;
   isAtLimit: boolean;
   isLifetime: boolean;
-  isDevMode: boolean;
   canCreateInterview: boolean; // Requirement 10 & 15 enforcement
   showPaywall: (metric?: string, limit?: number) => void;
-  setDevPlan: (plan: PlanType) => Promise<void>;
   refresh: () => Promise<void>;
   refreshWithRetry: (expectedPlan?: string) => Promise<boolean>;
 }
@@ -138,13 +136,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   // Requirement 10: Block if limit reached OR payment inactive (except for trials)
   const canCreateInterview = !usage?.access_blocked && !isAtLimit && (isActive || isTrial);
 
-  const setDevPlan = async (plan: PlanType) => {
-    // Set cookie for 7 days
-    document.cookie = `cf_dev_plan=${plan}; path=/; max-age=${7 * 24 * 60 * 60}`;
-    setIsLoading(true);
-    await fetchUsage();
-  };
-
   return (
     <SubscriptionContext.Provider
       value={{
@@ -167,10 +158,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         isNearLimit: limit > 0 ? (used / limit) >= 0.8 : true,
         isAtLimit,
         isLifetime: !!usage?.is_lifetime,
-        isDevMode: !!usage?.is_dev_mode,
         canCreateInterview,
         showPaywall,
-        setDevPlan,
         refresh: fetchUsage,
         refreshWithRetry,
       }}
