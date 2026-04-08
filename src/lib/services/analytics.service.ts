@@ -273,7 +273,7 @@ export const AnalyticsService = {
         const sent = statusCounts.sent || 0;
         const opened = statusCounts.opened || 0;
         const inProgress = statusCounts.in_progress || 0;
-        const completed = statusCounts.completed || 0;
+        const completed = (statusCounts.completed || 0) + (statusCounts.review_ready || 0);
         const approved = statusCounts.approved || 0;
         const published = statusCounts.published || 0;
 

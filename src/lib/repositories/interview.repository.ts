@@ -242,7 +242,7 @@ export const InterviewRepository = {
    * Get all status counts in a single query (replaces 5 separate countByStatus calls)
    */
   async getFullStatusCounts(orgId: string): Promise<Record<InterviewStatus, number>> {
-    const statuses: InterviewStatus[] = ["sent", "opened", "in_progress", "completed", "approved", "published"];
+    const statuses: InterviewStatus[] = ["sent", "opened", "in_progress", "completed", "review_ready", "approved", "published"];
     const results: Record<string, number> = {};
 
     // Parallel count queries (batched, not 5 separate round-trips for complex aggregation)
@@ -315,7 +315,7 @@ export const InterviewRepository = {
     (data || []).forEach((row) => {
       const s = row.status;
       if (["sent", "opened", "in_progress"].includes(s)) active++;
-      if (["completed", "approved", "published"].includes(s)) completed++;
+      if (["completed", "review_ready", "approved", "published"].includes(s)) completed++;
     });
 
     return { active, completed, total: (data || []).length };
