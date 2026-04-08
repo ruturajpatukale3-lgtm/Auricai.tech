@@ -97,9 +97,9 @@ export const generateCaseStudyJob = inngest.createFunction(
       });
     });
 
-    // Mark interview as fully completed
-    await step.run("mark-interview-completed", async () => {
-      await InterviewRepository.updateStatus(orgId, interviewId, "completed");
+    // Mark interview as fully completed and ready for review
+    await step.run("mark-interview-review-ready", async () => {
+      await InterviewRepository.updateStatus(orgId, interviewId, "review_ready");
     });
 
     // 6. Notify org that case study is ready for their final approval

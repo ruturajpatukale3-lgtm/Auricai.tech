@@ -305,8 +305,8 @@ export const InterviewService = {
     const interview = await InterviewRepository.findById(orgId, interviewId);
     if (!interview) throw new NotFoundError("Interview");
 
-    if (interview.status !== "completed") {
-      return { success: false, error: "Only completed interviews can be approved", code: "INVALID_STATE" };
+    if (interview.status !== "review_ready" && interview.status !== "completed") {
+      return { success: false, error: "Only completed or review-ready interviews can be approved", code: "INVALID_STATE" };
     }
 
     const updated = await InterviewRepository.updateStatus(orgId, interviewId, "approved");
