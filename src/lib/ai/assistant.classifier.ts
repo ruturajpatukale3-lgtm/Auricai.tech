@@ -44,7 +44,7 @@ export const AssistantClassifier = {
     if (input.includes("billing") || input.includes("limit") || input.includes("pricing")) {
       return {
         type: "policy",
-        message: "Your current usage and plan details are available in the Settings. You get 10 free interviews on the Starter plan.",
+        message: "Your current usage and plan details are available in the Settings. You get 25 free interviews on the Starter plan.",
         actions: [{ label: "Check Plan Status", route: "/dashboard/settings" }],
       };
     }
