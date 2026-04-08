@@ -35,9 +35,9 @@ const plans = {
   growth: {
     name: "Growth",
     upgradeLabel: "Scale volume",
-    monthlyPrice: 159,
-    annualPrice: 1526,
-    monthlyEquivalent: 127,
+    monthlyPrice: 129,
+    annualPrice: 1238,
+    monthlyEquivalent: 103,
     description: "Double your interview volume and add a team member to collaborate on success stories.",
     limits: ["60 AI interviews/month", "2 team seats"],
     brandingNote: "Includes Auricai branding — upgrade to Enterprise to remove watermark",
@@ -46,9 +46,9 @@ const plans = {
   enterprise: {
     name: "Enterprise",
     upgradeLabel: "Full branding control & scale",
-    monthlyPrice: 459,
-    annualPrice: 4406,
-    monthlyEquivalent: 367,
+    monthlyPrice: 399,
+    annualPrice: 3830,
+    monthlyEquivalent: 319,
     description: "For agencies and teams requiring complete branding control and maximum volume.",
     limits: ["Unlimited AI interviews", "5+ team seats"],
     brandingPerks: [
@@ -171,7 +171,7 @@ export default function Pricing() {
   };
 
   return (
-    <section id="pricing" data-build-id="pricing-remediation-v1.0.3" className="section-padding bg-[#0A0A0A] relative overflow-hidden">
+    <section id="pricing" data-build-id="pricing-remediation-v1.0.4" className="section-padding bg-[#0A0A0A] relative overflow-hidden">
       <div className="container-max relative z-10">
         <ScrollReveal className="text-center mb-16">
           <h2 className="text-h2 text-[#FAFAFA] mb-4">
