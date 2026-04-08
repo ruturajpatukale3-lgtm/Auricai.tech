@@ -57,42 +57,42 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   }, [isSignedIn]);
 
   // ─── Polling retry for checkout success (Requirement 12) ─────
-  // Intervals: Immediate, 500ms, 1000ms
+  // Intervals: Immediate, 1s, 3s, 5s (Total window: ~9s)
+  // Accommodates Paddle webhook latency while keeping UI reactive.
   const refreshWithRetry = useCallback(async (expectedPlan?: string): Promise<boolean> => {
     const originalPlan = prevPlanRef.current;
+    const delays = [0, 1000, 3000, 5000]; // milliseconds
     
-    // Attempt 1: Immediate
-    try {
-      const res = await fetch("/api/subscription/usage");
-      if (res.ok) {
-        const { data } = await res.json();
-        if (expectedPlan ? data?.plan === expectedPlan : data?.plan !== originalPlan) {
-          setUsage(data);
-          prevPlanRef.current = data?.plan;
-          return true;
-        }
-      }
-    } catch { /* ignore */ }
+    setIsLoading(true);
+    console.log(`[Subscription] Starting polling for plan update (Target: ${expectedPlan || 'any update'})...`);
 
-    // Attempt 2: 500ms
-    await new Promise(r => setTimeout(r, 500));
-    try {
-      const res = await fetch("/api/subscription/usage");
-      if (res.ok) {
-        const { data } = await res.json();
-        if (expectedPlan ? data?.plan === expectedPlan : data?.plan !== originalPlan) {
-          setUsage(data);
-          prevPlanRef.current = data?.plan;
-          return true;
-        }
-      }
-    } catch { /* ignore */ }
+    for (let i = 0; i < delays.length; i++) {
+      const delay = delays[i];
+      if (delay > 0) await new Promise(r => setTimeout(r, delay));
 
-    // Attempt 3: 1000ms
-    await new Promise(r => setTimeout(r, 1000));
-    await fetchUsage();
-    return prevPlanRef.current !== originalPlan;
-  }, [fetchUsage]);
+      try {
+        const res = await fetch("/api/subscription/usage");
+        if (res.ok) {
+          const { data } = await res.json();
+          const hasUpdated = expectedPlan ? data?.plan === expectedPlan : data?.plan !== originalPlan;
+          
+          if (hasUpdated) {
+            console.log(`[Subscription] Plan update detected on attempt ${i + 1}: ${data?.plan}`);
+            setUsage(data);
+            prevPlanRef.current = data?.plan;
+            setIsLoading(false);
+            return true;
+          }
+        }
+      } catch (err) {
+        console.warn(`[Subscription] Polling attempt ${i + 1} failed:`, err);
+      }
+    }
+
+    console.warn(`[Subscription] Polling finished after ${delays.length} attempts without detecting update.`);
+    setIsLoading(false);
+    return false;
+  }, []);
 
   // ─── Background Polling ──────────────────────────────────
   useEffect(() => {

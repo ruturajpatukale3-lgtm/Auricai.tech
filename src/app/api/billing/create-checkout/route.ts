@@ -11,16 +11,16 @@ import { apiSuccess, apiError, handleApiError, AuthRequiredError, AppError } fro
 // ─── Plan → Paddle Price ID mapping ─────────────────────
 const PLAN_PRICE_MAP: Record<string, { monthly: string; annual: string }> = {
   starter: {
-    monthly: process.env.PADDLE_STARTER_PRICE_ID || "",
-    annual: process.env.PADDLE_STARTER_PRICE_ID_ANNUAL || "",
+    monthly: process.env.PADDLE_STARTER_PRICE_ID || "pri_starter_monthly",
+    annual: process.env.PADDLE_STARTER_YEARLY_PRICE_ID || "pri_starter_yearly",
   },
   growth: {
-    monthly: process.env.PADDLE_GROWTH_PRICE_ID || "",
-    annual: process.env.PADDLE_GROWTH_PRICE_ID_ANNUAL || "",
+    monthly: process.env.PADDLE_GROWTH_PRICE_ID || "pri_growth_monthly",
+    annual: process.env.PADDLE_GROWTH_YEARLY_PRICE_ID || "pri_growth_yearly",
   },
   enterprise: {
-    monthly: process.env.PADDLE_ENTERPRISE_PRICE_ID || "",
-    annual: process.env.PADDLE_ENTERPRISE_PRICE_ID_ANNUAL || "",
+    monthly: process.env.PADDLE_ENTERPRISE_PRICE_ID || "pri_enterprise_monthly",
+    annual: process.env.PADDLE_ENTERPRISE_YEARLY_PRICE_ID || "pri_enterprise_yearly",
   },
 };
 

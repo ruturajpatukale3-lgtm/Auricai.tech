@@ -97,7 +97,7 @@ export default function ProblemAgitation() {
               </div>
 
               <p className="text-xs text-[#52525B]">
-                Average: <span className="text-[#A1A1AA]">24 hours, $99/mo, stunning live page</span>
+                Average: <span className="text-[#A1A1AA]">24 hours, $49/mo, stunning live page</span>
               </p>
             </SpotlightCard>
           </motion.div>

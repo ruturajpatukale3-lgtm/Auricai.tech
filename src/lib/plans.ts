@@ -79,7 +79,8 @@ export const PADDLE_PRICE_IDS: Record<string, PlanType> = {
   [process.env.PADDLE_STARTER_PRICE_ID || "pri_starter_monthly"]: "starter",
   [process.env.PADDLE_GROWTH_PRICE_ID || "pri_growth_monthly"]: "growth",
   [process.env.PADDLE_ENTERPRISE_PRICE_ID || "pri_enterprise_monthly"]: "enterprise",
-  // Yearly — add when ready
+  
+  // Yearly
   [process.env.PADDLE_STARTER_YEARLY_PRICE_ID || "pri_starter_yearly"]: "starter",
   [process.env.PADDLE_GROWTH_YEARLY_PRICE_ID || "pri_growth_yearly"]: "growth",
   [process.env.PADDLE_ENTERPRISE_YEARLY_PRICE_ID || "pri_enterprise_yearly"]: "enterprise",
@@ -93,11 +94,11 @@ export function isYearlyPriceId(priceId: string): boolean {
     process.env.PADDLE_STARTER_YEARLY_PRICE_ID,
     process.env.PADDLE_GROWTH_YEARLY_PRICE_ID,
     process.env.PADDLE_ENTERPRISE_YEARLY_PRICE_ID,
-    // Add fallback IDs for testing
+    // Fallbacks
     "pri_starter_yearly",
     "pri_growth_yearly",
     "pri_enterprise_yearly"
-  ].filter(Boolean); // Filter out undefined if env vars are missing
+  ].filter(Boolean);
   return yearlyIds.includes(priceId);
 }
 

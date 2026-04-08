@@ -24,9 +24,10 @@ const plans = {
   starter: {
     name: "Starter",
     upgradeLabel: "Best for getting started",
-    monthlyPrice: 99,
-    annualPrice: 79,
-    description: "Launch your social proof engine with all core features. Just $4 per interview.",
+    monthlyPrice: 49,
+    annualPrice: 470,
+    monthlyEquivalent: 39,
+    description: "Launch your social proof engine with all core features. Just $2 per interview.",
     limits: ["25 AI interviews/month", "1 team seat"],
     brandingNote: "Includes Auricai branding — upgrade to Enterprise to remove watermark",
     cta: "Start 7-Day Trial",
@@ -34,8 +35,9 @@ const plans = {
   growth: {
     name: "Growth",
     upgradeLabel: "Scale volume",
-    monthlyPrice: 199,
-    annualPrice: 159,
+    monthlyPrice: 159,
+    annualPrice: 1526,
+    monthlyEquivalent: 127,
     description: "Double your interview volume and add a team member to collaborate on success stories.",
     limits: ["60 AI interviews/month", "2 team seats"],
     brandingNote: "Includes Auricai branding — upgrade to Enterprise to remove watermark",
@@ -44,8 +46,9 @@ const plans = {
   enterprise: {
     name: "Enterprise",
     upgradeLabel: "Full branding control & scale",
-    monthlyPrice: 499,
-    annualPrice: 399,
+    monthlyPrice: 459,
+    annualPrice: 4406,
+    monthlyEquivalent: 367,
     description: "For agencies and teams requiring complete branding control and maximum volume.",
     limits: ["Unlimited AI interviews", "5+ team seats"],
     brandingPerks: [
@@ -218,16 +221,28 @@ export default function Pricing() {
               </span>
               <h3 className="text-xl font-bold text-white mb-2">{plans.starter.name}</h3>
 
-              <div className="flex items-baseline gap-1 mb-2 h-[48px]">
-                <motion.span
-                  key={annual ? "s-annual" : "s-monthly"}
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-4xl font-bold text-white font-mono tracking-tight"
-                >
-                  ${annual ? plans.starter.annualPrice : plans.starter.monthlyPrice}
-                </motion.span>
-                <span className="text-sm text-[#52525B]">/mo</span>
+              <div className="flex flex-col mb-4 h-[72px] justify-center">
+                <div className="flex items-baseline gap-1.5">
+                  {annual && (
+                    <span className="text-sm text-zinc-500 line-through decoration-zinc-500/50">
+                      ${plans.starter.monthlyPrice}
+                    </span>
+                  )}
+                  <motion.span
+                    key={annual ? "s-annual" : "s-monthly"}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-4xl font-bold text-white font-mono tracking-tight"
+                  >
+                    ${annual ? plans.starter.monthlyEquivalent : plans.starter.monthlyPrice}
+                  </motion.span>
+                  <span className="text-sm text-[#52525B]">/mo</span>
+                </div>
+                {annual && (
+                  <p className="text-[10px] text-zinc-500 mt-1 uppercase tracking-wider font-bold">
+                    Billed annually
+                  </p>
+                )}
               </div>
 
               <p className="text-sm text-[#A1A1AA] mb-5 min-h-[60px] leading-relaxed">{plans.starter.description}</p>
@@ -283,16 +298,28 @@ export default function Pricing() {
               </span>
               <h3 className="text-xl font-bold text-white mb-2">{plans.growth.name}</h3>
 
-              <div className="flex items-baseline gap-1 mb-2 h-[48px]">
-                <motion.span
-                  key={annual ? "g-annual" : "g-monthly"}
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-4xl font-bold text-white font-mono tracking-tight"
-                >
-                  ${annual ? plans.growth.annualPrice : plans.growth.monthlyPrice}
-                </motion.span>
-                <span className="text-sm text-[#52525B]">/mo</span>
+              <div className="flex flex-col mb-4 h-[72px] justify-center">
+                <div className="flex items-baseline gap-1.5">
+                  {annual && (
+                    <span className="text-sm text-blue-400/40 line-through decoration-blue-500/30">
+                      ${plans.growth.monthlyPrice}
+                    </span>
+                  )}
+                  <motion.span
+                    key={annual ? "g-annual" : "g-monthly"}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-4xl font-bold text-white font-mono tracking-tight"
+                  >
+                    ${annual ? plans.growth.monthlyEquivalent : plans.growth.monthlyPrice}
+                  </motion.span>
+                  <span className="text-sm text-[#52525B]">/mo</span>
+                </div>
+                {annual && (
+                  <p className="text-[10px] text-blue-500/60 mt-1 uppercase tracking-wider font-bold">
+                    Billed annually
+                  </p>
+                )}
               </div>
 
               <p className="text-sm text-[#A1A1AA] mb-5 min-h-[60px] leading-relaxed">{plans.growth.description}</p>
@@ -354,16 +381,28 @@ export default function Pricing() {
                 <h3 className="text-xl font-bold text-white mb-2">{plans.enterprise.name}</h3>
                 <p className="text-xl text-green-400 font-bold mb-4 tracking-tight min-h-[32px]">Build 1 case study → pays for itself</p>
 
-                <div className="flex items-baseline gap-1 mb-2 h-[48px]">
-                  <motion.span
-                    key={annual ? "e-annual" : "e-monthly"}
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-5xl font-bold text-white font-mono tracking-tight"
-                  >
-                    ${annual ? plans.enterprise.annualPrice : plans.enterprise.monthlyPrice}
-                  </motion.span>
-                  <span className="text-sm text-[#52525B]">/mo</span>
+                <div className="flex flex-col mb-4 h-[72px] justify-center">
+                  <div className="flex items-baseline gap-1.5">
+                    {annual && (
+                      <span className="text-lg text-white/30 line-through decoration-white/20">
+                        ${plans.enterprise.monthlyPrice}
+                      </span>
+                    )}
+                    <motion.span
+                      key={annual ? "e-annual" : "e-monthly"}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-5xl font-bold text-white font-mono tracking-tight"
+                    >
+                      ${annual ? plans.enterprise.monthlyEquivalent : plans.enterprise.monthlyPrice}
+                    </motion.span>
+                    <span className="text-sm text-[#52525B]">/mo</span>
+                  </div>
+                  {annual && (
+                    <p className="text-[10px] text-white/40 mt-1 uppercase tracking-wider font-bold">
+                      Billed annually
+                    </p>
+                  )}
                 </div>
 
                 <p className="text-sm text-[#A1A1AA] mb-5 min-h-[60px] leading-relaxed">{plans.enterprise.description}</p>

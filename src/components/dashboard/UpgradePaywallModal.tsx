@@ -37,10 +37,10 @@ export function UpgradePaywallModal({ isOpen, onClose, metric, limit, planType }
     : "Upgrade Your Plan";
 
   const description = isFree
-    ? "You've used your 2 free interviews. Start your 7-day trial to unlock 25 interviews — no credit card required."
+    ? "You've used your 2 free interviews. Unlock 25 interviews/mo and all premium features with a 7-day free trial of our Starter plan ($49/mo)."
     : isTrial
-      ? `You're close to your limit${limit ? ` of ${limit}` : ""} for ${metric || "this feature"}. Upgrade to continue without interruption.`
-      : `You've reached your monthly limit${limit ? ` of ${limit}` : ""} for ${metric || "this feature"}. Upgrade to unlock more volume.`;
+      ? `You're close to your limit${limit ? ` of ${limit}` : ""} for ${metric || "this feature"}. Upgrade to Growth ($159/mo) to continue without interruption.`
+      : `You've reached your monthly limit${limit ? ` of ${limit}` : ""} for ${metric || "this feature"}. Upgrade to Growth ($159/mo) to unlock more volume.`;
 
   const ctaLabel = isFree
     ? "Start 7-Day Trial"
