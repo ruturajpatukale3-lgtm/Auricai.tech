@@ -141,9 +141,9 @@ export function InterviewList({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05, duration: 0.3, ease: "easeOut" }}
-            className="flex flex-col bg-white border border-zinc-200/60 rounded-[14px] p-[24px] shadow-[0_4px_12px_rgba(0,0,0,0.03)]"
+            className="flex flex-col bg-white border border-black/5 rounded-[14px] p-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] transition-all duration-300"
           >
-            {/* Header / Meta */}
+            {/* Header: Name + Primary Action */}
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
               <div>
                 <h3 className="text-[18px] font-bold text-zinc-900 tracking-tight leading-none mb-1">
@@ -151,37 +151,28 @@ export function InterviewList({
                 </h3>
               </div>
               
-              {/* Actions Area */}
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => handleCopyLink(interview)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-zinc-50 border border-zinc-200 text-zinc-600 font-semibold text-[13px] hover:bg-zinc-100 hover:text-black transition-colors"
-                >
-                  <Copy className="w-3.5 h-3.5" /> Copy Link
-                </button>
-                <button
-                  disabled={loadingAction === `remind-${interview.id}`}
-                  onClick={() => handleRemind(interview.id, interview.client_email)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-zinc-50 border border-zinc-200 text-zinc-600 font-semibold text-[13px] hover:bg-zinc-100 hover:text-black transition-colors"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${loadingAction === `remind-${interview.id}` ? 'animate-spin' : ''}`} /> Resend
-                </button>
-
-                {stepCompletedDone && (
-                  <button
-                    onClick={() => setSelectedId(interview.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-zinc-50 border border-zinc-200 text-zinc-600 font-semibold text-[13px] hover:bg-zinc-100 hover:text-black transition-colors"
-                  >
-                    <Eye className="w-3.5 h-3.5" /> View Responses
-                  </button>
-                )}
-
-                {stepGeneratedDone && (
+              {/* Primary Action (Strictly 1 button) */}
+              <div className="flex items-center">
+                {stepGeneratedDone ? (
                   <button
                     onClick={() => router.push(`/dashboard/case-studies`)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-indigo-50 border border-indigo-100 text-indigo-600 font-semibold text-[13px] hover:bg-indigo-100 transition-colors shadow-sm"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-[8px] bg-black text-white font-semibold text-[13px] hover:bg-zinc-800 transition-colors shadow-sm"
                   >
-                    <ExternalLink className="w-3.5 h-3.5" /> View Case Study
+                    View Case Study <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                ) : stepCompletedDone ? (
+                  <button
+                    onClick={() => setSelectedId(interview.id)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-[8px] bg-black text-white font-semibold text-[13px] hover:bg-zinc-800 transition-colors shadow-sm"
+                  >
+                    View Responses
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleCopyLink(interview)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-[8px] bg-black text-white font-semibold text-[13px] hover:bg-zinc-800 transition-colors shadow-sm"
+                  >
+                    <Copy className="w-3.5 h-3.5" /> Copy Link
                   </button>
                 )}
               </div>
@@ -190,52 +181,48 @@ export function InterviewList({
             {/* Horizontal Timeline */}
             <div className="mt-8 md:mt-10 relative px-2">
               {/* Background joining line */}
-              <div className="absolute top-[8px] left-[20px] right-[20px] h-[2px] bg-zinc-100 -z-10" />
+              <div className="absolute top-[8px] left-[20px] right-[20px] h-[1.5px] bg-zinc-100 -z-10" />
 
               <div className="grid grid-cols-4 w-full text-center">
                 {timeline.map((step, idx) => {
                   return (
-                    <div key={idx} className="flex flex-col items-center relative">
+                    <div key={idx} className="flex flex-col items-center relative gap-2">
                       
-                      {/* Active line fill (Connects steps visually if completed) */}
+                      {/* Active line fill */}
                       {idx !== 0 && step.state === "completed" && (
                          <motion.div 
                            initial={{ scaleX: 0 }}
                            animate={{ scaleX: 1 }}
                            transition={{ duration: 0.5 }}
                            style={{ originX: 0 }}
-                           className="absolute top-[8px] right-[50%] w-full h-[2px] bg-green-500 -z-10" 
+                           className="absolute top-[8px] right-[50%] w-full h-[1.5px] bg-green-500 -z-10" 
                          />
                       )}
 
                       {/* Icon Container */}
                       <div className="h-4 w-full flex justify-center items-center bg-transparent z-10">
                         {step.state === "completed" && (
-                          <motion.div 
-                            initial={{ scale: 0 }} 
-                            animate={{ scale: 1 }} 
-                            className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center shadow-[0_0_8px_rgba(34,197,94,0.3)]"
-                          >
-                            <Check className="w-2.5 h-2.5 text-white" strokeWidth={4} />
-                          </motion.div>
+                          <div className="w-[18px] h-[18px] rounded-full bg-green-500 flex items-center justify-center shadow-[0_0_8px_rgba(34,197,94,0.3)]">
+                            <Check className="w-3 h-3 text-white" strokeWidth={4} />
+                          </div>
                         )}
 
                         {step.state === "active" && (
-                          <div className="relative flex h-3 w-3 items-center justify-center">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                          <div className="relative flex h-[14px] w-[14px] items-center justify-center">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-60"></span>
+                            <span className="relative inline-flex rounded-full h-[10px] w-[10px] bg-indigo-500"></span>
                           </div>
                         )}
 
                         {step.state === "future" && (
-                          <div className="w-3 h-3 rounded-full border-2 border-zinc-200 bg-white" />
+                          <div className="w-[14px] h-[14px] rounded-full border-[2px] border-zinc-200 bg-white" />
                         )}
                       </div>
 
                       {/* Labels */}
-                      <div className="mt-3 flex flex-col items-center">
-                        <span className={`text-[12px] font-bold uppercase tracking-wider ${
-                          step.state === "completed" ? "text-zinc-800" :
+                      <div className="flex flex-col items-center">
+                        <span className={`text-[12px] font-bold uppercase tracking-widest ${
+                          step.state === "completed" ? "text-zinc-900" :
                           step.state === "active" ? "text-indigo-600" :
                           "text-zinc-400"
                         }`}>
@@ -252,6 +239,28 @@ export function InterviewList({
                     </div>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* Secondary Actions */}
+            <div className="mt-8 pt-4 border-t border-zinc-100 flex flex-col gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                Actions
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleCopyLink(interview)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-zinc-50 text-zinc-500 font-medium text-[12px] hover:bg-zinc-100 hover:text-black transition-colors"
+                >
+                  <Copy className="w-3 h-3" /> Copy Link
+                </button>
+                <button
+                  disabled={loadingAction === `remind-${interview.id}`}
+                  onClick={() => handleRemind(interview.id, interview.client_email)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-zinc-50 text-zinc-500 font-medium text-[12px] hover:bg-zinc-100 hover:text-black transition-colors"
+                >
+                  <RefreshCw className={`w-3 h-3 ${loadingAction === `remind-${interview.id}` ? 'animate-spin' : ''}`} /> Resend
+                </button>
               </div>
             </div>
 
