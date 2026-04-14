@@ -111,7 +111,7 @@ export const CaseStudyService = {
       caseStudy = await CaseStudyRepository.update(orgId, existing.id, {
         headline: aiOutput.headline,
         summary: aiOutput.summary,
-        metric_type: aiOutput.metrics,
+        metric_type: Array.isArray(aiOutput.metrics) ? aiOutput.metrics.join(", ") : aiOutput.metrics,
         before_value: aiOutput.before,
         after_value: aiOutput.after,
         timeframe: aiOutput.timeframe,
@@ -125,7 +125,7 @@ export const CaseStudyService = {
         status: "draft",
         headline: aiOutput.headline,
         summary: aiOutput.summary,
-        metric_type: aiOutput.metrics,
+        metric_type: Array.isArray(aiOutput.metrics) ? aiOutput.metrics.join(", ") : aiOutput.metrics,
         before_value: aiOutput.before,
         after_value: aiOutput.after,
         timeframe: aiOutput.timeframe,
