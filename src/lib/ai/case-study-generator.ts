@@ -147,14 +147,15 @@ OUTPUT FORMAT:
 Return JSON ONLY with this exact schema:
 {
   "headline": "A specific, high-conversion hook with transformation or outcome",
-  "metrics": ["2-3 key metric strings (e.g., '+45% Efficiency', '$12k Saved')"],
+  "primary_metric": "The single most important metric string (e.g. '+158% Engagement', '$12k MRR')",
   "before": "The SPECIFIC problem, friction, or bottleneck they faced.",
   "after": "The SPECIFIC result, shift, or new operational state achieved.",
+  "metrics": ["2-3 secondary key metric strings (e.g., '+45% Efficiency', '20 hrs Saved')"],
   "story": "3-5 lines of short, punchy narrative about the journey and outcome.",
+  "impact": "1-2 lines detailing the overarching business impact or ROI.",
   "quote": "Direct, natural, human-sounding quote from the client.",
   "client_name": "The name of the individual interviewed",
-  "company": "The company name",
-  "timeframe": "Time taken or 'Ongoing'"
+  "company": "The company name"
 }`;
 
     try {
@@ -219,17 +220,19 @@ Return JSON ONLY with this exact schema:
 
       // ─── FINAL ASSEMBLY (with variability-aware defaults) ───
       const companyHint = context.targetCustomer || "the team";
+      const initialMetrics = Array.isArray(parsed.metrics) ? parsed.metrics : [];
+      
       const finalOutput: AICaseStudyOutput = {
         headline: parsed.headline || pickRandom(FALLBACK_HEADLINES).replace("[COMPANY]", companyHint),
-        metrics: Array.isArray(parsed.metrics) ? parsed.metrics : [parsed.metrics || pickRandom(DIRECTIONAL_POOLS.improvement)],
+        primary_metric: parsed.primary_metric || "+XX% Improvement",
         before: parsed.before || `${companyHint} faced operational friction that slowed execution and reduced visibility into what was actually driving results.`,
         after: parsed.after || `A more structured, repeatable approach — with clearer priorities and ${pickRandom(DIRECTIONAL_POOLS.efficiency)}.`,
-        summary: parsed.summary || parsed.story || pickRandom(FALLBACK_SUMMARIES),
-        story: parsed.story || parsed.summary || pickRandom(FALLBACK_SUMMARIES),
-        quote: parsed.quote || parsed.testimonial || pickRandom(FALLBACK_TESTIMONIALS),
+        metrics: initialMetrics.length > 0 ? initialMetrics : [pickRandom(DIRECTIONAL_POOLS.improvement)],
+        story: parsed.story || pickRandom(FALLBACK_SUMMARIES),
+        impact: parsed.impact || "Moved from inconsistent performance to structured predictability.",
+        quote: parsed.quote || pickRandom(FALLBACK_TESTIMONIALS),
         client_name: parsed.client_name || "Client",
         company: parsed.company || companyHint,
-        timeframe: parsed.timeframe || "Ongoing",
       };
 
       // Record Usage immediately for the denominator
@@ -244,14 +247,15 @@ Return JSON ONLY with this exact schema:
       const lastAnswer = answers[answers.length - 1]?.answer || "";
       return {
         headline: pickRandom(FALLBACK_HEADLINES).replace("[COMPANY]", companyHint),
-        metrics: [pickRandom(DIRECTIONAL_POOLS.improvement)],
+        primary_metric: pickRandom(DIRECTIONAL_POOLS.improvement),
         before: firstAnswer.length > 20 ? firstAnswer : `${companyHint} needed a more reliable way to drive outcomes without the constant manual overhead.`,
         after: lastAnswer.length > 20 ? lastAnswer : `A ${pickRandom(DIRECTIONAL_POOLS.growth)} — built on ${pickRandom(DIRECTIONAL_POOLS.efficiency)}.`,
+        metrics: [],
         story: pickRandom(FALLBACK_SUMMARIES),
+        impact: "Predictable, repeatable growth.",
         quote: pickRandom(FALLBACK_TESTIMONIALS),
         client_name: "Client",
         company: companyHint,
-        timeframe: "Ongoing",
       };
     }
   },

@@ -204,15 +204,18 @@ export interface AIQuestionResponse {
 
 export interface AICaseStudyOutput {
   headline: string;
-  summary?: string;
-  story?: string;
+  primary_metric: string;
   before: string;
   after: string;
-  metrics?: string | string[];
-  quote?: string;
-  client_name?: string;
-  company?: string;
+  metrics: string[];
+  story: string;
+  impact: string;
+  quote: string;
+  client_name: string;
+  company: string;
+  // Legacy optional properties for backward compatibility
   timeframe?: string;
+  summary?: string;
   confidenceScore?: number;
 }
 

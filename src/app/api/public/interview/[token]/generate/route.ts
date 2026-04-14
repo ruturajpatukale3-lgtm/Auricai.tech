@@ -59,16 +59,19 @@ export async function POST(
     } as any, organization?.plan_type || "starter");
 
     // ─── Persist to DB ────────────────────────────────
-    // Just a placeholder for creating the final record if it's the intended behavior
     const finalCaseStudy = await CaseStudyRepository.create(
       interview.org_id, 
       {
         interview_id: interview.id,
-        company_name: interview.client_name || "Client",
+        company_name: caseStudyData.company || interview.client_name || "Client",
         headline: caseStudyData.headline,
-        metric_type: "custom",
+        metric_type: caseStudyData.primary_metric || "custom", // Used as primary metric
         before_value: caseStudyData.before,
         after_value: caseStudyData.after,
+        metrics: caseStudyData.metrics,
+        summary: caseStudyData.impact, // Storing impact in summary
+        story: caseStudyData.story,
+        quote: caseStudyData.quote,
         delta_percent: undefined,
         timeframe: caseStudyData.timeframe || undefined,
       }

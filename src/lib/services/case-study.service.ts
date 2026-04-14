@@ -110,8 +110,11 @@ export const CaseStudyService = {
     if (existing) {
       caseStudy = await CaseStudyRepository.update(orgId, existing.id, {
         headline: aiOutput.headline,
-        summary: aiOutput.summary,
-        metric_type: Array.isArray(aiOutput.metrics) ? aiOutput.metrics.join(", ") : aiOutput.metrics,
+        summary: aiOutput.impact,
+        story: aiOutput.story,
+        quote: aiOutput.quote,
+        metrics: aiOutput.metrics,
+        metric_type: aiOutput.primary_metric,
         before_value: aiOutput.before,
         after_value: aiOutput.after,
         timeframe: aiOutput.timeframe,
@@ -120,12 +123,15 @@ export const CaseStudyService = {
     } else {
       const slug = this.generateSlug(interview.client_name || interview.client_email);
       caseStudy = await CaseStudyRepository.create(orgId, {
-        company_name: interview.client_name || interview.client_email.split("@")[0],
+        company_name: aiOutput.company || interview.client_name || interview.client_email.split("@")[0],
         interview_id: interviewId,
         status: "draft",
         headline: aiOutput.headline,
-        summary: aiOutput.summary,
-        metric_type: Array.isArray(aiOutput.metrics) ? aiOutput.metrics.join(", ") : aiOutput.metrics,
+        summary: aiOutput.impact,
+        story: aiOutput.story,
+        quote: aiOutput.quote,
+        metrics: aiOutput.metrics,
+        metric_type: aiOutput.primary_metric,
         before_value: aiOutput.before,
         after_value: aiOutput.after,
         timeframe: aiOutput.timeframe,

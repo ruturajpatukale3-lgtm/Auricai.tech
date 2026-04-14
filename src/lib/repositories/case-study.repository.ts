@@ -91,6 +91,9 @@ export const CaseStudyRepository = {
       timeframe?: string;
       slug?: string;
       summary?: string;
+      story?: string;
+      quote?: string;
+      metrics?: string[] | null;
       status?: CaseStudyStatus;
     }
   ): Promise<CaseStudy> {
@@ -123,6 +126,9 @@ export const CaseStudyRepository = {
         | "timeframe"
         | "status"
         | "slug"
+        | "story"
+        | "quote"
+        | "metrics"
       >
     >
   ): Promise<CaseStudy> {
