@@ -18,6 +18,8 @@ export type InterviewStatus =
 
 export type CaseStudyStatus = "draft" | "pending" | "live";
 
+export type CaseStudyTemplate = "minimal" | "dark" | "agency" | "enterprise";
+
 export type TeamRole = "owner" | "admin" | "editor";
 
 export type MemberStatus = "invited" | "active" | "inactive";
