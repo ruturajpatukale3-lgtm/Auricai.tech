@@ -61,7 +61,15 @@ export default clerkMiddleware(async (auth, req) => {
     }
   }
 
-  // C. Custom Domain Routing (Rewrite Logic)
+  // C. Main Domain Case Study Links (/c/[slug] -> /public-site/[hostname]/[slug])
+  if (url.pathname.startsWith('/c/')) {
+    const slug = url.pathname.split('/')[2];
+    if (slug) {
+      return NextResponse.rewrite(new URL(`/public-site/${hostname}/${slug}`, req.url));
+    }
+  }
+
+  // D. Custom Domain Routing (Rewrite Logic)
   const isMainDomain = hostname.includes('localhost') || hostname.includes('auricai.tech') || hostname.includes('caseflow.so')
   
   if (!isMainDomain && !url.pathname.startsWith('/api')) {

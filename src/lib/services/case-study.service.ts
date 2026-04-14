@@ -99,7 +99,7 @@ export const CaseStudyService = {
     const { CaseStudyGenerator } = await import("@/lib/ai/case-study-generator");
     const { OrgProfileRepository } = await import("@/lib/repositories/org-profile.repository");
     const orgProfile = await OrgProfileRepository.findByOrgId(orgId);
-    
+
     // Generate AI content
     const aiOutput = await CaseStudyGenerator.generate(answers, orgProfile!, org.plan_type);
 
@@ -108,30 +108,30 @@ export const CaseStudyService = {
     let caseStudy;
 
     if (existing) {
-       caseStudy = await CaseStudyRepository.update(orgId, existing.id, {
-         headline: aiOutput.headline,
-         summary: aiOutput.summary,
-         metric_type: aiOutput.metrics,
-         before_value: aiOutput.before,
-         after_value: aiOutput.after,
-         timeframe: aiOutput.timeframe,
-         delta_percent: this.computeDelta(aiOutput.before, aiOutput.after) ?? undefined,
-       });
+      caseStudy = await CaseStudyRepository.update(orgId, existing.id, {
+        headline: aiOutput.headline,
+        summary: aiOutput.summary,
+        metric_type: aiOutput.metrics,
+        before_value: aiOutput.before,
+        after_value: aiOutput.after,
+        timeframe: aiOutput.timeframe,
+        delta_percent: this.computeDelta(aiOutput.before, aiOutput.after) ?? undefined,
+      });
     } else {
-       const slug = this.generateSlug(interview.client_name || interview.client_email);
-       caseStudy = await CaseStudyRepository.create(orgId, {
-         company_name: interview.client_name || interview.client_email.split("@")[0],
-         interview_id: interviewId,
-         status: "draft",
-         headline: aiOutput.headline,
-         summary: aiOutput.summary,
-         metric_type: aiOutput.metrics,
-         before_value: aiOutput.before,
-         after_value: aiOutput.after,
-         timeframe: aiOutput.timeframe,
-         delta_percent: this.computeDelta(aiOutput.before, aiOutput.after) ?? undefined,
-         slug,
-       });
+      const slug = this.generateSlug(interview.client_name || interview.client_email);
+      caseStudy = await CaseStudyRepository.create(orgId, {
+        company_name: interview.client_name || interview.client_email.split("@")[0],
+        interview_id: interviewId,
+        status: "draft",
+        headline: aiOutput.headline,
+        summary: aiOutput.summary,
+        metric_type: aiOutput.metrics,
+        before_value: aiOutput.before,
+        after_value: aiOutput.after,
+        timeframe: aiOutput.timeframe,
+        delta_percent: this.computeDelta(aiOutput.before, aiOutput.after) ?? undefined,
+        slug,
+      });
     }
 
     return { success: true, data: caseStudy };

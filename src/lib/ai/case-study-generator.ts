@@ -123,40 +123,16 @@ ${formattedAnswers}
 
 ${variability}
 
-LAYER 8 WRITING RULES:
-1. Human. Sharp. Believable. Outcome-first. No fluff.
-2. CONFIDENCE RULE: ${toneRule}
-3. If an answer says "Not provided", omit it from the narrative elegantly.
-4. DO NOT invent metrics. Only use what is provided in the RAW CLIENT DATA.
-5. DIRECTIONAL LANGUAGE (when metrics are missing): Use STRONG, SPECIFIC directional outcomes.
-   BANNED PHRASES (NEVER use these — they are overused and generic):
-   - "significant improvement"
-   - "notable increase"
-   - "clear gain"
-   - "improved performance"
-   - "better results"
-   - "positive impact"
-   - "great results"
-   - "enhanced efficiency"
-   - "saw improvements"
-   - "experienced growth"
-   - "achieved results"
-   - "made progress"
-   Instead, use industry-specific and outcome-anchored phrasing. Examples:
-   - "reduced churn-to-close cycle from weeks to days"
-   - "unlocked a repeatable pipeline pattern"
-   - "moved from ad-hoc outreach to systematic engagement"
-6. UNIQUENESS ENFORCEMENT: Vary sentence length, verb choice, and structure. Never start two consecutive sentences the same way. Alternate between outcomes, context, and quotes.
-7. HEADLINE RULES:
-   - MUST include a specific transformation or outcome, not just a company name.
-   - MUST feel like a story worth clicking on, not a label.
-   - BAD: "How Company X Improved Results"
-   - GOOD: "How Company X Turned Stagnant Engagement Into a Consistent Growth Channel in 3 Weeks"
-   - GOOD: "From 12% to 34%: How Company X Rebuilt Their Conversion Pipeline"
-8. TRANSFORMATION DEPTH: The "before" and "after" fields must be SPECIFIC and contrasting.
-   - "before" = the exact friction point, bottleneck, or pain.
-   - "after" = the exact shift, outcome, or new state.
-   - NEVER allow vague before/after like "things were bad" → "things got better".
+ 6. UNIQUENESS ENFORCEMENT: Vary sentence length, verb choice, and structure. Never start two consecutive sentences the same way. Alternate between outcomes, context, and quotes.
+ 7. STRICT WRITING RULES:
+    - NO VAGUE PHRASES. Never use "meaningful improvement", "better performance", or "significant growth".
+    - IF NO NUMERIC DATA: Do NOT hallucinate. Use: "Improved results noticeably within [timeframe]" or similar specific directional outcome.
+    - HEADLINE: Must include a specific transformation or outcome.
+    - STORY: 3-5 lines of high-impact narrative.
+    - QUOTE: Direct, natural, human-sounding quote from the client.
+ 8. TRANSFORMATION DEPTH: The "before" and "after" fields must be SPECIFIC and contrasting.
+    - "before" = the exact friction point, bottleneck, or pain.
+    - "after" = the exact shift, outcome, or new state.
 9. QUALITATIVE EXCELLENCE: If no numbers exist, the narrative must still feel premium.
    - BAD: "The business saw better results."
    - ELITE: "The team moved from inconsistent, reactive workflows to a structured and predictable growth pattern — with full visibility into what was actually driving outcomes."
@@ -171,12 +147,14 @@ OUTPUT FORMAT:
 Return JSON ONLY with this exact schema:
 {
   "headline": "A specific, high-conversion hook with transformation or outcome",
-  "summary": "2-3 sentences max. The core transformation. Vary sentence structure.",
+  "metrics": ["2-3 key metric strings (e.g., '+45% Efficiency', '$12k Saved')"],
   "before": "The SPECIFIC problem, friction, or bottleneck they faced.",
   "after": "The SPECIFIC result, shift, or new operational state achieved.",
-  "metrics": "Exact numbers if available. If not, a strong directional outcome (NOT generic).",
-  "timeframe": "Time taken or 'Ongoing'",
-  "testimonial": "Direct quote or close paraphrase. Must sound human and unscripted."
+  "story": "3-5 lines of short, punchy narrative about the journey and outcome.",
+  "quote": "Direct, natural, human-sounding quote from the client.",
+  "client_name": "The name of the individual interviewed",
+  "company": "The company name",
+  "timeframe": "Time taken or 'Ongoing'"
 }`;
 
     try {
@@ -241,14 +219,16 @@ Return JSON ONLY with this exact schema:
 
       // ─── FINAL ASSEMBLY (with variability-aware defaults) ───
       const companyHint = context.targetCustomer || "the team";
-      const finalOutput = {
+      const finalOutput: AICaseStudyOutput = {
         headline: parsed.headline || pickRandom(FALLBACK_HEADLINES).replace("[COMPANY]", companyHint),
-        summary: parsed.summary || pickRandom(FALLBACK_SUMMARIES),
+        metrics: Array.isArray(parsed.metrics) ? parsed.metrics : [parsed.metrics || pickRandom(DIRECTIONAL_POOLS.improvement)],
         before: parsed.before || `${companyHint} faced operational friction that slowed execution and reduced visibility into what was actually driving results.`,
         after: parsed.after || `A more structured, repeatable approach — with clearer priorities and ${pickRandom(DIRECTIONAL_POOLS.efficiency)}.`,
-        metrics: (parsed.metrics && parsed.metrics !== "Not provided") ? parsed.metrics : pickRandom(DIRECTIONAL_POOLS.improvement),
+        story: parsed.story || parsed.summary || pickRandom(FALLBACK_SUMMARIES),
+        quote: parsed.quote || parsed.testimonial || pickRandom(FALLBACK_TESTIMONIALS),
+        client_name: parsed.client_name || "Client",
+        company: parsed.company || companyHint,
         timeframe: parsed.timeframe || "Ongoing",
-        testimonial: parsed.testimonial || pickRandom(FALLBACK_TESTIMONIALS),
       };
 
       // Record Usage immediately for the denominator
@@ -263,12 +243,14 @@ Return JSON ONLY with this exact schema:
       const lastAnswer = answers[answers.length - 1]?.answer || "";
       return {
         headline: pickRandom(FALLBACK_HEADLINES).replace("[COMPANY]", companyHint),
-        summary: pickRandom(FALLBACK_SUMMARIES),
+        metrics: [pickRandom(DIRECTIONAL_POOLS.improvement)],
         before: firstAnswer.length > 20 ? firstAnswer : `${companyHint} needed a more reliable way to drive outcomes without the constant manual overhead.`,
         after: lastAnswer.length > 20 ? lastAnswer : `A ${pickRandom(DIRECTIONAL_POOLS.growth)} — built on ${pickRandom(DIRECTIONAL_POOLS.efficiency)}.`,
-        metrics: pickRandom(DIRECTIONAL_POOLS.improvement),
+        story: pickRandom(FALLBACK_SUMMARIES),
+        quote: pickRandom(FALLBACK_TESTIMONIALS),
+        client_name: "Client",
+        company: companyHint,
         timeframe: "Ongoing",
-        testimonial: pickRandom(FALLBACK_TESTIMONIALS),
       };
     }
   },

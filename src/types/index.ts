@@ -131,7 +131,7 @@ export const ALL_INTENTS: InterviewIntent[] = [
   "testimonial",
 ];
 
-export type InterviewStage = 
+export type InterviewStage =
   | "business_context"
   | "problem"
   | "result"

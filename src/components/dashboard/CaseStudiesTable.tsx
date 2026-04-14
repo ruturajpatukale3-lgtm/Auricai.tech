@@ -66,7 +66,7 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
           <p className="text-zinc-500 max-w-sm mb-8 leading-relaxed text-sm">
             Create your first one by sending an interview to your client. We&apos;ll handle the generation.
           </p>
-          <button 
+          <button
             onClick={() => setIsSendInterviewOpen(true)}
             className="group inline-flex items-center gap-3 bg-white text-black px-8 py-3.5 rounded-xl text-base font-bold hover:bg-zinc-200 transition-all shadow-[0_0_30px_rgba(255,255,255,0.15)] hover:shadow-[0_0_40px_rgba(255,255,255,0.25)]"
           >
@@ -89,7 +89,7 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
       <div className="flex flex-col gap-4 w-full mt-4">
         {data.map((study, i) => {
           const headline = getValidHeadline(study.headline);
-          
+
           return (
             <motion.div
               key={study.id}
@@ -100,26 +100,25 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
             >
               {/* Main Row Content */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                
+
                 {/* Left Box: Company & Headline */}
                 <div className="flex-1 min-w-[200px]">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold text-white tracking-tight">{study.company_name}</span>
-                    <span 
+                    <span
                       title={
-                        study.status === 'live' ? 'Public case study' : 
-                        study.status === 'pending' ? 'Ready to publish' : 
-                        'Draft Ready for Review'
+                        study.status === 'live' ? 'Public case study' :
+                          study.status === 'pending' ? 'Ready to publish' :
+                            'Draft Ready for Review'
                       }
-                      className={`text-[10px] cursor-help uppercase tracking-wider px-2.5 py-1 rounded-full border font-bold transition-all hover:scale-105 ${
-                        study.status === 'live' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
-                        study.status === 'pending' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                        'bg-orange-500/10 text-orange-400 border-orange-500/20'
-                      }`}
+                      className={`text-[10px] cursor-help uppercase tracking-wider px-2.5 py-1 rounded-full border font-bold transition-all hover:scale-105 ${study.status === 'live' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                          study.status === 'pending' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                            'bg-orange-500/10 text-orange-400 border-orange-500/20'
+                        }`}
                     >
-                      {study.status === 'live' ? 'Live' : 
-                       study.status === 'pending' ? 'Approved' : 
-                       'Draft'}
+                      {study.status === 'live' ? 'Live' :
+                        study.status === 'pending' ? 'Approved' :
+                          'Draft'}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -157,7 +156,7 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
                         onClick={() => handleApprove(study.id)}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400`}
                       >
-                        <CheckCircle className="w-3.5 h-3.5" /> 
+                        <CheckCircle className="w-3.5 h-3.5" />
                         Approve
                       </button>
                     )}
@@ -170,21 +169,21 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
                       </button>
                     )}
 
-                    <button 
+                    <button
                       onClick={() => { setTargetStudy(study); setIsPreviewOpen(true); }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white text-black hover:bg-zinc-200 border border-transparent text-xs font-bold transition-all shadow-[0_0_10px_rgba(255,255,255,0.05)]"
                     >
                       <Eye className="w-3.5 h-3.5" /> View
                     </button>
 
-                    <button 
+                    <button
                       onClick={() => handleCopyLink(study.slug || "")}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-white transition-all`}
                     >
                       <Copy className="w-3.5 h-3.5" /> Copy Link
                     </button>
 
-                    <button 
+                    <button
                       onClick={() => { setTargetStudy(study); setIsEditOpen(true); }}
                       title="Edit Case Study"
                       className="flex items-center justify-center w-8 h-8 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-400 hover:text-white transition-colors"
@@ -192,7 +191,7 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
 
-                    <button 
+                    <button
                       onClick={() => { setTargetStudy(study); setIsDeleteOpen(true); }}
                       className="flex items-center justify-center w-8 h-8 rounded-md bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 text-red-500 transition-colors"
                     >
@@ -214,13 +213,13 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
         onSuccess={() => router.refresh()}
         caseStudy={targetStudy}
       />
-      
+
       <CaseStudyPreviewModal
         isOpen={isPreviewOpen}
         onClose={() => { setIsPreviewOpen(false); setTargetStudy(null); }}
         caseStudy={targetStudy}
       />
-      
+
       <DeleteConfirmModal
         isOpen={isDeleteOpen}
         onClose={() => { setIsDeleteOpen(false); setTargetStudy(null); }}

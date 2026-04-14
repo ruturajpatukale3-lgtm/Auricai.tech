@@ -161,19 +161,19 @@ export const CaseStudyRepository = {
     try {
       const { data: ctData } = await supabaseAdmin.from(TABLE).select("headline, interview_id").eq("id", id).single();
       if (ctData) {
-         if (ctData.headline) {
-            await SystemMemoryRepository.recordOutcome(ctData.headline, "hook", 0.2); // Views are 0.2
-         }
-         
-         if (ctData.interview_id) {
-            // Log engagement to all questions generated in this specific interview
-            const { data: answers } = await supabaseAdmin.from("interview_answers").select("question").eq("interview_id", ctData.interview_id);
-            if (answers) {
-              for (const a of answers) {
-                 if (a.question) await SystemMemoryRepository.recordOutcome(a.question, "question", 0.2); // Views are 0.2
-              }
+        if (ctData.headline) {
+          await SystemMemoryRepository.recordOutcome(ctData.headline, "hook", 0.2); // Views are 0.2
+        }
+
+        if (ctData.interview_id) {
+          // Log engagement to all questions generated in this specific interview
+          const { data: answers } = await supabaseAdmin.from("interview_answers").select("question").eq("interview_id", ctData.interview_id);
+          if (answers) {
+            for (const a of answers) {
+              if (a.question) await SystemMemoryRepository.recordOutcome(a.question, "question", 0.2); // Views are 0.2
             }
-         }
+          }
+        }
       }
     } catch (e) {
       console.log("[incrementViews] Suppressed telemetry err:", e);
@@ -188,15 +188,15 @@ export const CaseStudyRepository = {
       // 2. Telemetry (AI Logic)
       const { data: ctData } = await supabaseAdmin.from(TABLE).select("headline, interview_id").eq("id", id).single();
       if (ctData) {
-         if (ctData.headline) await SystemMemoryRepository.recordOutcome(ctData.headline, "hook", 0.6); // Clicks are 0.6
-         if (ctData.interview_id) {
-            const { data: answers } = await supabaseAdmin.from("interview_answers").select("question").eq("interview_id", ctData.interview_id);
-            if (answers) {
-              for (const a of answers) {
-                 if (a.question) await SystemMemoryRepository.recordOutcome(a.question, "question", 0.6);
-              }
+        if (ctData.headline) await SystemMemoryRepository.recordOutcome(ctData.headline, "hook", 0.6); // Clicks are 0.6
+        if (ctData.interview_id) {
+          const { data: answers } = await supabaseAdmin.from("interview_answers").select("question").eq("interview_id", ctData.interview_id);
+          if (answers) {
+            for (const a of answers) {
+              if (a.question) await SystemMemoryRepository.recordOutcome(a.question, "question", 0.6);
             }
-         }
+          }
+        }
       }
     } catch (e) {
       console.log("[incrementClicks] Suppressed telemetry err:", e);
@@ -216,15 +216,15 @@ export const CaseStudyRepository = {
       // 2. Telemetry (AI Logic)
       const { data: ctData } = await supabaseAdmin.from(TABLE).select("headline, interview_id").eq("id", id).single();
       if (ctData) {
-         if (ctData.headline) await SystemMemoryRepository.recordOutcome(ctData.headline, "hook", durationPingValue); 
-         if (ctData.interview_id) {
-            const { data: answers } = await supabaseAdmin.from("interview_answers").select("question").eq("interview_id", ctData.interview_id);
-            if (answers) {
-              for (const a of answers) {
-                 if (a.question) await SystemMemoryRepository.recordOutcome(a.question, "question", durationPingValue);
-              }
+        if (ctData.headline) await SystemMemoryRepository.recordOutcome(ctData.headline, "hook", durationPingValue);
+        if (ctData.interview_id) {
+          const { data: answers } = await supabaseAdmin.from("interview_answers").select("question").eq("interview_id", ctData.interview_id);
+          if (answers) {
+            for (const a of answers) {
+              if (a.question) await SystemMemoryRepository.recordOutcome(a.question, "question", durationPingValue);
             }
-         }
+          }
+        }
       }
     } catch (e) {
       console.log("[incrementReadTime] Suppressed telemetry err:", e);
