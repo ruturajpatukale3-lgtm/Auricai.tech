@@ -206,7 +206,6 @@ HARD VALIDATION:
         quote: parsed.quote || "",
         client_name: parsed.client_name || "Client",
         company: parsed.company || companyHint,
-        full_case_study: parsed.story, // story IS the proof asset
       };
 
       // Record Usage for the hook evolution engine
