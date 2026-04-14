@@ -10,7 +10,7 @@ import { apiPatch } from "@/lib/hooks/useSWR";
 import toast from "react-hot-toast";
 
 import { CaseStudy } from "@/types";
-import { getValidHeadline } from "@/lib/utils/case-study-validation";
+import { getValidHeadline, getValidMetric } from "@/lib/utils/case-study-validation";
 
 export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
   const router = useRouter();
@@ -84,12 +84,13 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full mt-4">
         {data.map((study, i) => {
           const headline = getValidHeadline(study.headline);
+          const validMetric = getValidMetric(study.metric_type);
           const domain = typeof window !== "undefined" ? window.location.origin : "https://auricai.com";
           const shareUrl = `${domain}/c/${study.slug}`;
           
           const handleCopyLinkedIn = () => {
             const clientName = study.client_name || study.company_name || "a client";
-            const metric = study.metric_type || "strong results";
+            const metric = validMetric || "strong results";
             const storyText = study.story || study.summary || "";
             const text = `We helped ${clientName} achieve ${metric}.\n\nHere's how:\n\n${storyText}\n\nFull case study:\n${shareUrl}`;
             navigator.clipboard.writeText(text);
@@ -104,7 +105,7 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
               transition={{ delay: i * 0.05 }}
               className="group relative flex flex-col justify-between bg-[#111111] border border-white/5 rounded-2xl p-6 hover:border-white/20 hover:-translate-y-[2px] hover:shadow-[0_10px_40px_rgba(0,0,0,0.5)] transition-all duration-300 min-h-[300px]"
             >
-              {/* Top Section: Metrics */}
+              {/* Top Section: Metrics — ONLY if real data exists */}
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <span className="font-bold text-zinc-400 text-sm tracking-tight">{study.company_name}</span>
@@ -126,9 +127,12 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
                 </div>
 
                 <div className="flex flex-col gap-1 mb-6">
-                  <span className="text-4xl font-extrabold text-white font-mono tracking-tight drop-shadow-md">
-                    {study.metric_type || "N/A"}
-                  </span>
+                  {/* Only show metric if it's real — never fallback */}
+                  {validMetric && (
+                    <span className="text-4xl font-extrabold text-white font-mono tracking-tight drop-shadow-md">
+                      {validMetric}
+                    </span>
+                  )}
                   {study.before_value && study.after_value && (
                     <span className="text-sm font-semibold text-blue-400/90 font-mono tracking-tight">
                       {study.before_value} → {study.after_value} {study.timeframe ? `in ${study.timeframe}` : ''}
@@ -144,13 +148,25 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
               {/* Bottom Section: Actions */}
               <div className="flex items-center gap-3 pt-6 border-t border-white/5">
                 <button
-                  onClick={() => window.open(`/c/${study.slug}`, '_blank')}
+                  onClick={() => {
+                    if (study.slug) {
+                      window.open(`/c/${study.slug}`, '_blank');
+                    } else {
+                      toast.error("No public link available");
+                    }
+                  }}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white text-black hover:bg-zinc-200 text-sm font-bold transition-all"
                 >
                   View <ExternalLink className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => handleCopyLink(study.slug || "")}
+                  onClick={() => {
+                    if (study.slug) {
+                      handleCopyLink(study.slug);
+                    } else {
+                      toast.error("No link to copy");
+                    }
+                  }}
                   title="Copy Link"
                   className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all"
                 >

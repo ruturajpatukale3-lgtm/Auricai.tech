@@ -58,26 +58,36 @@ export async function POST(
       target_customer: "Businesses",
     } as any, organization?.plan_type || "starter");
 
-    // ─── Validate Extraction ──────────────────────────
+    // ─── HARD VALIDATION (Parts 1, 9) ──────────────────
     if (!caseStudyData.headline) {
-      console.error("[generate] Missing headline from AI extraction");
-      return NextResponse.json({ success: false, error: "Extraction failed: missing headline" }, { status: 500 });
+      console.error("[generate] FATAL: Missing headline");
+      return NextResponse.json({ success: false, error: "Missing headline" }, { status: 500 });
     }
 
-    // ─── Generate Slug ────────────────────────────────
+    if (!caseStudyData.story || caseStudyData.story.length < 100) {
+      console.error("[generate] FATAL: Story too short or missing. Length:", caseStudyData.story?.length || 0);
+      return NextResponse.json({ success: false, error: "Invalid story — too short or missing" }, { status: 500 });
+    }
+
+    // ─── Generate Slug (GUARANTEED) ───────────────────
     const slug = caseStudyData.headline
       .toLowerCase()
       .replace(/[^a-z0-9 ]/g, "")
       .trim()
       .replace(/\s+/g, "-")
-      .substring(0, 60)
+      .slice(0, 60)
       + "-" + Date.now().toString().slice(-4);
 
-    console.log("[generate] Saving case study:", { headline: caseStudyData.headline, slug, company: caseStudyData.company });
+    if (!slug || slug.length < 5) {
+      console.error("[generate] FATAL: Slug generation failed");
+      return NextResponse.json({ success: false, error: "Slug generation failed" }, { status: 500 });
+    }
+
+    console.log("[generate] Saving:", { headline: caseStudyData.headline, slug, company: caseStudyData.company });
 
     // ─── Persist to DB (MUST NOT FAIL SILENTLY) ──────
     const finalCaseStudy = await CaseStudyRepository.create(
-      interview.org_id, 
+      interview.org_id,
       {
         interview_id: interview.id,
         company_name: caseStudyData.company || interview.client_name || "Client",
@@ -90,6 +100,7 @@ export async function POST(
         summary: caseStudyData.impact,
         story: caseStudyData.story,
         quote: caseStudyData.quote,
+        client_name: caseStudyData.client_name,
         delta_percent: undefined,
         timeframe: caseStudyData.timeframe || undefined,
       }

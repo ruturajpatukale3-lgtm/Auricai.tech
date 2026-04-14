@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Save, Loader2, Link as LinkIcon, ExternalLink } from "lucide-react";
+import { Save, Loader2, ExternalLink } from "lucide-react";
 import { apiPatch } from "@/lib/hooks/useSWR";
 import toast from "react-hot-toast";
 import type { CaseStudy } from "@/types";
@@ -14,10 +14,7 @@ export default function EditCaseStudyClient({ initialData }: { initialData: Case
     company_name: initialData.company_name || "",
     headline: initialData.headline || "",
     metric_type: initialData.metric_type || "",
-    before_value: initialData.before_value || "",
-    after_value: initialData.after_value || "",
     story: initialData.story || "",
-    summary: initialData.summary || "",
     quote: initialData.quote || "",
   });
 
@@ -25,18 +22,29 @@ export default function EditCaseStudyClient({ initialData }: { initialData: Case
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.company_name.trim() || saving) return;
+
+    // ─── Hard Validation ───────────────────────
+    if (!formData.company_name.trim()) {
+      toast.error("Company name is required");
+      return;
+    }
+    if (!formData.headline.trim()) {
+      toast.error("Headline is required");
+      return;
+    }
+    if (!formData.story.trim() || formData.story.trim().length < 100) {
+      toast.error("Story must be at least 100 characters");
+      return;
+    }
+    if (saving) return;
 
     setSaving(true);
     try {
       const result = await apiPatch(`/api/case-studies/${initialData.id}`, {
         company_name: formData.company_name.trim(),
-        headline: formData.headline.trim() || undefined,
+        headline: formData.headline.trim(),
         metric_type: formData.metric_type.trim() || undefined,
-        before_value: formData.before_value.trim() || undefined,
-        after_value: formData.after_value.trim() || undefined,
-        story: formData.story.trim() || undefined,
-        summary: formData.summary.trim() || undefined,
+        story: formData.story.trim(),
         quote: formData.quote.trim() || undefined,
       });
 
@@ -52,6 +60,8 @@ export default function EditCaseStudyClient({ initialData }: { initialData: Case
       setSaving(false);
     }
   };
+
+  const wordCount = formData.story.trim().split(/\s+/).filter(Boolean).length;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -73,12 +83,13 @@ export default function EditCaseStudyClient({ initialData }: { initialData: Case
 
           <div>
             <label className="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wider">
-              Primary Metric (+X%)
+              Primary Metric
             </label>
             <input
               type="text"
               value={formData.metric_type}
               onChange={(e) => setFormData(prev => ({ ...prev, metric_type: e.target.value }))}
+              placeholder="e.g. +158% Engagement"
               className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20 transition-all font-mono"
             />
           </div>
@@ -86,65 +97,32 @@ export default function EditCaseStudyClient({ initialData }: { initialData: Case
 
         <div>
           <label className="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wider">
-            Headline (Hook)
+            Headline
           </label>
           <input
             type="text"
             value={formData.headline}
             onChange={(e) => setFormData(prev => ({ ...prev, headline: e.target.value }))}
             className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20 transition-all font-semibold"
-          />
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wider">
-              Before Value
-            </label>
-            <input
-              type="text"
-              value={formData.before_value}
-              onChange={(e) => setFormData(prev => ({ ...prev, before_value: e.target.value }))}
-              placeholder="e.g. 12%"
-              className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20 transition-all font-mono"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wider">
-              After Value
-            </label>
-            <input
-              type="text"
-              value={formData.after_value}
-              onChange={(e) => setFormData(prev => ({ ...prev, after_value: e.target.value }))}
-              placeholder="e.g. 31%"
-              className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20 transition-all font-mono"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wider">
-            Impact Summary
-          </label>
-          <textarea
-            value={formData.summary}
-            onChange={(e) => setFormData(prev => ({ ...prev, summary: e.target.value }))}
-            rows={2}
-            className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20 transition-all resize-none"
+            required
           />
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wider">
-            Story / What Was Done
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider">
+              Story
+            </label>
+            <span className={`text-xs font-mono ${wordCount < 100 ? 'text-red-400' : wordCount > 200 ? 'text-amber-400' : 'text-emerald-400'}`}>
+              {wordCount} words
+            </span>
+          </div>
           <textarea
             value={formData.story}
             onChange={(e) => setFormData(prev => ({ ...prev, story: e.target.value }))}
-            rows={5}
-            className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20 transition-all resize-y"
+            rows={10}
+            placeholder="The full structured case study (120-180 words). This is the main content shown on the public page."
+            className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20 transition-all resize-y leading-relaxed"
           />
         </div>
 
@@ -155,7 +133,8 @@ export default function EditCaseStudyClient({ initialData }: { initialData: Case
           <textarea
             value={formData.quote}
             onChange={(e) => setFormData(prev => ({ ...prev, quote: e.target.value }))}
-            rows={3}
+            rows={2}
+            placeholder="Natural, human-sounding quote from the client"
             className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20 transition-all resize-none font-serif italic text-zinc-300"
           />
         </div>
@@ -164,7 +143,13 @@ export default function EditCaseStudyClient({ initialData }: { initialData: Case
       <div className="flex items-center justify-between">
         <button
           type="button"
-          onClick={() => window.open(`/c/${initialData.slug}`, '_blank')}
+          onClick={() => {
+            if (initialData.slug) {
+              window.open(`/c/${initialData.slug}`, '_blank');
+            } else {
+              toast.error("No public link available yet");
+            }
+          }}
           className="flex items-center gap-2 text-sm font-bold text-zinc-400 hover:text-white transition-colors"
         >
           <ExternalLink className="w-4 h-4" /> Live Preview

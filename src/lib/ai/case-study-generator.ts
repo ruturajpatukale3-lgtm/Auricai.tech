@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════
-// Auricai — AI Case Study Engine (Layer 8, 9, & Variability)
-// Generates case studies enforcing strong writing rules,
-// outcome evolution, and per-output language uniqueness.
+// Auricai — AI Case Study Engine (Elite 100/100)
+// Generates short, structured, sales-ready proof assets
+// (120–180 words). Result-first. No fluff. No articles.
 // ═══════════════════════════════════════════════════════════
 
 import { GeminiService } from "./gemini";
@@ -10,7 +10,6 @@ import { ContextEngine } from "./context-engine";
 import { MemorySystem } from "./memory-system";
 
 // ─── Language Variability Engine ─────────────────────────────
-// Ensures no two case studies share identical directional phrasing.
 const DIRECTIONAL_POOLS = {
   improvement: [
     "+32% conversion rate", "+45% efficiency", "+60% throughput",
@@ -23,12 +22,6 @@ const DIRECTIONAL_POOLS = {
     "tighter turnaround times", "more predictable throughput",
     "smoother end-to-end process", "less manual overhead",
   ],
-  growth: [
-    "consistent growth channel", "scalable pipeline expansion",
-    "predictable revenue trajectory", "compounding returns over time",
-    "stronger customer acquisition engine", "accelerated market traction",
-    "expanding reach with higher conversion", "sustainable scaling pattern",
-  ],
   transformation: [
     "moved from inconsistent performance to structured predictability",
     "replaced guesswork with data-driven clarity",
@@ -39,26 +32,6 @@ const DIRECTIONAL_POOLS = {
   ],
 } as const;
 
-const FALLBACK_HEADLINES = [
-  "How [COMPANY] Built a More Predictable Growth Engine",
-  "From Friction to Flow: [COMPANY]'s Path to Operational Clarity",
-  "[COMPANY] Turned Manual Bottlenecks Into Scalable Momentum",
-  "Inside [COMPANY]'s Shift to Higher-Impact Execution",
-  "How [COMPANY] Replaced Guesswork With Measurable Outcomes",
-];
-
-const FALLBACK_SUMMARIES = [
-  "By rethinking their core workflow, the team unlocked a more structured approach to growth — reducing friction and gaining clarity on what actually drives results.",
-  "What started as a need for better visibility evolved into a complete shift in how the team operates — with faster cycles, clearer priorities, and stronger outcomes.",
-  "The engagement produced a measurable shift in how the team approaches execution, moving from reactive adjustments to a proactive and repeatable system.",
-];
-
-const FALLBACK_TESTIMONIALS = [
-  "It changed how we think about the entire process — we're more focused and the results speak for themselves.",
-  "Honestly, we didn't expect this level of impact. It's become a core part of how we operate now.",
-  "The difference was noticeable almost immediately. Our team finally has clarity on what's working.",
-];
-
 function pickRandom<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -66,7 +39,7 @@ function pickRandom<T>(arr: readonly T[]): T {
 function getVariabilityDirective(): string {
   const style = pickRandom([
     "Use SHORT, punchy sentences. Maximum impact per word.",
-    "Use a MIX of sentence lengths — one short, one medium, one slightly longer — to create rhythm.",
+    "Use a MIX of sentence lengths — one short, one medium — to create rhythm.",
     "Lead with the outcome, then explain the context. Inverted pyramid style.",
     "Use contrast pairs: 'Before X, now Y' structures to emphasize transformation.",
   ]);
@@ -78,16 +51,14 @@ function getVariabilityDirective(): string {
 export const CaseStudyGenerator = {
   /**
    * Layer 8 Validation.
-   * Generate only when key preconditions exist.
    */
   canGenerate(state: InterviewState): boolean {
-    // LAYER 8 Validation is now fully permissive to support Edge Cases (e.g., user skips all metric questions).
-    // The Output Consistency Engine via the LLM prompt will handle weak data gracefully.
     return true;
   },
 
   /**
-   * Layer 8 & 9 - Generate a structured, human, Outcome-First case study.
+   * Generate a short, structured, sales-ready case study (120-180 words).
+   * Result-first. No fluff. No articles. Just proof.
    */
   async generate(
     answers: InterviewAnswer[],
@@ -96,150 +67,155 @@ export const CaseStudyGenerator = {
   ): Promise<AICaseStudyOutput> {
     const context = ContextEngine.buildContext(orgProfile);
     const hooks = await MemorySystem.getBestHooks(context.industry, plan);
-    
-    // Confidence-based metrics logic
+
     const hasExactMetrics = answers.some(a => a.extracted?.classification === "exact");
-    const toneRule = hasExactMetrics 
+    const toneRule = hasExactMetrics
         ? "USE STRONG, ASSERTIVE LANGUAGE. You have exact data. DO NOT use soft words."
         : "USE SOFTER VERBS. You have estimated data. Use 'roughly', 'about', or 'estimated'.";
 
     const formattedAnswers = answers.map(a => `- ${a.question || "Topic"}: ${a.answer}`).join("\n");
     const variability = getVariabilityDirective();
 
-    const systemPrompt = `You are an elite, conversion-focused B2B copywriter writing a premium case study.
-Your job is to turn raw client review answers into a high-trust, believable, and sharp narrative.
-Every case study you produce must feel UNIQUE — as if written fresh by a senior strategist, never from a template.
+    // ═══════════════════════════════════════════════════════════
+    // ELITE PROOF ASSET GENERATION PROMPT
+    // ═══════════════════════════════════════════════════════════
+    const systemPrompt = `You are an elite B2B case study writer. Your job is to produce a SHORT, STRUCTURED, SALES-READY proof asset from raw interview answers.
+
+This is NOT an article. This is NOT a testimonial. This is a high-conversion proof asset that a founder can send in a DM to close a deal.
+
+CORE RULES:
+- Short. Sharp. Structured. Result-first.
+- Total word count for "story" field: 120–180 words ONLY.
+- NO filler. NO fluff. Every sentence must earn its place.
 
 BUSINESS CONTEXT:
 Industry: ${context.industry}
 Service: ${context.serviceDescription}
 Target Customer: ${context.targetCustomer}
-Narrative Strategy: ${context.aiCaseStudyStyle === 'story_driven' ? 'Emphasize the human narrative, journey, and emotional transformation.' : 'Focus heavily on data points, efficiency gains, and ROI.'}
+Narrative Strategy: ${context.aiCaseStudyStyle === 'story_driven' ? 'Emphasize the human narrative and transformation.' : 'Focus on data points, efficiency gains, and ROI.'}
 
-RAW CLIENT DATA:
+${toneRule}
+
+RAW CLIENT INTERVIEW DATA:
 ${formattedAnswers}
 
 ${variability}
 
- 6. UNIQUENESS ENFORCEMENT: Vary sentence length, verb choice, and structure. Never start two consecutive sentences the same way. Alternate between outcomes, context, and quotes.
- 7. STRICT WRITING RULES:
-    - NO VAGUE PHRASES. Never use "meaningful improvement", "better performance", or "significant growth".
-    - IF NO NUMERIC DATA: Do NOT hallucinate. Use: "Improved results noticeably within [timeframe]" or similar specific directional outcome.
-    - HEADLINE: Must include a specific transformation or outcome.
-    - STORY: 3-5 lines of high-impact narrative.
-    - QUOTE: Direct, natural, human-sounding quote from the client.
- 8. TRANSFORMATION DEPTH: The "before" and "after" fields must be SPECIFIC and contrasting.
-    - "before" = the exact friction point, bottleneck, or pain.
-    - "after" = the exact shift, outcome, or new state.
-9. QUALITATIVE EXCELLENCE: If no numbers exist, the narrative must still feel premium.
-   - BAD: "The business saw better results."
-   - ELITE: "The team moved from inconsistent, reactive workflows to a structured and predictable growth pattern — with full visibility into what was actually driving outcomes."
+═══════════════════════════════════════════════
+STRUCTURE FOR "story" FIELD (MANDATORY — FOLLOW EXACTLY):
+═══════════════════════════════════════════════
 
-LAYER 9 ADAPTIVE EVOLUTION (Hooks): 
-These are the MOST SUCCESSFUL headline formats in our history, ranked by real-world engagement:
+The "story" field must follow this EXACT structure in this order:
+
+1. PRIMARY RESULT (first line) — One strong outcome. Prefer numeric if available.
+   Example: "+158% Engagement in 48 hours"
+
+2. CONTEXT (1–2 lines) — Who the client is and what happened.
+
+3. BEFORE (1–2 lines) — Specific problem or friction. NO vague words.
+
+4. WHAT WAS DONE (2–3 lines) — Concrete actions taken. Must feel real and specific.
+
+5. AFTER (1–2 lines) — Clear result or change. Prefer numbers.
+
+6. IMPACT (1 line) — Business effect: more clients, better pipeline, improved efficiency.
+
+7. QUOTE (1 line) — Natural, human, believable. NOT marketing tone.
+
+═══════════════════════════════════════════════
+STRICT WRITING RULES:
+═══════════════════════════════════════════════
+
+BANNED PHRASES (NEVER USE):
+- "meaningful improvement"
+- "better performance"  
+- "significant growth"
+- "game changer"
+- "revolutionary"
+- "groundbreaking"
+- "best in class"
+- "world-class results"
+- "impressive outcomes"
+
+IF NO NUMBERS: Use clear directional outcomes.
+Example: "response rates improved noticeably within weeks"
+
+TONE: direct, simple, credible, no fluff
+STYLE: short sentences, clean spacing, easy to scan
+
+═══════════════════════════════════════════════
+ADAPTIVE EVOLUTION (Proven Headlines):
+═══════════════════════════════════════════════
 ${hooks.map(h => `- ${h}`).join("\n")}
 
-You must generate the single best headline possible leveraging the psychological positioning of these proven variations.
+Generate the single best headline leveraging these proven patterns.
 
-OUTPUT FORMAT:
-Return JSON ONLY with this exact schema:
+═══════════════════════════════════════════════
+OUTPUT FORMAT — RETURN JSON ONLY:
+═══════════════════════════════════════════════
+
 {
-  "headline": "A specific, high-conversion hook with transformation or outcome",
-  "primary_metric": "The single most important metric string (e.g. '+158% Engagement', '$12k MRR')",
-  "before": "The SPECIFIC problem, friction, or bottleneck they faced.",
-  "after": "The SPECIFIC result, shift, or new operational state achieved.",
-  "metrics": ["2-3 secondary key metric strings (e.g., '+45% Efficiency', '20 hrs Saved')"],
-  "story": "3-5 lines of short, punchy narrative about the journey and outcome.",
-  "impact": "1-2 lines detailing the overarching business impact or ROI.",
+  "headline": "A specific, outcome-driven headline with transformation or result",
+  "primary_metric": "The single strongest outcome metric (e.g. '+158% Engagement', '$12k MRR'). If no metric exists, use null.",
+  "before": "The SPECIFIC problem, friction, or bottleneck they faced. 1-2 sentences.",
+  "after": "The SPECIFIC result, shift, or new state achieved. 1-2 sentences.",
+  "story": "The FULL structured body (120-180 words total). Must follow the 7-part structure above: Result → Context → Before → What Was Done → After → Impact → Quote. This is the complete proof asset.",
+  "impact": "1 sentence on overarching business impact.",
   "quote": "Direct, natural, human-sounding quote from the client.",
-  "client_name": "The name of the individual interviewed",
-  "company": "The company name"
-}`;
+  "client_name": "Name of the individual interviewed",
+  "company": "Company name"
+}
+
+HARD VALIDATION:
+- REJECT if story is under 100 words or over 200 words.
+- REJECT if language is vague.
+- REJECT if there is no clear before/after.`;
 
     try {
       const parsed = await GeminiService.generateJSON<any>({
         systemPrompt,
-        userPrompt: "Generate the case study. Produce a UNIQUE headline variation based on the proven history. Ensure every field feels fresh and non-templated.",
+        userPrompt: "Generate the case study proof asset. The 'story' field must be a complete 120-180 word structured body following the 7-part format. All other fields are extracted for card display. Make it feel like something a founder can send in a DM to close a deal.",
         temperature: 0.55,
       });
 
-      // LAYER 10: Trusted Inference Pass (High-Confidence Only)
-      if (!parsed.metrics || parsed.metrics === "Not provided" || parsed.metrics.length < 5) {
-         console.log("[CaseStudyGenerator] Initial metrics weak. Triggering Trusted Inference...");
-         const inferencePrompt = `The previous case study generation missed a specific metric.
-         RAW DATA: ${formattedAnswers}
-         
-         Analyze the data above. If no exact number exists, INFER a directional outcome and provide a confidence score (0-100).
-         
-         RULES:
-         1. Use SOFT LANGUAGE: "Approximately", "Estimated", "Directional", "Roughly".
-         2. Confidence >= 80 means you are reasonably sure based on the context.
-         3. Confidence < 80 means the claim is pure speculation.
-         
-         OUTPUT: JSON { "inferredMetric": "string", "confidenceScore": number }`;
-         
-         const inferenceResult = await GeminiService.generateJSON<{ inferredMetric: string, confidenceScore: number }>({
-            systemPrompt: "You are an expert data analyst. Infer a result only if evidence is strong.",
-            userPrompt: inferencePrompt,
-            temperature: 0.1
-         });
-         
-         if (inferenceResult?.confidenceScore >= 80) {
-            parsed.metrics = inferenceResult.inferredMetric;
-         } else {
-            console.log("[CaseStudyGenerator] Inference confidence too low:", inferenceResult?.confidenceScore);
-         }
+      // ═══════════════════════════════════════════════════════════
+      // HARD VALIDATION
+      // ═══════════════════════════════════════════════════════════
+      if (!parsed.headline) {
+        console.error("[CaseStudyGenerator] CRITICAL: Missing headline.");
+        throw new Error("AI failed to produce a headline. Generation aborted.");
       }
 
-      // FINAL VALIDATION: Headline Refinement (Non-Destructive)
-      if (parsed.headline?.toLowerCase().includes("achieved") || parsed.headline?.toLowerCase().includes("results")) {
-         if (parsed.metrics && parsed.metrics !== "Not provided") {
-            // REFINEMENT: Weave the metric into the original hook instead of replacing it.
-            const refinementPrompt = `Refine this headline to be more specific and include the outcome below.
-            ORIGINAL: "${parsed.headline}"
-            OUTCOME: "${parsed.metrics}"
-            
-            RULES:
-            1. Preserve the original hook's structure (clarity/specificity).
-            2. Weave the outcome in naturally.
-            3. Do NOT replace the entire headline.
-            
-            Respond with ONLY the refined headline string.`;
-            
-            const refinedHeadline = await GeminiService.generateText({
-               systemPrompt: "You are an elite B2B editor. Refineheadlines for outcome strength.",
-               userPrompt: refinementPrompt,
-               temperature: 0.2
-            });
-            
-            if (refinedHeadline) parsed.headline = refinedHeadline;
-         }
+      if (!parsed.story || parsed.story.split(/\s+/).length < 80) {
+        console.error("[CaseStudyGenerator] CRITICAL: Story too short. Words:", parsed.story?.split(/\s+/).length || 0);
+        throw new Error("AI failed to produce a complete proof asset. Generation aborted.");
       }
 
-      // ─── FINAL ASSEMBLY (with variability-aware defaults) ───
+      // ─── FINAL ASSEMBLY ───────────────────────────────────────
       const companyHint = context.targetCustomer || "the team";
       const initialMetrics = Array.isArray(parsed.metrics) ? parsed.metrics : [];
-      
+
       const finalOutput: AICaseStudyOutput = {
-        headline: parsed.headline || pickRandom(FALLBACK_HEADLINES).replace("[COMPANY]", companyHint),
-        primary_metric: parsed.primary_metric || "+XX% Improvement",
-        before: parsed.before || `${companyHint} faced operational friction that slowed execution and reduced visibility into what was actually driving results.`,
-        after: parsed.after || `A more structured, repeatable approach — with clearer priorities and ${pickRandom(DIRECTIONAL_POOLS.efficiency)}.`,
-        metrics: initialMetrics.length > 0 ? initialMetrics : [pickRandom(DIRECTIONAL_POOLS.improvement)],
-        story: parsed.story || pickRandom(FALLBACK_SUMMARIES),
-        impact: parsed.impact || "Moved from inconsistent performance to structured predictability.",
-        quote: parsed.quote || pickRandom(FALLBACK_TESTIMONIALS),
+        headline: parsed.headline,
+        primary_metric: parsed.primary_metric && parsed.primary_metric !== "null" && parsed.primary_metric !== null ? parsed.primary_metric : "",
+        before: parsed.before || "",
+        after: parsed.after || "",
+        metrics: initialMetrics,
+        story: parsed.story,
+        impact: parsed.impact || "",
+        quote: parsed.quote || "",
         client_name: parsed.client_name || "Client",
         company: parsed.company || companyHint,
+        full_case_study: parsed.story, // story IS the proof asset
       };
 
-      // Record Usage immediately for the denominator
+      // Record Usage for the hook evolution engine
       await MemorySystem.recordUsage(finalOutput.headline, "hook", context.industry, undefined, plan);
 
       return finalOutput;
     } catch (err) {
-      console.error("[CaseStudyGenerator] Gemini call failed. NOT returning fake data.", err);
-      throw new Error(`Extraction failed: ${err instanceof Error ? err.message : "Unknown AI error"}`);
+      console.error("[CaseStudyGenerator] Generation failed. NOT returning fake data.", err);
+      throw new Error(`Case study generation failed: ${err instanceof Error ? err.message : "Unknown AI error"}`);
     }
   },
 };

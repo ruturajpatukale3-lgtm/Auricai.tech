@@ -93,6 +93,7 @@ export const CaseStudyRepository = {
       summary?: string;
       story?: string;
       quote?: string;
+      client_name?: string;
       metrics?: string[] | null;
       status?: CaseStudyStatus;
     }
@@ -128,6 +129,7 @@ export const CaseStudyRepository = {
         | "slug"
         | "story"
         | "quote"
+        | "client_name"
         | "metrics"
       >
     >
