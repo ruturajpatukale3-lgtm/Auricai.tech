@@ -1,3 +1,9 @@
+// ═══════════════════════════════════════════════════════════
+// @deprecated — LEGACY. No longer used.
+// All case study generation now flows through CaseStudyGenerator.
+// Kept for reference only. Safe to delete.
+// ═══════════════════════════════════════════════════════════
+
 import { GeminiService } from "./gemini";
 import type { OrgProfile } from "@/types";
 

@@ -1,6 +1,13 @@
 // ═══════════════════════════════════════════════════════════
-// CaseFlow — Case Study Service
-// Auto-generates case studies from completed interviews.
+// CaseFlow — Case Study Service (UNIFIED PIPELINE)
+//
+// ONE generation path: generateFromInterview()
+// → Fetch interview + answers
+// → CaseStudyGenerator.generate() (AI)
+// → Validate (headline + story ≥ 100 words)
+// → Persist to DB
+//
+// No legacy extraction. No partial creation. No fallbacks.
 // ═══════════════════════════════════════════════════════════
 
 import { CaseStudyRepository } from "@/lib/repositories/case-study.repository";
@@ -11,67 +18,118 @@ import { UsageRepository } from "@/lib/repositories/usage.repository";
 import { EventService } from "@/lib/services/event.service";
 import { canCreateCaseStudy } from "@/lib/plans";
 import { PlanLimitError, NotFoundError } from "@/lib/errors";
-import type { CaseStudy, ServiceResult, InterviewAnswer } from "@/types";
+import type { CaseStudy, ServiceResult } from "@/types";
 
 export const CaseStudyService = {
   /**
-   * Generate a case study from a completed interview.
-   * Extracts structured data, computes metrics, saves as draft.
+   * Generate a case study from a completed interview using the AI pipeline.
+   * This is the SINGLE generation entry point for the entire system.
+   *
+   * Flow: Fetch → AI Generate → Validate → Slug → DB
    */
   async generateFromInterview(
     orgId: string,
     interviewId: string
   ): Promise<ServiceResult<CaseStudy>> {
-    // 1. Verify interview exists and is completed
+    // 1. Verify interview exists and has valid status
     const interview = await InterviewRepository.findById(orgId, interviewId);
     if (!interview) throw new NotFoundError("Interview");
 
-    if (interview.status !== "completed" && interview.status !== "approved" && interview.status !== "in_progress") {
+    if (
+      interview.status !== "completed" &&
+      interview.status !== "approved" &&
+      interview.status !== "in_progress" &&
+      interview.status !== "generating"
+    ) {
       return { success: false, error: "Interview must be completed or in progress", code: "INVALID_STATE" };
     }
 
-    // 2. Get answers
+    // 2. Get answers — require at least 1
     const answers = await InterviewAnswerRepository.findByInterview(interviewId);
     if (answers.length === 0) {
       return { success: false, error: "No answers found for this interview", code: "NO_DATA" };
     }
 
-    // 3. Extract structured data from answers
-    const extracted = this.extractCaseStudyData(answers);
+    // 3. Load context
+    const org = await OrganizationRepository.findById(orgId);
+    if (!org) throw new NotFoundError("Organization");
 
-    // 4. Compute delta_percent
-    const deltaPercent = this.computeDelta(extracted.before, extracted.after);
+    const { CaseStudyGenerator } = await import("@/lib/ai/case-study-generator");
+    const { OrgProfileRepository } = await import("@/lib/repositories/org-profile.repository");
+    const orgProfile = await OrgProfileRepository.findByOrgId(orgId);
 
-    // 5. Generate slug
-    const slug = this.generateSlug(extracted.companyName || interview.client_email);
+    const defaultProfile = {
+      industry: "other" as const,
+      industry_raw: "General Business",
+      service_category: "Professional Services",
+      service_type: "Business services",
+      target_customer: "Businesses",
+      ai_tone: "professional" as const,
+      ai_output_style: "concise" as const,
+      ai_case_study_style: "metric_driven" as const,
+      font_preset: "sans" as const,
+    };
 
-    // 6. Upsert case study
+    // 4. Generate via AI (THE SINGLE PATH)
+    const aiOutput = await CaseStudyGenerator.generate(
+      answers,
+      orgProfile || defaultProfile as any,
+      org.plan_type
+    );
+
+    // 5. HARD VALIDATION — Never allow null story or headline
+    if (!aiOutput.headline) {
+      throw new Error("AI generation failed: Missing headline. Generation aborted.");
+    }
+
+    if (!aiOutput.story || aiOutput.story.split(/\s+/).length < 80) {
+      throw new Error(
+        `AI generation failed: Story too short (${aiOutput.story?.split(/\s+/).length || 0} words). Generation aborted.`
+      );
+    }
+
+    // 6. Generate slug (GUARANTEED non-null)
+    const slug = this.generateSlug(aiOutput.headline);
+
+    // 7. Compute delta
+    const deltaPercent = this.computeDelta(aiOutput.before, aiOutput.after);
+
+    // 8. Upsert case study
     const existing = await CaseStudyRepository.findByInterviewId(interviewId);
+
+    const caseStudyData = {
+      company_name: aiOutput.company || interview.client_name || interview.client_email.split("@")[0],
+      headline: aiOutput.headline,
+      summary: aiOutput.impact || undefined,
+      story: aiOutput.story,
+      quote: aiOutput.quote || undefined,
+      client_name: aiOutput.client_name || undefined,
+      metrics: aiOutput.metrics || undefined,
+      metric_type: aiOutput.primary_metric || undefined,
+      before_value: aiOutput.before || undefined,
+      after_value: aiOutput.after || undefined,
+      delta_percent: deltaPercent ?? undefined,
+      timeframe: aiOutput.timeframe || undefined,
+    };
+
     let caseStudy;
 
     if (existing) {
       caseStudy = await CaseStudyRepository.update(orgId, existing.id, {
-        company_name: extracted.companyName || interview.client_name || interview.client_email.split("@")[0],
-        headline: extracted.headline,
-        metric_type: extracted.metricType,
-        before_value: extracted.before,
-        after_value: extracted.after,
-        delta_percent: deltaPercent ?? undefined,
-        timeframe: extracted.timeframe,
+        ...caseStudyData,
       });
     } else {
       caseStudy = await CaseStudyRepository.create(orgId, {
-        company_name: extracted.companyName || interview.client_name || interview.client_email.split("@")[0],
         interview_id: interviewId,
-        headline: extracted.headline,
-        metric_type: extracted.metricType,
-        before_value: extracted.before,
-        after_value: extracted.after,
-        delta_percent: deltaPercent ?? undefined,
-        timeframe: extracted.timeframe,
         slug,
+        ...caseStudyData,
       });
     }
+
+    // 9. Log creation event
+    try {
+      await EventService.caseStudyCreated(orgId, caseStudy.id, caseStudy.company_name);
+    } catch { /* silent */ }
 
     return { success: true, data: caseStudy };
   },
@@ -143,41 +201,6 @@ export const CaseStudyService = {
     }
 
     return { success: true, data: caseStudy };
-  },
-
-  /**
-   * Raw creation of a case study (used by AI engine)
-   */
-  async create(
-    orgId: string,
-    interviewId: string,
-    data: {
-      metricType: string;
-      before: string | null;
-      after: string | null;
-      timeframe: string;
-      deltaPercent: number | null;
-    }
-  ): Promise<CaseStudy> {
-    const interview = await InterviewRepository.findById(orgId, interviewId);
-    const slug = this.generateSlug(interview?.client_name || interview?.client_email || "case-study");
-
-    const caseStudy = await CaseStudyRepository.create(orgId, {
-      company_name: interview?.client_name || interview?.client_email.split("@")[0] || "Client",
-      interview_id: interviewId,
-      headline: `${interview?.client_name || "Client"} achieved ${data.metricType} results`,
-      metric_type: data.metricType,
-      before_value: data.before || undefined,
-      after_value: data.after || undefined,
-      delta_percent: data.deltaPercent ?? undefined,
-      timeframe: data.timeframe,
-      slug,
-    });
-
-    try {
-      await EventService.caseStudyCreated(orgId, caseStudy.id, caseStudy.company_name);
-    } catch { /* silent */ }
-    return caseStudy;
   },
 
   /**
@@ -309,50 +332,6 @@ export const CaseStudyService = {
   },
 
   // ─── Private Helpers ─────────────────────────────────────
-
-  /**
-   * Extract structured case study data from interview answers
-   */
-  extractCaseStudyData(answers: InterviewAnswer[]): {
-    companyName?: string;
-    headline?: string;
-    metricType?: string;
-    before?: string;
-    after?: string;
-    timeframe?: string;
-  } {
-    const result: Record<string, string> = {};
-
-    for (const answer of answers) {
-      const lowerQ = answer.question.toLowerCase();
-
-      if (lowerQ.includes("company") || lowerQ.includes("name") || lowerQ.includes("organization")) {
-        result.companyName = answer.answer.trim();
-      }
-
-      if (lowerQ.includes("improve") || lowerQ.includes("result") || lowerQ.includes("metric") || lowerQ.includes("what changed")) {
-        result.metricType = answer.answer.trim();
-        if (answer.answer.length < 100) {
-          result.headline = `${result.companyName || "Client"} achieved ${answer.answer.trim()}`;
-        }
-      }
-
-      if (lowerQ.includes("before") || lowerQ.includes("prior") || lowerQ.includes("starting")) {
-        result.before = answer.answer.trim();
-      }
-
-      if (lowerQ.includes("after") || lowerQ.includes("now") || lowerQ.includes("current") || lowerQ.includes("result")) {
-        if (!result.metricType) result.after = answer.answer.trim();
-        else if (!result.after) result.after = answer.answer.trim();
-      }
-
-      if (lowerQ.includes("time") || lowerQ.includes("how long") || lowerQ.includes("period")) {
-        result.timeframe = answer.answer.trim();
-      }
-    }
-
-    return result as any;
-  },
 
   /**
    * Compute delta percentage between before and after values

@@ -12,6 +12,7 @@ export type InterviewStatus =
   | "opened"
   | "in_progress"
   | "completed"
+  | "generating"
   | "review_ready"
   | "approved"
   | "published";

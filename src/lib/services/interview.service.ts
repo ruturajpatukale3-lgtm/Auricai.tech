@@ -351,7 +351,7 @@ export const InterviewService = {
     return InterviewAnswerRepository.findByInterview(interviewId);
   },
 
-  // NOTE: Metric extraction is handled exclusively by AIExtractor (Gemini).
+  // NOTE: Metric extraction is handled by CaseStudyGenerator via the unified AI pipeline.
   // Legacy regex-based extractMetrics was removed — see audit_report.md.
 
   /**

@@ -5,6 +5,7 @@ import { AuthService } from "@/lib/services/auth.service";
 import { CaseStudyRepository } from "@/lib/repositories/case-study.repository";
 import { InterviewRepository } from "@/lib/repositories/interview.repository";
 import { DashboardActions } from "@/components/dashboard/DashboardActions";
+import { RealtimeDashboardBridge } from "@/components/dashboard/RealtimeDashboardBridge";
 import { AlertCircle, FileText, MessageSquare, ArrowRight } from "lucide-react";
 import Link from "next/link";
 

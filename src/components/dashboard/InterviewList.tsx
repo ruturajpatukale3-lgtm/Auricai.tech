@@ -114,6 +114,7 @@ export function InterviewList({
 
               <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${interview.status === 'published' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
                 interview.status === 'approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                  interview.status === 'generating' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 animate-pulse' :
                   interview.status === 'completed' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
                   interview.status === 'review_ready' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
                     'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
@@ -136,6 +137,7 @@ export function InterviewList({
             <div className="hidden md:block col-span-2">
               <span className={`inline-flex items-center text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${interview.status === 'published' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
                 interview.status === 'approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                  interview.status === 'generating' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 animate-pulse' :
                   interview.status === 'completed' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
                   interview.status === 'review_ready' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
                     'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'

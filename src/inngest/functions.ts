@@ -1,19 +1,23 @@
 import { inngest } from "./client";
-import { AIExtractor } from "@/lib/ai/extractor";
 import { InterviewRepository } from "@/lib/repositories/interview.repository";
 import { InterviewAnswerRepository } from "@/lib/repositories/interview-answer.repository";
-import { CaseStudyService } from "@/lib/services/case-study.service";
+import { OrgProfileRepository } from "@/lib/repositories/org-profile.repository";
+import { OrganizationRepository } from "@/lib/repositories/organization.repository";
+import { CaseStudyRepository } from "@/lib/repositories/case-study.repository";
+import { CaseStudyGenerator } from "@/lib/ai/case-study-generator";
 import { EmailService } from "@/lib/services/email.service";
 import { EventService } from "@/lib/services/event.service";
 import { DomainService } from "@/lib/services/domain.service";
-import { OrgProfileRepository } from "@/lib/repositories/org-profile.repository";
-import { OrganizationRepository } from "@/lib/repositories/organization.repository";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { NotificationService } from "@/lib/services/notification.service";
 
-/**
- * AI Case Study Generation Job
- */
+// ═══════════════════════════════════════════════════════════
+// AI Case Study Generation Job (UNIFIED PIPELINE)
+//
+// ONE path. No alternatives. No legacy fallbacks.
+//
+// Interview completed → this job → CaseStudyGenerator → DB
+// ═══════════════════════════════════════════════════════════
 export const generateCaseStudyJob = inngest.createFunction(
   { 
     id: "generate-case-study", 
@@ -21,88 +25,162 @@ export const generateCaseStudyJob = inngest.createFunction(
     triggers: [{ event: "ai/generate_case_study" }],
     concurrency: {
       limit: 20,
-      key: "event.data.orgId", // Per-org concurrency limit to prevent one org from hogging all slots
+      key: "event.data.orgId",
     }
   },
   async ({ event, step }: { event: any; step: any }) => {
     const { interviewId, orgId } = event.data;
 
+    // ─── Step 1: Fetch Interview ─────────────────────────
     const interview = await step.run("fetch-interview", async () => {
       return await InterviewRepository.findById(orgId, interviewId);
     });
 
-    if (!interview || interview.status !== "completed") {
+    if (!interview || (interview.status !== "completed" && interview.status !== "generating")) {
       return { success: false, reason: "Interview not ready for generation" };
     }
 
+    // ─── Step 2: Set Status → "generating" ───────────────
+    await step.run("set-generating-status", async () => {
+      await InterviewRepository.updateStatus(orgId, interviewId, "generating");
+    });
+
+    // ─── Step 3: Fetch Answers ───────────────────────────
     const answers = await step.run("fetch-answers", async () => {
       return await InterviewAnswerRepository.findByInterview(interviewId);
     });
 
     if (!answers.length) {
+      // Revert status on failure
+      await step.run("revert-status-no-answers", async () => {
+        await InterviewRepository.updateStatus(orgId, interviewId, "completed");
+      });
       return { success: false, reason: "No answers found" };
     }
 
+    // ─── Step 4: Fetch Context ───────────────────────────
     const orgProfile = await step.run("fetch-org-profile", async () => {
       return await OrgProfileRepository.findByOrgId(orgId);
     });
 
-    const metrics = await step.run("extract-metrics", async () => {
-      const formattedAnswers = answers.map((a: { question: string; answer: string }) => ({
-        question: a.question,
-        answer: a.answer,
-      }));
-      return await AIExtractor.extractMetrics(formattedAnswers, orgProfile);
+    const organization = await step.run("fetch-organization", async () => {
+      return await OrganizationRepository.findById(orgId);
     });
 
-    if (metrics.isVague) {
-      await step.run("dispatch-clarification-email", async () => {
-        const org = await OrganizationRepository.findById(orgId);
-        if (org) {
-          await EmailService.sendClarificationEmail(
-            interview.client_email,
-            org.name,
-            interview.token,
-            metrics.missingFields,
-            interview.client_name || undefined
-          );
-        }
+    // ─── Step 5: AI Generation (THE SINGLE PATH) ─────────
+    const aiOutput = await step.run("generate-ai-case-study", async () => {
+      const defaultProfile = {
+        industry: "other" as const,
+        industry_raw: "General Business",
+        service_category: "Professional Services",
+        service_type: "Business services",
+        target_customer: "Businesses",
+        ai_tone: "professional" as const,
+        ai_output_style: "concise" as const,
+        ai_case_study_style: "metric_driven" as const,
+        font_preset: "sans" as const,
+      };
+
+      return await CaseStudyGenerator.generate(
+        answers,
+        orgProfile || defaultProfile as any,
+        organization?.plan_type || "starter"
+      );
+    });
+
+    // ─── Step 6: Hard Validation ─────────────────────────
+    if (!aiOutput.headline) {
+      await step.run("revert-status-no-headline", async () => {
+        await InterviewRepository.updateStatus(orgId, interviewId, "completed");
         await EventService.track({
           orgId,
           type: "ai_generation_failed",
           entityId: interviewId,
-          metadata: {
-            reason: "vague_answers",
-            missingFields: metrics.missingFields,
-          }
+          metadata: { reason: "missing_headline" },
         });
       });
-      return { success: false, reason: "Answers too vague", metrics };
+      throw new Error("AI generation failed: Missing headline");
     }
 
-    const deltaPercent = await step.run("compute-math", async () => {
-      if (metrics.before > 0 && metrics.after > metrics.before) {
-        return Number((((metrics.after - metrics.before) / metrics.before) * 100).toFixed(2));
-      }
-      return null;
-    });
-
-    const caseStudy = await step.run("create-case-study", async () => {
-      return await CaseStudyService.create(orgId, interviewId, {
-        metricType: metrics.metricType,
-        before: metrics.before > 0 ? metrics.before.toString() : null,
-        after: metrics.after > 0 ? metrics.after.toString() : null,
-        timeframe: metrics.timeframe,
-        deltaPercent,
+    if (!aiOutput.story || aiOutput.story.split(/\s+/).length < 80) {
+      await step.run("revert-status-bad-story", async () => {
+        await InterviewRepository.updateStatus(orgId, interviewId, "completed");
+        await EventService.track({
+          orgId,
+          type: "ai_generation_failed",
+          entityId: interviewId,
+          metadata: { reason: "story_too_short", wordCount: aiOutput.story?.split(/\s+/).length || 0 },
+        });
       });
+      throw new Error("AI generation failed: Story too short or missing");
+    }
+
+    // ─── Step 7: Generate Slug ───────────────────────────
+    const slug = aiOutput.headline
+      .toLowerCase()
+      .replace(/[^a-z0-9 ]/g, "")
+      .trim()
+      .replace(/\s+/g, "-")
+      .slice(0, 60)
+      + "-" + Date.now().toString().slice(-4);
+
+    // ─── Step 8: Persist to DB ───────────────────────────
+    const caseStudy = await step.run("persist-case-study", async () => {
+      // Check for existing case study for this interview (upsert)
+      const existing = await CaseStudyRepository.findByInterviewId(interviewId);
+
+      // Compute delta
+      let deltaPercent: number | undefined;
+      if (aiOutput.before && aiOutput.after) {
+        const parseMagnitude = (val: string): number | null => {
+          const cleaned = val.replace(/[,$%\s]/g, "").toLowerCase();
+          const match = cleaned.match(/([\d.]+)(k|m|b)?/);
+          if (!match) return null;
+          let num = parseFloat(match[1]);
+          if (match[2] === "k") num *= 1000;
+          if (match[2] === "m") num *= 1000000;
+          if (match[2] === "b") num *= 1000000000;
+          return num;
+        };
+        const beforeNum = parseMagnitude(aiOutput.before);
+        const afterNum = parseMagnitude(aiOutput.after);
+        if (beforeNum && afterNum && beforeNum > 0) {
+          deltaPercent = Math.round(((afterNum - beforeNum) / beforeNum) * 100);
+        }
+      }
+
+      const caseStudyData = {
+        company_name: aiOutput.company || interview.client_name || interview.client_email.split("@")[0],
+        headline: aiOutput.headline,
+        summary: aiOutput.impact || undefined,
+        story: aiOutput.story,
+        quote: aiOutput.quote || undefined,
+        client_name: aiOutput.client_name || undefined,
+        metrics: aiOutput.metrics || undefined,
+        metric_type: aiOutput.primary_metric || undefined,
+        before_value: aiOutput.before || undefined,
+        after_value: aiOutput.after || undefined,
+        delta_percent: deltaPercent,
+        timeframe: aiOutput.timeframe || undefined,
+        slug,
+      };
+
+      if (existing) {
+        return await CaseStudyRepository.update(orgId, existing.id, caseStudyData);
+      } else {
+        return await CaseStudyRepository.create(orgId, {
+          interview_id: interviewId,
+          ...caseStudyData,
+        });
+      }
     });
 
-    // Mark interview as fully completed and ready for review
+    // ─── Step 9: Mark Interview → review_ready ───────────
     await step.run("mark-interview-review-ready", async () => {
       await InterviewRepository.updateStatus(orgId, interviewId, "review_ready");
     });
 
-    // 6. Notify org that case study is ready for their final approval
+    // ─── Step 10: Notify ─────────────────────────────────
     await step.run("notify-case-study-ready", async () => {
       try {
         await NotificationService.notifyCaseStudyReady(
