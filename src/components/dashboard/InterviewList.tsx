@@ -2,61 +2,59 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, Clock, ArrowRight, Eye, RefreshCw, Layers, Loader2, Copy } from "lucide-react";
-import MagneticButton from "@/components/ui/MagneticButton";
+import { Mail, ArrowRight, Copy, RefreshCw, Eye, ExternalLink, Check } from "lucide-react";
 import { ViewResponsesModal } from "@/components/dashboard/ViewResponsesModal";
-import { apiPost } from "@/lib/hooks/useSWR";
-import toast from "react-hot-toast";
-
 import { SendInterviewModal } from "@/components/dashboard/SendInterviewModal";
+import { apiPost, apiGet } from "@/lib/hooks/useSWR";
+import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { Interview } from "@/types";
 
+/** Formats a date or timestamp string into "X min ago" style */
+function timeAgo(dateString?: string | null): string {
+  if (!dateString) return "—";
+  const diffMs = Date.now() - new Date(dateString).getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins} min ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+  return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+}
+
 export function InterviewList({
   data,
-  totalCount,
 }: {
   data: Interview[];
   totalCount?: number;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [remindingId, setRemindingId] = useState<string | null>(null);
   const [isSendOpen, setIsSendOpen] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const router = useRouter();
 
   if (!data || data.length === 0) {
     return (
-      <div className="w-full flex-col bg-[#111111] border border-white/10 rounded-xl mt-6 p-10 text-center flex items-center justify-center min-h-[400px] relative overflow-hidden">
-        {/* Subtle background glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-blue-500/10 blur-[100px] pointer-events-none" />
-
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-6 border border-white/10 relative z-10">
-          <Mail className="w-8 h-8 text-white" />
+      <div className="w-full flex-col bg-white border border-zinc-200/60 rounded-[14px] mt-6 p-10 text-center flex items-center justify-center min-h-[400px] shadow-[0_4px_16px_rgba(0,0,0,0.04)] relative">
+        <div className="w-16 h-16 rounded-2xl bg-zinc-50 flex items-center justify-center mb-6 border border-zinc-100">
+          <Mail className="w-8 h-8 text-zinc-400" />
         </div>
 
-        <h3 className="text-2xl font-bold text-white mb-2 tracking-tight relative z-10">
-          Start collecting client proof
+        <h3 className="text-[20px] font-bold text-zinc-900 mb-2 tracking-tight relative z-10">
+          No interviews yet
         </h3>
-
-        {/* Response flow visual */}
-        <div className="flex items-center gap-2 text-xs font-bold font-mono tracking-wider text-zinc-500 mb-8 relative z-10 uppercase">
-          <span className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-md text-white">Sent</span>
-          <ArrowRight className="w-3 h-3" />
-          <span className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-md">Opened</span>
-          <ArrowRight className="w-3 h-3" />
-          <span className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-md">Completed</span>
-          <ArrowRight className="w-3 h-3" />
-          <span className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 text-blue-400 px-3 py-1.5 rounded-md">Case Study</span>
-        </div>
-
-        <MagneticButton onClick={() => setIsSendOpen(true)} variant="white" className="shadow-[0_0_30px_rgba(255,255,255,0.15)] py-3 px-8 font-bold text-base flex items-center gap-2 relative z-10 hover:shadow-[0_0_40px_rgba(255,255,255,0.25)] transition-shadow">
-          Send First Interview
-        </MagneticButton>
-
-        {/* Flow Explanation */}
-        <p className="text-sm font-medium text-zinc-500 mt-6 relative z-10 flex items-center gap-2">
-          Send <ArrowRight className="w-3 h-3 text-zinc-600" /> Client answers <ArrowRight className="w-3 h-3 text-zinc-600" /> AI generates case study
+        <p className="text-[15px] font-medium text-zinc-500 mb-8 relative z-10 flex items-center gap-2">
+          Send an interview <ArrowRight className="w-4 h-4 text-zinc-400" /> track engagement in real time
         </p>
+
+        <button 
+          onClick={() => setIsSendOpen(true)} 
+          className="bg-black text-white py-3.5 px-8 rounded-[12px] font-bold text-[15px] flex items-center gap-2 shadow-[0_4px_14px_rgba(0,0,0,0.15)] hover:bg-zinc-800 transition-all hover:-translate-y-0.5"
+        >
+          Send First Interview
+        </button>
 
         <SendInterviewModal
           isOpen={isSendOpen}
@@ -68,9 +66,9 @@ export function InterviewList({
   }
 
   const handleRemind = async (id: string, email: string) => {
-    setRemindingId(id);
+    setLoadingAction(`remind-${id}`);
     const result = await apiPost(`/api/interviews/${id}/remind`, {});
-    setRemindingId(null);
+    setLoadingAction(null);
 
     if (result.success) {
       toast.success(`Reminder sent to ${email}`);
@@ -79,127 +77,193 @@ export function InterviewList({
     }
   };
 
+  const handleCopyLink = async (interview: Interview) => {
+    // If it's ready, fetch the direct link. If not, just copy the interview form link.
+    if (["review_ready", "approved", "published"].includes(interview.status)) {
+      try {
+        const res = await apiGet<{ slug: string; id: string }>(`/api/interviews/${interview.id}/link`);
+        if (res.success && res.data?.slug) {
+          const origin = typeof window !== "undefined" ? window.location.origin : "https://auricai.com";
+          navigator.clipboard.writeText(`${origin}/c/${res.data.slug}`);
+          toast.success("Case study link copied!");
+          return;
+        }
+      } catch {
+         // Fallback if the endpoint fails
+      }
+    }
+    
+    // Default: copy the interview form link
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://auricai.com";
+    navigator.clipboard.writeText(`${origin}/interview/${interview.token}`);
+    toast.success("Interview link copied!");
+  };
+
   return (
-    <div className="w-full bg-[#111111] border border-white/10 rounded-xl overflow-hidden mt-6">
+    <div className="w-full flex flex-col gap-5 mt-6 pb-20">
+      {data.map((interview, i) => {
+        const clientNameDisplay = interview.client_name || interview.client_email;
+        const status = interview.status;
 
-      {/* Table Header - Only on Desktop */}
-      <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-4 border-b border-white/5 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-        <div className="col-span-3">Client Name</div>
-        <div className="col-span-2">Status</div>
-        <div className="col-span-4">Link & Actions</div>
-        <div className="col-span-2">Created Date</div>
-        <div className="col-span-1 text-right"></div>
-      </div>
+        // Determine step progression
+        const stepOpenedDone = !!interview.opened_at || ["opened", "in_progress", "completed", "generating", "review_ready", "approved", "published"].includes(status);
+        const stepCompletedDone = !!interview.completed_at || ["completed", "generating", "review_ready", "approved", "published"].includes(status);
+        const stepGeneratedDone = ["review_ready", "approved", "published"].includes(status);
 
-      {/* Table Rows */}
-      <div className="divide-y divide-white/5">
-        {data.map((interview, i) => (
+        // Timeline Configuration
+        // Sent -> Opened -> Completed -> Generated
+        const timeline = [
+          {
+            label: "Sent",
+            state: "completed",
+            subtext: timeAgo(interview.sent_at),
+          },
+          {
+            label: "Opened",
+            state: stepOpenedDone ? "completed" : (status === "sent" ? "active" : "future"),
+            subtext: stepOpenedDone ? timeAgo(interview.opened_at || interview.last_activity) /* Fallback */ : (status === "sent" ? "waiting" : "—"),
+          },
+          {
+            label: "Completed",
+            state: stepCompletedDone ? "completed" : (["opened", "in_progress"].includes(status) ? "active" : "future"),
+            subtext: stepCompletedDone ? timeAgo(interview.completed_at) : (["opened", "in_progress"].includes(status) ? "in progress" : "—"),
+          },
+          {
+            label: "Generated",
+            state: stepGeneratedDone ? "completed" : (status === "generating" ? "active" : "future"),
+            subtext: stepGeneratedDone ? "ready" : (status === "generating" ? "generating" : "—"),
+          }
+        ];
+
+        return (
           <motion.div
             key={interview.id}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.05 + 0.3 }}
-            className="group flex flex-col md:grid md:grid-cols-12 gap-4 px-4 md:px-6 py-4 md:items-center hover:bg-white/5 transition-colors relative border-b border-white/5 last:border-0"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05, duration: 0.3, ease: "easeOut" }}
+            className="flex flex-col bg-white border border-zinc-200/60 rounded-[14px] p-[24px] shadow-[0_4px_12px_rgba(0,0,0,0.03)]"
           >
-            {/* ROW 1: Client & Status (Mobile Layout) */}
-            <div className="flex items-center justify-between md:hidden mb-1">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white">
-                  {interview.client_name ? interview.client_name.charAt(0).toUpperCase() : interview.client_email.charAt(0).toUpperCase()}
-                </div>
-                <span className="text-sm font-bold text-white truncate max-w-[120px] sm:max-w-none">
-                  {interview.client_name || interview.client_email}
-                </span>
+            {/* Header / Meta */}
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+              <div>
+                <h3 className="text-[18px] font-bold text-zinc-900 tracking-tight leading-none mb-1">
+                  {clientNameDisplay}
+                </h3>
               </div>
-
-              <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${interview.status === 'published' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-                interview.status === 'approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                  interview.status === 'generating' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 animate-pulse' :
-                  interview.status === 'completed' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                  interview.status === 'review_ready' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                    'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
-                }`}>
-                {interview.status}
-              </span>
-            </div>
-
-            {/* Desktop Client Name Column */}
-            <div className="hidden md:flex col-span-3 items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                {interview.client_name ? interview.client_name.charAt(0).toUpperCase() : interview.client_email.charAt(0).toUpperCase()}
-              </div>
-              <span className="text-sm font-medium text-white truncate">
-                {interview.client_name || interview.client_email}
-              </span>
-            </div>
-
-            {/* Desktop Status Column */}
-            <div className="hidden md:block col-span-2">
-              <span className={`inline-flex items-center text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${interview.status === 'published' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-                interview.status === 'approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                  interview.status === 'generating' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 animate-pulse' :
-                  interview.status === 'completed' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                  interview.status === 'review_ready' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                    'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
-                } shadow-sm`}>
-                {interview.status}
-              </span>
-            </div>
-
-            {/* Link & Primary Actions (Full Width on Mobile) */}
-            <div className="col-span-4 flex items-center gap-2">
-              <button
-                onClick={() => {
-                  const url = `${window.location.origin}/interview/${interview.token}`;
-                  navigator.clipboard.writeText(url);
-                  toast.success("Link copied!");
-                }}
-                className="flex-1 md:flex-initial text-xs text-zinc-400 bg-white/5 border border-white/10 px-3 py-2 md:py-1.5 rounded-lg hover:bg-white/10 hover:text-white transition-all flex items-center justify-center gap-2 min-h-[40px] md:min-h-0"
-              >
-                <Copy className="w-3.5 h-3.5" /> <span className="md:inline">Copy Link</span>
-              </button>
-
-              <a
-                href={`mailto:${interview.client_email}?subject=Interview%20Request&body=Hi%20${interview.client_name || 'there'},%0A%0AWe'd%20love%20to%20hear%20about%20your%20experience.%20Could%20you%20please%20complete%20this%20quick%203-minute%20interview?%0A%0A${window.location.origin}/interview/${interview.token}%0A%0ABest%20regards!`}
-                className="flex items-center justify-center w-10 md:w-8 h-10 md:h-8 rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-all shrink-0"
-                title="Share via Email"
-              >
-                <Mail className="w-4 h-4" />
-              </a>
-
-              {/* View Responses (Mobile only show as icon in this strip) */}
-              <button
-                onClick={() => setSelectedId(interview.id)}
-                className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-all shrink-0"
-              >
-                <Eye className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Created Date (Compact/Hidden on Mobile) */}
-            <div className="col-span-2 flex items-center gap-1.5 text-[10px] md:text-sm text-zinc-500 mt-1 md:mt-0">
-              <Clock className="w-3.5 h-3.5" />
-              <span suppressHydrationWarning>
-                {new Date(interview.created_at).toLocaleDateString()}
-              </span>
-            </div>
-
-            {/* Actions (Desktop only hover) */}
-            <div className="hidden md:flex col-span-1 items-center justify-end">
-              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200">
+              
+              {/* Actions Area */}
+              <div className="flex flex-wrap items-center gap-2">
                 <button
-                  onClick={() => setSelectedId(interview.id)}
-                  title="View Responses"
-                  className="flex items-center justify-center w-8 h-8 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 transition-colors"
+                  onClick={() => handleCopyLink(interview)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-zinc-50 border border-zinc-200 text-zinc-600 font-semibold text-[13px] hover:bg-zinc-100 hover:text-black transition-colors"
                 >
-                  <Eye className="w-4 h-4" />
+                  <Copy className="w-3.5 h-3.5" /> Copy Link
                 </button>
+                <button
+                  disabled={loadingAction === `remind-${interview.id}`}
+                  onClick={() => handleRemind(interview.id, interview.client_email)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-zinc-50 border border-zinc-200 text-zinc-600 font-semibold text-[13px] hover:bg-zinc-100 hover:text-black transition-colors"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingAction === `remind-${interview.id}` ? 'animate-spin' : ''}`} /> Resend
+                </button>
+
+                {stepCompletedDone && (
+                  <button
+                    onClick={() => setSelectedId(interview.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-zinc-50 border border-zinc-200 text-zinc-600 font-semibold text-[13px] hover:bg-zinc-100 hover:text-black transition-colors"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> View Responses
+                  </button>
+                )}
+
+                {stepGeneratedDone && (
+                  <button
+                    onClick={() => router.push(`/dashboard/case-studies`)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-indigo-50 border border-indigo-100 text-indigo-600 font-semibold text-[13px] hover:bg-indigo-100 transition-colors shadow-sm"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" /> View Case Study
+                  </button>
+                )}
               </div>
             </div>
-          </motion.div>
-        ))}
-      </div>
 
+            {/* Horizontal Timeline */}
+            <div className="mt-8 md:mt-10 relative px-2">
+              {/* Background joining line */}
+              <div className="absolute top-[8px] left-[20px] right-[20px] h-[2px] bg-zinc-100 -z-10" />
+
+              <div className="grid grid-cols-4 w-full text-center">
+                {timeline.map((step, idx) => {
+                  return (
+                    <div key={idx} className="flex flex-col items-center relative">
+                      
+                      {/* Active line fill (Connects steps visually if completed) */}
+                      {idx !== 0 && step.state === "completed" && (
+                         <motion.div 
+                           initial={{ scaleX: 0 }}
+                           animate={{ scaleX: 1 }}
+                           transition={{ duration: 0.5 }}
+                           style={{ originX: 0 }}
+                           className="absolute top-[8px] right-[50%] w-full h-[2px] bg-green-500 -z-10" 
+                         />
+                      )}
+
+                      {/* Icon Container */}
+                      <div className="h-4 w-full flex justify-center items-center bg-transparent z-10">
+                        {step.state === "completed" && (
+                          <motion.div 
+                            initial={{ scale: 0 }} 
+                            animate={{ scale: 1 }} 
+                            className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center shadow-[0_0_8px_rgba(34,197,94,0.3)]"
+                          >
+                            <Check className="w-2.5 h-2.5 text-white" strokeWidth={4} />
+                          </motion.div>
+                        )}
+
+                        {step.state === "active" && (
+                          <div className="relative flex h-3 w-3 items-center justify-center">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                          </div>
+                        )}
+
+                        {step.state === "future" && (
+                          <div className="w-3 h-3 rounded-full border-2 border-zinc-200 bg-white" />
+                        )}
+                      </div>
+
+                      {/* Labels */}
+                      <div className="mt-3 flex flex-col items-center">
+                        <span className={`text-[12px] font-bold uppercase tracking-wider ${
+                          step.state === "completed" ? "text-zinc-800" :
+                          step.state === "active" ? "text-indigo-600" :
+                          "text-zinc-400"
+                        }`}>
+                          {step.label}
+                        </span>
+                        <span className={`text-[12px] mt-0.5 font-medium ${
+                          step.state === "completed" ? "text-zinc-500" :
+                          step.state === "active" ? "text-indigo-500" :
+                          "text-zinc-300"
+                        }`}>
+                          {step.subtext}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+          </motion.div>
+        );
+      })}
+
+      <SendInterviewModal
+         isOpen={isSendOpen}
+         onClose={() => setIsSendOpen(false)}
+         onSuccess={() => router.refresh()}
+      />
       <ViewResponsesModal
         isOpen={!!selectedId}
         onClose={() => setSelectedId(null)}

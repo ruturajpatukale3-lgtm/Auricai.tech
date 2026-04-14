@@ -87,7 +87,7 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
           const validMetric = getValidMetric(study.metric_type);
           const domain = typeof window !== "undefined" ? window.location.origin : "https://auricai.com";
           const shareUrl = `${domain}/c/${study.slug}`;
-          
+
           const handleCopyLinkedIn = () => {
             const clientName = study.client_name || study.company_name || "a client";
             const metric = validMetric || "strong results";
@@ -152,7 +152,7 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
                 >
                   View <ArrowRight className="w-4 h-4" />
                 </button>
-                
+
                 <span className="text-[#ccc] text-xs">|</span>
 
                 <button
