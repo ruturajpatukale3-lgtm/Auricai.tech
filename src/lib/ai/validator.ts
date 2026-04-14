@@ -122,7 +122,7 @@ Summary: ${caseStudy.summary}
 Before: ${caseStudy.before}
 After: ${caseStudy.after}
 Metrics: ${caseStudy.metrics}
-Testimonial: ${caseStudy.testimonial}
+Testimonial: ${caseStudy.quote}
 
 STRICT INSTRUCTIONS:
 1. Extract every specific claim, number, percentage, timeframe, or entity from the Case Study.

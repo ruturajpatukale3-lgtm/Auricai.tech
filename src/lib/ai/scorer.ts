@@ -36,7 +36,7 @@ Summary: ${caseStudy.summary || caseStudy.story || ""}
 Before: ${caseStudy.before}
 After: ${caseStudy.after}
 Metrics: ${caseStudy.metrics}
-Testimonial: ${caseStudy.testimonial}
+Testimonial: ${caseStudy.quote}
 
 Return ONLY JSON matching:
 {
