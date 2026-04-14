@@ -257,6 +257,11 @@ export interface CaseStudy {
   company_name: string;
   headline: string | null;
   summary: string | null;
+  story: string | null;
+  quote: string | null;
+  client_name: string | null;
+  template_id: CaseStudyTemplate;
+  metrics: string[] | null;
   metric_type: string | null;
   before_value: string | null;
   after_value: string | null;
