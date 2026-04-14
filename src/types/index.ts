@@ -201,7 +201,7 @@ export interface AIQuestionResponse {
 }
 
 export interface AICaseStudyOutput {
-  headline?: string;
+  headline: string;
   summary?: string;
   story?: string;
   before: string;
