@@ -82,7 +82,9 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full mt-4">
-        {data.map((study, i) => {
+        {data
+          .filter((study) => study.headline || study.story)
+          .map((study, i) => {
           const headline = getValidHeadline(study.headline);
           const validMetric = getValidMetric(study.metric_type);
           const domain = typeof window !== "undefined" ? window.location.origin : "https://auricai.com";

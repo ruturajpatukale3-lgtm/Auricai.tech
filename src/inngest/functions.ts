@@ -88,21 +88,23 @@ export const generateCaseStudyJob = inngest.createFunction(
       );
     });
 
-    // ─── Step 6: Hard Validation ─────────────────────────
-    if (!aiOutput.headline) {
-      await step.run("revert-status-no-headline", async () => {
+    // ─── Step 6: Hard Validation (NEVER allow null story or headline) ─
+    if (!aiOutput.headline || !aiOutput.story) {
+      await step.run("revert-status-invalid-output", async () => {
         await InterviewRepository.updateStatus(orgId, interviewId, "completed");
         await EventService.track({
           orgId,
           type: "ai_generation_failed",
           entityId: interviewId,
-          metadata: { reason: "missing_headline" },
+          metadata: { 
+            reason: !aiOutput.headline ? "missing_headline" : "missing_story",
+          },
         });
       });
-      throw new Error("AI generation failed: Missing headline");
+      throw new Error(`AI generation failed: ${!aiOutput.headline ? 'Missing headline' : 'Missing story'}`);
     }
 
-    if (!aiOutput.story || aiOutput.story.split(/\s+/).length < 80) {
+    if (aiOutput.story.split(/\s+/).length < 80) {
       await step.run("revert-status-bad-story", async () => {
         await InterviewRepository.updateStatus(orgId, interviewId, "completed");
         await EventService.track({
@@ -112,7 +114,7 @@ export const generateCaseStudyJob = inngest.createFunction(
           metadata: { reason: "story_too_short", wordCount: aiOutput.story?.split(/\s+/).length || 0 },
         });
       });
-      throw new Error("AI generation failed: Story too short or missing");
+      throw new Error("AI generation failed: Story too short");
     }
 
     // ─── Step 7: Generate Slug ───────────────────────────
@@ -175,12 +177,27 @@ export const generateCaseStudyJob = inngest.createFunction(
       }
     });
 
-    // ─── Step 9: Mark Interview → review_ready ───────────
+    // ─── Step 9: VALIDATE DB INSERT (CRITICAL) ───────────
+    // ONLY mark review_ready AFTER confirmed DB persistence
+    if (!caseStudy || !caseStudy.id) {
+      await step.run("revert-status-db-failure", async () => {
+        await InterviewRepository.updateStatus(orgId, interviewId, "completed");
+        await EventService.track({
+          orgId,
+          type: "ai_generation_failed",
+          entityId: interviewId,
+          metadata: { reason: "db_insert_failed" },
+        });
+      });
+      throw new Error("Case study not saved to database");
+    }
+
+    // ─── Step 10: Mark Interview → review_ready ──────────
     await step.run("mark-interview-review-ready", async () => {
       await InterviewRepository.updateStatus(orgId, interviewId, "review_ready");
     });
 
-    // ─── Step 10: Notify ─────────────────────────────────
+    // ─── Step 11: Notify ─────────────────────────────────
     await step.run("notify-case-study-ready", async () => {
       try {
         await NotificationService.notifyCaseStudyReady(
@@ -193,7 +210,7 @@ export const generateCaseStudyJob = inngest.createFunction(
       }
     });
 
-    return { success: true, caseStudy };
+    return { success: true, caseStudyId: caseStudy.id };
   }
 );
 

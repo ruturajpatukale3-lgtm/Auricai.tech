@@ -116,22 +116,22 @@ export function InterviewList({
           {
             label: "Sent",
             state: "completed",
-            subtext: timeAgo(interview.sent_at),
+            subtext: "—",
           },
           {
             label: "Opened",
             state: stepOpenedDone ? "completed" : (status === "sent" ? "active" : "future"),
-            subtext: stepOpenedDone ? timeAgo(interview.opened_at || interview.last_activity) /* Fallback */ : (status === "sent" ? "waiting" : "—"),
+            subtext: stepOpenedDone ? timeAgo(interview.opened_at || interview.last_activity) : (status === "sent" ? "now" : "—"),
           },
           {
             label: "Completed",
             state: stepCompletedDone ? "completed" : (["opened", "in_progress"].includes(status) ? "active" : "future"),
-            subtext: stepCompletedDone ? timeAgo(interview.completed_at) : (["opened", "in_progress"].includes(status) ? "in progress" : "—"),
+            subtext: stepCompletedDone ? timeAgo(interview.completed_at) : (["opened", "in_progress"].includes(status) ? "now" : "—"),
           },
           {
             label: "Generated",
             state: stepGeneratedDone ? "completed" : (status === "generating" ? "active" : "future"),
-            subtext: stepGeneratedDone ? "ready" : (status === "generating" ? "generating" : "—"),
+            subtext: stepGeneratedDone ? "ready" : (status === "generating" ? "now" : "—"),
           }
         ];
 
@@ -202,9 +202,13 @@ export function InterviewList({
                       {/* Icon Container */}
                       <div className="h-4 w-full flex justify-center items-center bg-transparent z-10">
                         {step.state === "completed" && (
-                          <div className="w-[18px] h-[18px] rounded-full bg-green-500 flex items-center justify-center shadow-[0_0_8px_rgba(34,197,94,0.3)]">
+                          <motion.div 
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="w-[18px] h-[18px] rounded-full bg-green-500 flex items-center justify-center shadow-[0_0_8px_rgba(34,197,94,0.3)]"
+                          >
                             <Check className="w-3 h-3 text-white" strokeWidth={4} />
-                          </div>
+                          </motion.div>
                         )}
 
                         {step.state === "active" && (

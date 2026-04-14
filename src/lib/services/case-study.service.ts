@@ -126,6 +126,15 @@ export const CaseStudyService = {
       });
     }
 
+    // HARD VALIDATION: Confirm DB persistence before returning success
+    if (!caseStudy || !caseStudy.id) {
+      throw new Error("Case study was not saved to the database. Generation aborted.");
+    }
+
+    if (!caseStudy.headline || !caseStudy.story) {
+      throw new Error("Case study saved but critical fields (headline/story) are missing.");
+    }
+
     // 9. Log creation event
     try {
       await EventService.caseStudyCreated(orgId, caseStudy.id, caseStudy.company_name);
