@@ -16,7 +16,7 @@ export const CaseStudyRepository = {
   ): Promise<CaseStudy[]> {
     let query = supabaseAdmin
       .from(TABLE)
-      .select("id, company_name, headline, metric_type, delta_percent, status, slug, created_at, views, clicks, total_read_time, before_value, after_value, timeframe, summary, story, quote, client_name, metrics, full_case_study")
+      .select("id, company_name, headline, metric_type, delta_percent, status, slug, created_at, views, clicks, total_read_time, before_value, after_value, timeframe, summary, story, quote, client_name, metrics")
       .eq("org_id", orgId)
       .order("created_at", { ascending: false });
 
@@ -94,7 +94,6 @@ export const CaseStudyRepository = {
       story?: string;
       quote?: string;
       client_name?: string;
-      full_case_study?: string;
       metrics?: string[] | null;
       status?: CaseStudyStatus;
     }
@@ -131,7 +130,6 @@ export const CaseStudyRepository = {
         | "story"
         | "quote"
         | "client_name"
-        | "full_case_study"
         | "metrics"
       >
     >

@@ -101,7 +101,6 @@ export async function POST(
         story: caseStudyData.story,
         quote: caseStudyData.quote,
         client_name: caseStudyData.client_name,
-        full_case_study: caseStudyData.full_case_study,
         delta_percent: undefined,
         timeframe: caseStudyData.timeframe || undefined,
       }
