@@ -224,6 +224,7 @@ Return JSON ONLY with this exact schema:
         metrics: Array.isArray(parsed.metrics) ? parsed.metrics : [parsed.metrics || pickRandom(DIRECTIONAL_POOLS.improvement)],
         before: parsed.before || `${companyHint} faced operational friction that slowed execution and reduced visibility into what was actually driving results.`,
         after: parsed.after || `A more structured, repeatable approach — with clearer priorities and ${pickRandom(DIRECTIONAL_POOLS.efficiency)}.`,
+        summary: parsed.summary || parsed.story || pickRandom(FALLBACK_SUMMARIES),
         story: parsed.story || parsed.summary || pickRandom(FALLBACK_SUMMARIES),
         quote: parsed.quote || parsed.testimonial || pickRandom(FALLBACK_TESTIMONIALS),
         client_name: parsed.client_name || "Client",

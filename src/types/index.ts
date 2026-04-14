@@ -201,14 +201,15 @@ export interface AIQuestionResponse {
 }
 
 export interface AICaseStudyOutput {
-  headline: string;
-  metrics: string[];
+  headline?: string;
+  summary?: string;
+  story?: string;
   before: string;
   after: string;
-  story: string;
-  quote: string;
-  client_name: string;
-  company: string;
+  metrics?: string | string[];
+  quote?: string;
+  client_name?: string;
+  company?: string;
   timeframe?: string;
   confidenceScore?: number;
 }

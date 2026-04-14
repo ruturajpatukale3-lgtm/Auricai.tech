@@ -32,7 +32,7 @@ Scoring Criteria:
 
 CASE STUDY TO EVALUATE:
 Headline: ${caseStudy.headline}
-Summary: ${caseStudy.summary}
+Summary: ${caseStudy.summary || caseStudy.story || ""}
 Before: ${caseStudy.before}
 After: ${caseStudy.after}
 Metrics: ${caseStudy.metrics}
