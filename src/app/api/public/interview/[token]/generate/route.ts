@@ -93,7 +93,7 @@ export async function POST(
         company_name: caseStudyData.company || interview.client_name || "Client",
         headline: caseStudyData.headline,
         slug,
-        metric_type: caseStudyData.primary_metric || null,
+        metric_type: caseStudyData.primary_metric || undefined,
         before_value: caseStudyData.before,
         after_value: caseStudyData.after,
         metrics: caseStudyData.metrics,
