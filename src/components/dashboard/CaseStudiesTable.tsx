@@ -82,10 +82,10 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full mt-4">
-        {data
-          .filter((study) => study.headline || study.story)
-          .map((study, i) => {
-          const headline = getValidHeadline(study.headline);
+        {data.map((study, i) => {
+          // SAFE FALLBACKS: Never drop records, replace missing info with placeholders
+          const safeHeadline = study.headline || "Untitled Case Study — Generation Pending";
+          const headline = getValidHeadline(safeHeadline);
           const validMetric = getValidMetric(study.metric_type);
           const domain = typeof window !== "undefined" ? window.location.origin : "https://auricai.com";
           const shareUrl = `${domain}/c/${study.slug}`;

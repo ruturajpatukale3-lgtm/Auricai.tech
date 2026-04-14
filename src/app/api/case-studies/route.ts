@@ -10,9 +10,8 @@ export const GET = withOrg(async (_req: NextRequest, ctx: OrgContext) => {
     const caseStudies = await CaseStudyService.getByOrg(ctx.orgId);
     return apiSuccess(caseStudies);
   } catch (error) {
-    console.error("[API:CaseStudies] Error fetching studies:", error);
-    // STABILITY FIRST: Return an empty array so the dashboard can still load
-    return apiSuccess([]);
+    console.error("CASE STUDY FETCH ERROR [API]:", error);
+    return handleApiError(error);
   }
 });
 

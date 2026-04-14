@@ -57,10 +57,10 @@ export default async function CaseStudiesPage({
 async function CaseStudyDataList({ orgId, limit, offset }: { orgId: string; limit: number; offset: number }) {
   try {
     const studies = await CaseStudyRepository.findByOrg(orgId, { limit, offset });
+    console.log("CASE STUDIES FETCHED:", studies?.length || 0);
     return <CaseStudiesTable data={studies} />;
   } catch (error) {
-    console.error("[RSC:CaseStudyDataList] Error fetching case studies:", error);
-    // STABILITY FIRST: Return an empty array so the page doesn't crash
-    return <CaseStudiesTable data={[]} />;
+    console.error("CASE STUDY FETCH ERROR [RSC:CaseStudyDataList]:", error);
+    throw error; // FAIL LOUD — DO NOT SWALLOW
   }
 }
