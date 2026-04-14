@@ -12,7 +12,7 @@ import toast from "react-hot-toast";
 import { CaseStudy } from "@/types";
 import { getValidHeadline, getValidMetric } from "@/lib/utils/case-study-validation";
 
-export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
+export function CaseStudiesTable({ data, hasCompletedInterviews = false }: { data: CaseStudy[]; hasCompletedInterviews?: boolean }) {
   const router = useRouter();
 
   const [targetStudy, setTargetStudy] = useState<CaseStudy | null>(null);
@@ -49,6 +49,74 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
   };
 
   if (!data || data.length === 0) {
+    if (hasCompletedInterviews) {
+      return (
+        <div className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-2xl p-10 flex flex-col items-center justify-center min-h-[400px] mt-6 relative overflow-hidden">
+          {/* Animated background glow */}
+          <motion.div
+            animate={{
+              opacity: [0.1, 0.3, 0.1],
+              scale: [0.8, 1.2, 0.8],
+            }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-indigo-500/20 blur-[100px] rounded-full point-events-none"
+          />
+
+          <div className="relative z-10 flex flex-col items-center text-center">
+            <h3 className="text-xl font-bold text-white tracking-tight mb-6 flex items-center gap-2">
+              ✨ Generating your case study...
+            </h3>
+            
+            <div className="flex flex-col gap-3 text-left w-full max-w-xs">
+              <div className="flex items-center gap-3 text-sm text-zinc-400">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                </motion.div>
+                <motion.span
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  Extracting metrics
+                </motion.span>
+              </div>
+              
+              <div className="flex items-center gap-3 text-sm text-zinc-400">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1.5 }}
+                >
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                </motion.div>
+                <motion.span
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 1.5 }}
+                >
+                  Structuring proof
+                </motion.span>
+              </div>
+
+              <div className="flex items-center gap-3 text-sm text-zinc-400">
+                <motion.div
+                  initial={{ opacity: 0.5, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ repeat: Infinity, duration: 1, repeatType: "reverse" }}
+                  className="w-4 h-4 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin"
+                />
+                <span className="text-zinc-200">Preparing output</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <>
         <div className="w-full h-[400px] bg-[#0A0A0A] border border-white/5 rounded-2xl flex flex-col items-center justify-center p-8 text-center mt-6 shadow-[0_8px_40px_rgba(0,0,0,0.5)]">

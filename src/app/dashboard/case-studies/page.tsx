@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { AuthService } from "@/lib/services/auth.service";
 import { CaseStudyRepository } from "@/lib/repositories/case-study.repository";
+import { InterviewRepository } from "@/lib/repositories/interview.repository";
 import { CaseStudiesTable } from "@/components/dashboard/CaseStudiesTable";
 import { Plus } from "lucide-react";
 import { RealtimeDashboardBridge } from "@/components/dashboard/RealtimeDashboardBridge";
@@ -57,8 +58,14 @@ export default async function CaseStudiesPage({
 async function CaseStudyDataList({ orgId, limit, offset }: { orgId: string; limit: number; offset: number }) {
   try {
     const studies = await CaseStudyRepository.findByOrg(orgId, { limit, offset });
+    const { data: interviews } = await InterviewRepository.findByOrg(orgId, { limit: 50 }); // Fetch recent interviews
+    
+    const hasCompletedInterviews = interviews.some(
+      (i) => i.status === "completed" || i.status === "generating"
+    );
+
     console.log("CASE STUDIES FETCHED:", studies?.length || 0);
-    return <CaseStudiesTable data={studies} />;
+    return <CaseStudiesTable data={studies} hasCompletedInterviews={hasCompletedInterviews} />;
   } catch (error) {
     console.error("CASE STUDY FETCH ERROR [RSC:CaseStudyDataList]:", error);
     throw error; // FAIL LOUD — DO NOT SWALLOW

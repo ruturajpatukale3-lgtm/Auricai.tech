@@ -129,7 +129,7 @@ export function InterviewList({
             subtext: stepCompletedDone ? timeAgo(interview.completed_at) : (["opened", "in_progress"].includes(status) ? "now" : "—"),
           },
           {
-            label: "Generated",
+            label: stepGeneratedDone ? "Generated" : (status === "generating" ? "Generating..." : "Generated"),
             state: stepGeneratedDone ? "completed" : (status === "generating" ? "active" : "future"),
             subtext: stepGeneratedDone ? "ready" : (status === "generating" ? "now" : "—"),
           }

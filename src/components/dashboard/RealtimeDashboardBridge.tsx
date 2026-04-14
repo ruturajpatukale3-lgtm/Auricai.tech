@@ -60,12 +60,32 @@ export function RealtimeDashboardBridge({ orgId }: { orgId: string }) {
       .on(
         "postgres_changes",
         {
+          event: "INSERT",
+          schema: "public",
+          table: "interviews",
+          filter: `org_id=eq.${orgId}`,
+        },
+        () => debouncedRefresh("interviews_new")
+      )
+      .on(
+        "postgres_changes",
+        {
           event: "UPDATE",
           schema: "public",
           table: "interviews",
           filter: `org_id=eq.${orgId}`,
         },
         () => debouncedRefresh("interviews")
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "case_studies",
+          filter: `org_id=eq.${orgId}`,
+        },
+        () => debouncedRefresh("case_studies_new")
       )
       .subscribe();
       
