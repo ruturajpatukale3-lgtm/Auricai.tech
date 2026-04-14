@@ -3,9 +3,6 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { AuthService } from "@/lib/services/auth.service";
 import { InterviewRepository } from "@/lib/repositories/interview.repository";
-import { AnalyticsService } from "@/lib/services/analytics.service";
-import { FunnelStrip } from "@/components/dashboard/FunnelStrip";
-import { ResponseFlow } from "@/components/dashboard/ResponseFlow";
 import { InterviewList } from "@/components/dashboard/InterviewList";
 import { AlertCircle } from "lucide-react";
 import { RealtimeDashboardBridge } from "@/components/dashboard/RealtimeDashboardBridge";
@@ -33,9 +30,6 @@ export default async function InterviewsPage({
   const limit = 20;
   const offset = (currentPage - 1) * limit;
 
-  // 1. Fetch State Intelligence Metrics (single call returns funnel + breakdown + duplicates + meta)
-  const stateMetrics = await AnalyticsService.getFunnelMetrics(orgId);
-
   return (
     <div className="w-full max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8 animate-in fade-in duration-500 overflow-x-hidden min-w-0">
       <RealtimeDashboardBridge orgId={orgId} />
@@ -47,20 +41,7 @@ export default async function InterviewsPage({
           <p className="text-sm text-zinc-500">Automate your client proof extraction progress.</p>
         </div>
         
-        <InterviewPageActions isVisible={stateMetrics.funnel.total > 0} />
-      </div>
-
-      {/* 2. Funnel = Progression Clarity (Stage Isolated) */}
-      <div className="mb-4">
-        <FunnelStrip metrics={stateMetrics.funnel} />
-      </div>
-
-      <div className="mb-8">
-        <ResponseFlow 
-          breakdown={stateMetrics.breakdown}
-          duplicates={stateMetrics.duplicates}
-          meta={stateMetrics.meta}
-        />
+        <InterviewPageActions isVisible={true} />
       </div>
 
       {/* 4. Alerts Sector (Suspense) */}

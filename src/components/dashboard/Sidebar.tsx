@@ -22,7 +22,6 @@ const navigation = [
   { name: "Command Center", href: "/dashboard/command-center", icon: LayoutDashboard },
   { name: "Case Studies", href: "/dashboard/case-studies", icon: FileText },
   { name: "Interviews", href: "/dashboard/interviews", icon: MessageSquare },
-  { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
 ];
 
 interface SidebarProps {

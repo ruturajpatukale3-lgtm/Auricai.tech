@@ -2,13 +2,10 @@ import { Suspense } from "react";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { AuthService } from "@/lib/services/auth.service";
-import { AnalyticsService } from "@/lib/services/analytics.service";
-import { OverviewStrip } from "@/components/dashboard/OverviewStrip";
-import { RecentActivity } from "@/components/dashboard/RecentActivity";
-import { RealtimeDashboardBridge } from "@/components/dashboard/RealtimeDashboardBridge";
-import { OverviewStripSkeleton, RecentActivitySkeleton } from "@/components/dashboard/SkeletonLoaders";
+import { CaseStudyRepository } from "@/lib/repositories/case-study.repository";
+import { InterviewRepository } from "@/lib/repositories/interview.repository";
 import { DashboardActions } from "@/components/dashboard/DashboardActions";
-import { AlertCircle, TrendingUp, ArrowRight } from "lucide-react";
+import { AlertCircle, FileText, MessageSquare, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export const metadata = {
@@ -43,50 +40,62 @@ export default async function CommandCenterPage() {
         <DashboardAlerts orgId={orgId} />
       </Suspense>
 
-      {/* 4. Overview Strip Sector (Suspense Bound) */}
-      <Suspense fallback={<OverviewStripSkeleton />}>
-        <DashboardOverview orgId={orgId} />
+      {/* 4. Simple Usage Overview */}
+      <Suspense fallback={null}>
+        <DashboardUsage orgId={orgId} />
       </Suspense>
-
-      {/* 5. Activity & Insights Sector (Suspense Bound) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8">
-        <div className="lg:col-span-12">
-          <Suspense fallback={<RecentActivitySkeleton />}>
-            <DashboardActivity orgId={orgId} />
-          </Suspense>
-        </div>
-      </div>
     </div>
   );
 }
 
 // ─── Granular Data Components (RSC) ──────────────────────────────────
 
-async function DashboardOverview({ orgId }: { orgId: string }) {
-  const metrics = await AnalyticsService.getDashboard(orgId);
-  return <OverviewStrip metrics={metrics} />;
-}
+async function DashboardUsage({ orgId }: { orgId: string }) {
+  const [caseStudies, interviews] = await Promise.all([
+    CaseStudyRepository.findByOrg(orgId),
+    InterviewRepository.findByOrg(orgId)
+  ]);
 
-async function DashboardActivity({ orgId }: { orgId: string }) {
-  const activities = await AnalyticsService.getActivityFeed(orgId, 6);
-  return <RecentActivity activities={activities} />;
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+      <div className="p-6 bg-white/5 border border-white/10 rounded-xl flex items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+          <FileText className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <p className="text-sm text-zinc-400 font-medium">Total Case Studies</p>
+          <h3 className="text-2xl font-bold text-white">{caseStudies.length}</h3>
+        </div>
+      </div>
+
+      <div className="p-6 bg-white/5 border border-white/10 rounded-xl flex items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+          <MessageSquare className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <p className="text-sm text-zinc-400 font-medium">Interviews Sent</p>
+          <h3 className="text-2xl font-bold text-white">{interviews.data.length}</h3>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 async function DashboardAlerts({ orgId }: { orgId: string }) {
-  const metrics = await AnalyticsService.getDashboard(orgId);
+  const stalledCount = await InterviewRepository.countStalled(orgId, new Date(Date.now() - 24 * 60 * 60 * 10 * 1000));
   
-  if (metrics.stalledInterviews === 0) return null;
+  if (stalledCount === 0) return null;
 
   return (
     <div className="mb-8 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
       <div className="flex items-center gap-4 text-center md:text-left">
         <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
-          <TrendingUp className="w-6 h-6 text-blue-400" />
+          <AlertCircle className="w-6 h-6 text-blue-400" />
         </div>
         <div>
           <h3 className="text-sm font-semibold text-white">Stalled Proof Recovery</h3>
           <p className="text-xs text-zinc-500">
-            You have <span className="text-blue-400 font-bold">{metrics.stalledInterviews} stalling interviews</span> that are delaying your public proof.
+            You have <span className="text-blue-400 font-bold">{stalledCount} stalling interviews</span> that are delaying your public proof.
           </p>
         </div>
       </div>
