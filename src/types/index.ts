@@ -213,6 +213,7 @@ export interface AICaseStudyOutput {
   quote: string;
   client_name: string;
   company: string;
+  full_case_study?: string;
   // Legacy optional properties for backward compatibility
   timeframe?: string;
   summary?: string;
@@ -268,6 +269,7 @@ export interface CaseStudy {
   story: string | null;
   quote: string | null;
   client_name: string | null;
+  full_case_study: string | null;
   template_id: CaseStudyTemplate;
   metrics: string[] | null;
   metric_type: string | null;
