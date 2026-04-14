@@ -202,11 +202,13 @@ export interface AIQuestionResponse {
 
 export interface AICaseStudyOutput {
   headline: string;
-  summary: string;
+  metrics: string[];
   before: string;
   after: string;
-  metrics: string;
-  testimonial: string;
+  story: string;
+  quote: string;
+  client_name: string;
+  company: string;
   timeframe?: string;
   confidenceScore?: number;
 }
