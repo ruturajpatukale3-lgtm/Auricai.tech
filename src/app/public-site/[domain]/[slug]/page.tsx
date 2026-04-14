@@ -7,7 +7,6 @@ import { MinimalTemplate } from "@/components/templates/MinimalTemplate";
 import { DarkTemplate } from "@/components/templates/DarkTemplate";
 import { AgencyTemplate } from "@/components/templates/AgencyTemplate";
 import { EnterpriseTemplate } from "@/components/templates/EnterpriseTemplate";
-import { CaseStudyTracker } from "@/components/analytics/CaseStudyTracker";
 
 interface PublicCaseStudyPageProps {
   params: {
@@ -73,7 +72,6 @@ export default async function PublicCaseStudyPage({ params }: PublicCaseStudyPag
 
   return (
     <>
-      <CaseStudyTracker id={cs.id} />
       {cs.template_id === "dark" ? (
          <DarkTemplate caseStudy={cs} org={org} showWatermark={showWatermark} />
       ) : cs.template_id === "agency" ? (
