@@ -103,50 +103,43 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="group relative flex flex-col justify-between bg-[#111111] border border-white/5 rounded-2xl p-6 hover:border-white/20 hover:-translate-y-[2px] hover:shadow-[0_10px_40px_rgba(0,0,0,0.5)] transition-all duration-300 min-h-[300px]"
+              className="group relative flex flex-col justify-between bg-white border border-black/5 rounded-[14px] p-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-[2px] hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] transition-all duration-200 ease-out min-h-[auto]"
             >
-              {/* Top Section: Metrics — ONLY if real data exists */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="font-bold text-zinc-400 text-sm tracking-tight">{study.company_name}</span>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => router.push(`/edit/${study.id}`)}
-                      title="Edit Case Study"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-md hover:bg-white/10 text-zinc-400 hover:text-white"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => { setTargetStudy(study); setIsDeleteOpen(true); }}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-md hover:bg-red-500/10 text-red-500"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
+              {/* Top Right: Actions (Hidden until hover) */}
+              <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => router.push(`/edit/${study.id}`)}
+                  title="Edit"
+                  className="p-1.5 rounded-md hover:bg-black/5 text-[#555] hover:text-black transition-colors"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => { setTargetStudy(study); setIsDeleteOpen(true); }}
+                  title="Delete"
+                  className="p-1.5 rounded-md hover:bg-red-50 text-red-500 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
 
-                <div className="flex flex-col gap-1 mb-6">
-                  {/* Only show metric if it's real — never fallback */}
-                  {validMetric && (
-                    <span className="text-4xl font-extrabold text-white font-mono tracking-tight drop-shadow-md">
+              {/* Top Section: Primary Metric + Headline */}
+              <div>
+                {validMetric ? (
+                  <div className="mb-[8px]">
+                    <span className="text-[32px] md:text-[36px] font-bold leading-[1.2] text-[#222] tracking-tight block">
                       {validMetric}
                     </span>
-                  )}
-                  {study.before_value && study.after_value && (
-                    <span className="text-sm font-semibold text-blue-400/90 font-mono tracking-tight">
-                      {study.before_value} → {study.after_value} {study.timeframe ? `in ${study.timeframe}` : ''}
-                    </span>
-                  )}
-                </div>
+                  </div>
+                ) : null}
 
-                <h3 className="text-lg font-bold text-white/90 leading-snug mb-4">
+                <h3 className="text-[16px] md:text-[18px] font-medium text-[#222] line-clamp-2 leading-snug pr-12">
                   {headline}
                 </h3>
               </div>
 
               {/* Bottom Section: Actions */}
-              <div className="flex items-center gap-3 pt-6 border-t border-white/5">
+              <div className="flex items-center gap-[10px] mt-[16px]">
                 <button
                   onClick={() => {
                     if (study.slug) {
@@ -155,10 +148,13 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
                       toast.error("No public link available");
                     }
                   }}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white text-black hover:bg-zinc-200 text-sm font-bold transition-all"
+                  className="text-[13px] md:text-[14px] font-medium text-[#555] hover:text-black transition-colors flex items-center gap-1.5"
                 >
-                  View <ExternalLink className="w-4 h-4" />
+                  View <ArrowRight className="w-4 h-4" />
                 </button>
+                
+                <span className="text-[#ccc] text-xs">|</span>
+
                 <button
                   onClick={() => {
                     if (study.slug) {
@@ -167,17 +163,18 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
                       toast.error("No link to copy");
                     }
                   }}
-                  title="Copy Link"
-                  className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all"
+                  className="text-[13px] md:text-[14px] font-medium text-[#555] hover:text-black transition-colors"
                 >
-                  <Copy className="w-4 h-4" />
+                  Copy Link
                 </button>
+
+                <span className="text-[#ccc] text-xs">|</span>
+
                 <button
                   onClick={handleCopyLinkedIn}
-                  title="Copy LinkedIn Post"
-                  className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#0077b5]/10 hover:bg-[#0077b5]/20 border border-[#0077b5]/20 text-[#0077b5] transition-all"
+                  className="text-[13px] md:text-[14px] font-medium text-[#555] hover:text-[#0077b5] transition-colors"
                 >
-                  <Share2 className="w-4 h-4" />
+                  Copy DM
                 </button>
               </div>
             </motion.div>
