@@ -378,16 +378,17 @@ export const CaseStudyService = {
   },
 
   /**
-   * Generate URL-safe slug from company name
+   * Generate URL-safe slug from headline or company name.
+   * NEVER returns null. Always unique via timestamp suffix.
    */
-  generateSlug(name: string): string {
-    const base = name
+  generateSlug(text: string): string {
+    const base = text
       .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/[^a-z0-9 ]/g, "")
+      .trim()
       .replace(/\s+/g, "-")
-      .replace(/-+/g, "-")
-      .substring(0, 50);
-    const suffix = Math.random().toString(36).substring(2, 8);
-    return `${base}-${suffix}`;
+      .substring(0, 60);
+    const suffix = Date.now().toString().slice(-4);
+    return `${base || "case-study"}-${suffix}`;
   },
 };

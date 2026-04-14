@@ -88,7 +88,10 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
           const shareUrl = `${domain}/c/${study.slug}`;
           
           const handleCopyLinkedIn = () => {
-            const text = `🎯 ${study.metric_type}\n\n${headline}\n\n${study.summary || study.story || ""}\n\nRead the full case study: ${shareUrl}`;
+            const clientName = study.client_name || study.company_name || "a client";
+            const metric = study.metric_type || "strong results";
+            const storyText = study.story || study.summary || "";
+            const text = `We helped ${clientName} achieve ${metric}.\n\nHere's how:\n\n${storyText}\n\nFull case study:\n${shareUrl}`;
             navigator.clipboard.writeText(text);
             toast.success("LinkedIn post copied!");
           };

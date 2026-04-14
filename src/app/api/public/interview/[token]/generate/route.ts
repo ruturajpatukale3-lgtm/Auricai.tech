@@ -58,31 +58,48 @@ export async function POST(
       target_customer: "Businesses",
     } as any, organization?.plan_type || "starter");
 
-    // ─── Persist to DB ────────────────────────────────
+    // ─── Validate Extraction ──────────────────────────
+    if (!caseStudyData.headline) {
+      console.error("[generate] Missing headline from AI extraction");
+      return NextResponse.json({ success: false, error: "Extraction failed: missing headline" }, { status: 500 });
+    }
+
+    // ─── Generate Slug ────────────────────────────────
+    const slug = caseStudyData.headline
+      .toLowerCase()
+      .replace(/[^a-z0-9 ]/g, "")
+      .trim()
+      .replace(/\s+/g, "-")
+      .substring(0, 60)
+      + "-" + Date.now().toString().slice(-4);
+
+    console.log("[generate] Saving case study:", { headline: caseStudyData.headline, slug, company: caseStudyData.company });
+
+    // ─── Persist to DB (MUST NOT FAIL SILENTLY) ──────
     const finalCaseStudy = await CaseStudyRepository.create(
       interview.org_id, 
       {
         interview_id: interview.id,
         company_name: caseStudyData.company || interview.client_name || "Client",
         headline: caseStudyData.headline,
-        metric_type: caseStudyData.primary_metric || "custom", // Used as primary metric
+        slug,
+        metric_type: caseStudyData.primary_metric || null,
         before_value: caseStudyData.before,
         after_value: caseStudyData.after,
         metrics: caseStudyData.metrics,
-        summary: caseStudyData.impact, // Storing impact in summary
+        summary: caseStudyData.impact,
         story: caseStudyData.story,
         quote: caseStudyData.quote,
         delta_percent: undefined,
         timeframe: caseStudyData.timeframe || undefined,
       }
-    ).catch(err => {
-      console.error("[generate] DB save failed:", err);
-      // Return data anyway
-    });
+    );
+
+    console.log("[generate] Saved slug:", finalCaseStudy.slug, "id:", finalCaseStudy.id);
 
     return NextResponse.json({
       success: true,
-      data: caseStudyData
+      data: { ...caseStudyData, slug: finalCaseStudy.slug, id: finalCaseStudy.id }
     });
 
   } catch (error: any) {

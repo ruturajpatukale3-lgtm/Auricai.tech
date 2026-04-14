@@ -13,11 +13,9 @@ import { MemorySystem } from "./memory-system";
 // Ensures no two case studies share identical directional phrasing.
 const DIRECTIONAL_POOLS = {
   improvement: [
-    "measurable lift", "clear upward shift", "meaningful performance gain",
-    "noticeable acceleration in results", "tangible improvement in outcomes",
-    "marked increase in output quality", "demonstrable forward momentum",
-    "visible improvement across key indicators", "sustained positive trajectory",
-    "concrete progress toward target benchmarks",
+    "+32% conversion rate", "+45% efficiency", "+60% throughput",
+    "2x pipeline velocity", "3x faster turnaround", "40% cost reduction",
+    "+28% team output", "50% less manual work",
   ],
   efficiency: [
     "streamlined operations", "reduced operational friction",
@@ -240,23 +238,8 @@ Return JSON ONLY with this exact schema:
 
       return finalOutput;
     } catch (err) {
-      console.error("[CaseStudyGenerator] Gemini call failed, using premium fallback:", err);
-      // ─── PREMIUM FALLBACK (never dry or robotic) ───
-      const companyHint = context.targetCustomer || "the team";
-      const firstAnswer = answers[0]?.answer || "";
-      const lastAnswer = answers[answers.length - 1]?.answer || "";
-      return {
-        headline: pickRandom(FALLBACK_HEADLINES).replace("[COMPANY]", companyHint),
-        primary_metric: pickRandom(DIRECTIONAL_POOLS.improvement),
-        before: firstAnswer.length > 20 ? firstAnswer : `${companyHint} needed a more reliable way to drive outcomes without the constant manual overhead.`,
-        after: lastAnswer.length > 20 ? lastAnswer : `A ${pickRandom(DIRECTIONAL_POOLS.growth)} — built on ${pickRandom(DIRECTIONAL_POOLS.efficiency)}.`,
-        metrics: [],
-        story: pickRandom(FALLBACK_SUMMARIES),
-        impact: "Predictable, repeatable growth.",
-        quote: pickRandom(FALLBACK_TESTIMONIALS),
-        client_name: "Client",
-        company: companyHint,
-      };
+      console.error("[CaseStudyGenerator] Gemini call failed. NOT returning fake data.", err);
+      throw new Error(`Extraction failed: ${err instanceof Error ? err.message : "Unknown AI error"}`);
     }
   },
 };
