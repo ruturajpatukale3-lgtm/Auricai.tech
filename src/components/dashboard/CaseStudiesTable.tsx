@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Copy, Eye, Pencil, Trash2, ArrowRight, CheckCircle, UploadCloud, Mail, ExternalLink, Linkedin } from "lucide-react";
+import { Copy, Eye, Pencil, Trash2, ArrowRight, CheckCircle, UploadCloud, Mail, ExternalLink, Share2 } from "lucide-react";
 import { SendInterviewModal } from "@/components/dashboard/SendInterviewModal";
 import { DeleteConfirmModal } from "@/components/dashboard/DeleteConfirmModal";
 import { apiPatch } from "@/lib/hooks/useSWR";
@@ -158,7 +158,7 @@ export function CaseStudiesTable({ data }: { data: CaseStudy[] }) {
                   title="Copy LinkedIn Post"
                   className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#0077b5]/10 hover:bg-[#0077b5]/20 border border-[#0077b5]/20 text-[#0077b5] transition-all"
                 >
-                  <Linkedin className="w-4 h-4" />
+                  <Share2 className="w-4 h-4" />
                 </button>
               </div>
             </motion.div>
