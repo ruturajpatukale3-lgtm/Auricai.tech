@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { AuthService } from "@/lib/services/auth.service";
 import { InterviewRepository } from "@/lib/repositories/interview.repository";
 import { InterviewList } from "@/components/dashboard/InterviewList";
-import { AlertCircle } from "lucide-react";
 import { RealtimeDashboardBridge } from "@/components/dashboard/RealtimeDashboardBridge";
 import { TableSkeleton } from "@/components/dashboard/SkeletonLoaders";
 import { InterviewPageActions } from "@/components/dashboard/InterviewPageActions";
@@ -44,11 +43,6 @@ export default async function InterviewsPage({
         <InterviewPageActions isVisible={true} />
       </div>
 
-      {/* 4. Alerts Sector (Suspense) */}
-      <Suspense fallback={null}>
-        <InterviewAlerts orgId={orgId} />
-      </Suspense>
-
       {/* 5. Interview List (Suspense with Skeleton) */}
       <Suspense fallback={<TableSkeleton rows={10} />}>
         <InterviewDataList 
@@ -62,42 +56,6 @@ export default async function InterviewsPage({
 }
 
 // ─── Data Components (RSC) ──────────────────────────────────
-
-async function InterviewAlerts({ orgId }: { orgId: string }) {
-  const [stalledCount, waitingCount] = await Promise.all([
-    InterviewRepository.countStalled(orgId, new Date(Date.now() - 24 * 60 * 60 * 10 * 1000)),
-    InterviewRepository.countWaitingApproval(orgId)
-  ]);
-
-  if (stalledCount === 0 && waitingCount === 0) return null;
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-      {stalledCount > 0 && (
-        <div className="flex items-center gap-4 bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl">
-          <div className="p-2 rounded-lg bg-amber-500/20 text-amber-500">
-            <AlertCircle className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-amber-500">{stalledCount} Stalled Interviews</p>
-            <p className="text-xs text-amber-500/70">Clients waiting for &gt;24h. Send a reminder?</p>
-          </div>
-        </div>
-      )}
-      {waitingCount > 0 && (
-        <div className="flex items-center gap-4 bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl">
-          <div className="p-2 rounded-lg bg-blue-500/20 text-blue-500">
-            <AlertCircle className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-blue-500">{waitingCount} Pending Approvals</p>
-            <p className="text-xs text-blue-500/70">Ready to be converted into case studies.</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 async function InterviewDataList({ orgId, limit, offset }: { 
   orgId: string; 

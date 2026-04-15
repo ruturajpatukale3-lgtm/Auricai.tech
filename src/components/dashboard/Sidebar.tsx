@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AuricaiLogo } from "@/components/ui/AuricaiLogo";
 import {
-  LayoutDashboard,
   FileText,
   MessageSquare,
   BarChart3,
@@ -19,7 +18,6 @@ import { useSubscription } from "@/context/SubscriptionContext";
 import { getPlanLimits } from "@/lib/plans";
 
 const navigation = [
-  { name: "Command Center", href: "/dashboard/command-center", icon: LayoutDashboard },
   { name: "Case Studies", href: "/dashboard/case-studies", icon: FileText },
   { name: "Interviews", href: "/dashboard/interviews", icon: MessageSquare },
 ];
